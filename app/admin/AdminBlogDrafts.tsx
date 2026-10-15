@@ -1,9 +1,12 @@
 'use client';
 
 import {
+  AlertTriangle,
   ChevronDown,
   ChevronUp,
   ExternalLink,
+  FileText,
+  Link2,
   RefreshCw,
   Send,
   Trash2,
@@ -12,6 +15,8 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { SafeMarkdown } from '@/components/ui/SafeMarkdown';
 import { toast } from '@/components/ui/Toast';
+import { hueClass } from '@/lib/palette';
+import { AdminEmpty, AdminSkeletonList } from './AdminUi';
 
 type Draft = {
   id: string;
@@ -137,17 +142,9 @@ export function AdminBlogDrafts({
   const needsHuman = drafts.filter((d) => d.status === 'needs_human');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem',
-          flexWrap: 'wrap',
-        }}
-      >
-        <p className="admin-section-desc" style={{ margin: 0 }}>
+    <div className="adm-stack">
+      <div className="adm-toolbar-line">
+        <p className="adm-sub" aria-live="polite">
           {loading && !data
             ? 'Loading drafts…'
             : `${ready.length} ready · ${needsHuman.length} need a human · ${data?.inFlight ?? 0} still in the review loop`}
@@ -158,35 +155,33 @@ export function AdminBlogDrafts({
           onClick={load}
           disabled={loading}
         >
-          <RefreshCw className="w-4 h-4" /> Refresh
+          <RefreshCw
+            size={14}
+            aria-hidden="true"
+            className={loading ? 'acct-spin' : undefined}
+          />{' '}
+          Refresh
         </button>
       </div>
 
       {data && !data.publishConfigured && (
-        <div
-          className="surface"
-          style={{
-            padding: '0.9rem 1rem',
-            borderLeft: '3px solid #d97706',
-            fontSize: '0.85rem',
-          }}
-        >
-          <strong>Publishing isn&apos;t configured yet.</strong> Add a{' '}
-          <code>BLOG_PUBLISH_TOKEN</code> Worker secret: a fine-grained GitHub
-          token for the repo with <em>Contents: read &amp; write</em>. Reject
-          and retry still work without it.
+        <div className="acct-callout acct-callout--warn">
+          <AlertTriangle size={16} aria-hidden="true" />
+          <div>
+            <strong>Publishing isn&apos;t configured yet.</strong> Add a{' '}
+            <code>BLOG_PUBLISH_TOKEN</code> Worker secret: a fine-grained GitHub
+            token for the repo with <em>Contents: read &amp; write</em>. Reject
+            and retry still work without it.
+          </div>
         </div>
       )}
 
+      {loading && !data && <AdminSkeletonList rows={2} />}
+
       {data && drafts.length === 0 && (
-        <div
-          className="surface"
-          style={{ padding: '2rem', textAlign: 'center' }}
-        >
-          <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
-            No drafts waiting. The pipeline cron writes new ones on its own.
-          </p>
-        </div>
+        <AdminEmpty icon={FileText} title="No drafts waiting" boxed>
+          The pipeline cron writes new ones on its own.
+        </AdminEmpty>
       )}
 
       {[...ready, ...needsHuman].map((d) => {
@@ -196,51 +191,25 @@ export function AdminBlogDrafts({
         const issues = d.review?.issues ?? [];
         const busy = busyId === d.id;
         return (
-          <article key={d.id} className="admin-card" style={{ padding: 0 }}>
-            <div style={{ padding: '1rem 1.1rem' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '0.5rem',
-                  alignItems: 'center',
-                  marginBottom: '0.35rem',
-                  flexWrap: 'wrap',
-                }}
-              >
+          <article
+            key={d.id}
+            className={`adm-card adm-draft${busy ? ' is-busy' : ''}`}
+          >
+            <div className="adm-draft-main">
+              <div className="adm-draft-top">
                 <span
-                  className="admin-tab-badge"
-                  style={{
-                    background: d.status === 'ready' ? '#10b981' : '#d97706',
-                  }}
+                  className={`adm-tag is-dot ${d.status === 'ready' ? 'hue-green' : 'hue-amber'}`}
                 >
                   {d.status === 'ready' ? 'Ready' : 'Needs human'}
                 </span>
-                <code style={{ fontSize: '0.75rem', opacity: 0.8 }}>
-                  /blog/{d.slug}
-                </code>
+                <code className="adm-draft-slug">/blog/{d.slug}</code>
               </div>
-              <h3 style={{ margin: '0 0 0.35rem', fontSize: '1.05rem' }}>
-                {d.title}
-              </h3>
-              <p
-                style={{
-                  margin: '0 0 0.6rem',
-                  fontSize: '0.875rem',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                {d.excerpt}
-              </p>
-              <div
-                style={{
-                  fontSize: '0.78rem',
-                  color: 'var(--text-secondary)',
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '0.25rem 1rem',
-                }}
-              >
-                <span>Keyword: {d.primaryKeyword}</span>
+              <h3 className="adm-draft-title">{d.title}</h3>
+              <p className="adm-draft-excerpt">{d.excerpt}</p>
+              <div className="adm-meta">
+                <span>
+                  Keyword <strong>{d.primaryKeyword}</strong>
+                </span>
                 <span>{wordCount(d.content).toLocaleString()} words</span>
                 <span>Review passes: {d.iterations}</span>
                 {scores && (
@@ -257,41 +226,36 @@ export function AdminBlogDrafts({
                     {Number(sim.maxCosine).toFixed(2)})
                   </span>
                 )}
-                <span>Tags: {d.tags.join(', ')}</span>
               </div>
+              {d.tags.length > 0 && (
+                <div className="adm-tags">
+                  {d.tags.map((tag) => (
+                    <span key={tag} className={`adm-tag ${hueClass(tag)}`}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
 
               {d.status === 'needs_human' && issues.length > 0 && (
-                <ul
-                  style={{
-                    margin: '0.75rem 0 0',
-                    paddingLeft: '1.1rem',
-                    fontSize: '0.82rem',
-                    color: '#d97706',
-                  }}
-                >
+                <ul className="adm-issues">
                   {issues.map((issue) => (
                     <li key={issue}>{issue}</li>
                   ))}
                 </ul>
               )}
 
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '0.5rem',
-                  marginTop: '0.9rem',
-                  flexWrap: 'wrap',
-                }}
-              >
+              <div className="adm-actions adm-draft-actions">
                 <button
                   type="button"
                   className="btn btn-sm btn-secondary"
+                  aria-expanded={isOpen}
                   onClick={() => setOpenId(isOpen ? null : d.id)}
                 >
                   {isOpen ? (
-                    <ChevronUp className="w-4 h-4" />
+                    <ChevronUp size={14} aria-hidden="true" />
                   ) : (
-                    <ChevronDown className="w-4 h-4" />
+                    <ChevronDown size={14} aria-hidden="true" />
                   )}
                   {isOpen ? 'Hide post' : 'Read post'}
                 </button>
@@ -301,7 +265,7 @@ export function AdminBlogDrafts({
                   disabled={busy || !data?.publishConfigured}
                   onClick={() => act(d, 'publish')}
                 >
-                  <Send className="w-4 h-4" />
+                  <Send size={14} aria-hidden="true" />
                   {busy ? 'Working…' : 'Approve & publish'}
                 </button>
                 {d.status === 'needs_human' && (
@@ -311,71 +275,53 @@ export function AdminBlogDrafts({
                     disabled={busy}
                     onClick={() => act(d, 'retry')}
                   >
-                    <Undo2 className="w-4 h-4" /> Send back for review
+                    <Undo2 size={14} aria-hidden="true" /> Send back for review
                   </button>
                 )}
                 <button
                   type="button"
-                  className="btn btn-sm btn-secondary"
+                  className="btn btn-sm adm-btn-tint hue-red"
                   disabled={busy}
                   onClick={() => act(d, 'reject')}
                 >
-                  <Trash2 className="w-4 h-4" /> Reject
+                  <Trash2 size={14} aria-hidden="true" /> Reject
                 </button>
               </div>
             </div>
 
             {isOpen && (
-              <div
-                style={{
-                  borderTop: '1px solid var(--border-color)',
-                  padding: '1rem 1.1rem',
-                  maxHeight: '70vh',
-                  overflowY: 'auto',
-                }}
-              >
+              <div className="adm-draft-body">
                 <div className="markdown-body">
                   <SafeMarkdown content={d.content} />
                 </div>
                 {d.faq.length > 0 && (
-                  <div style={{ marginTop: '1.5rem' }}>
-                    <h4 style={{ marginBottom: '0.5rem' }}>FAQ</h4>
+                  <div className="adm-faq">
+                    <h4>FAQ</h4>
                     {d.faq.map((f) => (
-                      <div key={f.q} style={{ marginBottom: '0.75rem' }}>
-                        <strong style={{ fontSize: '0.9rem' }}>{f.q}</strong>
-                        <p
-                          style={{
-                            margin: '0.25rem 0 0',
-                            fontSize: '0.875rem',
-                            color: 'var(--text-secondary)',
-                          }}
-                        >
-                          {f.a}
-                        </p>
+                      <div key={f.q} className="adm-faq-item">
+                        <strong>{f.q}</strong>
+                        <p>{f.a}</p>
                       </div>
                     ))}
                   </div>
                 )}
                 {d.backlinkSuggestions.length > 0 && (
-                  <div
-                    className="surface"
-                    style={{
-                      marginTop: '1.5rem',
-                      padding: '0.75rem 1rem',
-                      fontSize: '0.82rem',
-                    }}
-                  >
-                    <strong>After publishing,</strong> link to this post from:
-                    <ul style={{ margin: '0.4rem 0 0', paddingLeft: '1.1rem' }}>
-                      {d.backlinkSuggestions.map((b) => (
-                        <li key={b.url}>
-                          <a href={b.url} target="_blank" rel="noreferrer">
-                            {b.title} <ExternalLink className="w-3 h-3" />
-                          </a>{' '}
-                          — anchor e.g. &ldquo;{b.anchor}&rdquo;
-                        </li>
-                      ))}
-                    </ul>
+                  <div className="acct-callout acct-callout--info adm-backlinks">
+                    <Link2 size={16} aria-hidden="true" />
+                    <div>
+                      <strong>After publishing,</strong> link to this post from:
+                      <ul>
+                        {d.backlinkSuggestions.map((b) => (
+                          <li key={b.url}>
+                            <a href={b.url} target="_blank" rel="noreferrer">
+                              {b.title}{' '}
+                              <ExternalLink size={12} aria-hidden="true" />
+                            </a>{' '}
+                            — anchor e.g. &ldquo;{b.anchor}&rdquo;
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
                 )}
               </div>

@@ -3,6 +3,7 @@
 import {
   Check,
   ExternalLink,
+  Inbox,
   RefreshCw,
   Sparkles,
   Terminal,
@@ -14,6 +15,7 @@ import { notifyAdminStatsChanged } from '../../lib/adminStatsRefresh';
 import type { RepoStatus } from '../../lib/repoCheck';
 import { STALE_REASON_LABEL, type StaleReason } from '../../lib/staleness';
 import { TRUST_TIER_COPY, type TrustTier } from '../../lib/trustTier';
+import { AdminEmpty, AdminSectionHead, AdminSkeletonList } from './AdminUi';
 
 type Queue = 'pending' | 'stale';
 type VerdictFilter = 'all' | 'approve' | 'needs_review' | 'reject' | 'none';
@@ -61,17 +63,17 @@ type TriageResponse = {
   pageSize: number;
 };
 
-const VERDICT_STYLE: Record<Verdict, { label: string; color: string }> = {
-  approve: { label: 'Jev: approve', color: 'var(--admin-ok)' },
-  needs_review: { label: 'Jev: look closer', color: 'var(--admin-warn)' },
-  reject: { label: 'Jev: reject', color: 'var(--admin-bad)' },
+const VERDICT_STYLE: Record<Verdict, { label: string; hue: string }> = {
+  approve: { label: 'Jev: approve', hue: 'hue-green' },
+  needs_review: { label: 'Jev: look closer', hue: 'hue-amber' },
+  reject: { label: 'Jev: reject', hue: 'hue-red' },
 };
 
-const TIER_COLOR: Record<TrustTier, string> = {
-  verified: 'var(--admin-ok)',
-  runs_needs_keys: 'var(--accent-color)',
-  installable: 'var(--text-secondary)',
-  unverified: 'var(--admin-warn)',
+const TIER_HUE: Record<TrustTier, string> = {
+  verified: 'hue-green',
+  runs_needs_keys: 'hue-cyan',
+  installable: '',
+  unverified: 'hue-amber',
 };
 
 function fmtDate(v: string | null): string {
@@ -80,32 +82,15 @@ function fmtDate(v: string | null): string {
   return Number.isNaN(d.getTime()) ? '—' : d.toISOString().slice(0, 10);
 }
 
+/** Evidence pill; `hue` is a status/identity hue-* class (neutral when omitted). */
 function Chip({
   children,
-  color,
+  hue = '',
 }: {
   children: React.ReactNode;
-  color?: string;
+  hue?: string;
 }) {
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '0.3rem',
-        padding: '0.15rem 0.5rem',
-        borderRadius: '999px',
-        fontSize: '0.72rem',
-        fontWeight: 600,
-        background: 'var(--admin-chip-bg)',
-        color: color ?? 'var(--text-secondary)',
-        border: `1px solid ${color ?? 'var(--border-color)'}`,
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {children}
-    </span>
-  );
+  return <span className={`adm-tag ${hue}`}>{children}</span>;
 }
 
 /**
@@ -336,90 +321,110 @@ export function AdminTriageQueue() {
   const rejectLabel = queue === 'pending' ? 'Reject' : 'Unpublish';
 
   return (
-    <section style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <div>
-        <h2 className="admin-section-title">Triage queue</h2>
-        <p className="admin-section-desc">
-          Jev recommends; you decide. Keys: <kbd>j</kbd>/<kbd>k</kbd> move ·{' '}
-          <kbd>a</kbd> {acceptLabel.toLowerCase()} · <kbd>r</kbd>{' '}
-          {rejectLabel.toLowerCase()} · <kbd>t</kbd> ask Jev again ·{' '}
-          <kbd>o</kbd> open repo · <kbd>e</kbd> sandbox log
-        </p>
-      </div>
-
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-        {(['pending', 'stale'] as const).map((q) => (
+    <section className="adm-section">
+      <AdminSectionHead
+        title="Triage queue"
+        description={
+          <>
+            Jev recommends; you decide. Keys: <kbd className="kbd">j</kbd>/
+            <kbd className="kbd">k</kbd> move · <kbd className="kbd">a</kbd>{' '}
+            {acceptLabel.toLowerCase()} · <kbd className="kbd">r</kbd>{' '}
+            {rejectLabel.toLowerCase()} · <kbd className="kbd">t</kbd> ask Jev
+            again · <kbd className="kbd">o</kbd> open repo ·{' '}
+            <kbd className="kbd">e</kbd> sandbox log
+          </>
+        }
+        actions={
           <button
-            key={q}
             type="button"
-            className={`admin-tab-btn ${queue === q ? 'active' : ''}`}
-            onClick={() => setQueue(q)}
+            className="btn btn-sm btn-secondary"
+            onClick={() => void load()}
+            disabled={loading}
           >
-            {q === 'pending' ? 'Pending approval' : 'Flagged stale'}
+            <RefreshCw
+              size={14}
+              aria-hidden="true"
+              className={loading ? 'acct-spin' : undefined}
+            />{' '}
+            Refresh
           </button>
-        ))}
-        <span style={{ flex: 1 }} />
-        <button
-          type="button"
-          className="admin-tab-btn"
-          onClick={() => void load()}
-          disabled={loading}
-        >
-          <RefreshCw className="w-4 h-4" /> Refresh
-        </button>
+        }
+      />
+
+      <div className="adm-card adm-toolbar">
+        <div className="adm-toolbar-row">
+          <fieldset className="fieldset-plain segmented">
+            <legend className="sr-only">Queue</legend>
+            {(['pending', 'stale'] as const).map((q) => (
+              <button
+                key={q}
+                type="button"
+                className={queue === q ? 'is-active' : undefined}
+                aria-pressed={queue === q}
+                onClick={() => setQueue(q)}
+              >
+                {q === 'pending' ? 'Pending approval' : 'Flagged stale'}
+              </button>
+            ))}
+          </fieldset>
+        </div>
+
+        <div className="adm-chip-row scroll-x fade-x">
+          {(
+            [
+              ['all', 'All', total],
+              ['approve', 'Jev approve', counts.approve ?? 0],
+              ['reject', 'Jev reject', counts.reject ?? 0],
+              ['needs_review', 'Look closer', counts.needs_review ?? 0],
+              ['none', 'Not triaged yet', counts.none ?? 0],
+            ] as const
+          ).map(([v, label, n]) => (
+            <button
+              key={v}
+              type="button"
+              className="chip"
+              aria-pressed={verdict === v}
+              onClick={() => setVerdict(v)}
+            >
+              {label}
+              <span className="chip-count">{n}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="adm-toolbar-row adm-bulk">
+          <span className="adm-toolbar-label">On this page</span>
+          <div className="adm-actions">
+            <button
+              type="button"
+              className="btn btn-sm adm-btn-tint hue-green"
+              disabled={pageApprove === 0}
+              onClick={() => void bulkAccept('approve')}
+            >
+              <Check size={14} aria-hidden="true" /> {acceptLabel} all
+              Jev-approved ({pageApprove})
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm adm-btn-tint hue-red"
+              disabled={pageReject === 0}
+              onClick={() => void bulkAccept('reject')}
+            >
+              <X size={14} aria-hidden="true" /> {rejectLabel} all Jev-rejected
+              ({pageReject})
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-        {(
-          [
-            ['all', `All (${total})`],
-            ['approve', `Jev approve (${counts.approve ?? 0})`],
-            ['reject', `Jev reject (${counts.reject ?? 0})`],
-            ['needs_review', `Look closer (${counts.needs_review ?? 0})`],
-            ['none', `Not triaged yet (${counts.none ?? 0})`],
-          ] as const
-        ).map(([v, label]) => (
-          <button
-            key={v}
-            type="button"
-            className={`admin-tab-btn ${verdict === v ? 'active' : ''}`}
-            onClick={() => setVerdict(v)}
-            style={{ fontSize: '0.8rem' }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-        <button
-          type="button"
-          className="admin-tab-btn"
-          disabled={pageApprove === 0}
-          onClick={() => void bulkAccept('approve')}
-        >
-          <Check className="w-4 h-4" /> {acceptLabel} all Jev-approved on page (
-          {pageApprove})
-        </button>
-        <button
-          type="button"
-          className="admin-tab-btn"
-          disabled={pageReject === 0}
-          onClick={() => void bulkAccept('reject')}
-        >
-          <X className="w-4 h-4" /> {rejectLabel} all Jev-rejected on page (
-          {pageReject})
-        </button>
-      </div>
-
-      {loading && items.length === 0 && (
-        <p className="admin-section-desc">Loading…</p>
-      )}
+      {loading && items.length === 0 && <AdminSkeletonList rows={3} />}
       {!loading && items.length === 0 && (
-        <p className="admin-section-desc">Nothing here. Queue clear.</p>
+        <AdminEmpty icon={Inbox} title="Queue clear" boxed>
+          Nothing here right now.
+        </AdminEmpty>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+      <div className="adm-triage-list">
         {items.map((item, idx) => {
           const focused = idx === focus;
           const v = item.triageVerdict
@@ -432,47 +437,20 @@ export function AdminTriageQueue() {
               ref={(el) => {
                 rowRefs.current[item.id] = el;
               }}
-              style={{
-                padding: '0.9rem 1rem',
-                borderRadius: '12px',
-                background: 'var(--card-bg)',
-                border: `1px solid ${focused ? 'var(--accent-color)' : 'var(--border-color)'}`,
-                opacity: isBusy ? 0.5 : 1,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.5rem',
-              }}
+              className={`adm-triage${focused ? ' is-focused' : ''}${isBusy ? ' is-busy' : ''}`}
             >
-              <div
-                style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                }}
-              >
-                <strong style={{ color: 'var(--text-primary)' }}>
-                  {item.name}
-                </strong>
+              <div className="adm-name">
+                <strong>{item.name}</strong>
                 <a
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{
-                    color: 'var(--text-secondary)',
-                    fontSize: '0.78rem',
-                    display: 'inline-flex',
-                    gap: '0.2rem',
-                    alignItems: 'center',
-                    overflowWrap: 'anywhere',
-                  }}
+                  className="adm-repo-link"
                 >
                   {item.url.replace(/^https?:\/\//, '')}
-                  <ExternalLink className="w-3 h-3" />
+                  <ExternalLink size={12} aria-hidden="true" />
                 </a>
-                {item.reviewPriority && (
-                  <Chip color="var(--gold-color)">Priority</Chip>
-                )}
+                {item.reviewPriority && <Chip hue="hue-amber">Priority</Chip>}
                 {item.submitterEmail ? (
                   <Chip>Submitted</Chip>
                 ) : (
@@ -481,50 +459,26 @@ export function AdminTriageQueue() {
               </div>
 
               {v ? (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <Chip color={v.color}>
-                    <Sparkles className="w-3 h-3" />
+                <div className="adm-verdict">
+                  <Chip hue={v.hue}>
+                    <Sparkles size={12} aria-hidden="true" />
                     {v.label}
                   </Chip>
-                  <span
-                    style={{
-                      fontSize: '0.8rem',
-                      color: 'var(--text-secondary)',
-                    }}
-                  >
-                    {item.triageReason}
-                  </span>
+                  <span className="adm-muted">{item.triageReason}</span>
                 </div>
               ) : (
-                <span
-                  style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}
-                >
-                  Not triaged yet — press <kbd>t</kbd> to ask Jev now.
+                <span className="adm-note">
+                  Not triaged yet — press <kbd className="kbd">t</kbd> to ask
+                  Jev now.
                 </span>
               )}
 
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: '0.84rem',
-                  color: 'var(--text-secondary)',
-                  lineHeight: 1.5,
-                }}
-              >
+              <p className="adm-triage-desc">
                 {(item.aiSummary || item.description).slice(0, 280)}
               </p>
 
-              <div
-                style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}
-              >
-                <Chip color={TIER_COLOR[item.trustTier]}>
+              <div className="adm-tags">
+                <Chip hue={TIER_HUE[item.trustTier]}>
                   {TRUST_TIER_COPY[item.trustTier].label}
                 </Chip>
                 {item.mcpProbability !== null && (
@@ -536,12 +490,10 @@ export function AdminTriageQueue() {
                 )}
                 <Chip>last commit {fmtDate(item.lastCommitAt)}</Chip>
                 {item.repoForkOf && (
-                  <Chip color="var(--admin-warn)">
-                    fork of {item.repoForkOf}
-                  </Chip>
+                  <Chip hue="hue-amber">fork of {item.repoForkOf}</Chip>
                 )}
                 {item.repoStatus === 'gone' && (
-                  <Chip color="var(--admin-bad)">
+                  <Chip hue="hue-red">
                     source 404
                     {(item.repoGoneCount ?? 0) >= 2
                       ? ' · confirmed'
@@ -549,42 +501,42 @@ export function AdminTriageQueue() {
                   </Chip>
                 )}
                 {item.repoStatus === 'ok' && (
-                  <Chip color="var(--admin-ok)">
+                  <Chip hue="hue-green">
                     source live · {fmtDate(item.repoCheckedAt)}
                   </Chip>
                 )}
                 {item.repoStatus === 'site_only' && (
-                  <Chip color="var(--admin-warn)">
+                  <Chip hue="hue-amber">
                     repo 404 · website live (private repo?)
                   </Chip>
                 )}
                 {item.repoStatus === 'archived' && (
-                  <Chip color="var(--admin-warn)">repo archived</Chip>
+                  <Chip hue="hue-amber">repo archived</Chip>
                 )}
                 {item.healthStatus === 'archived' && (
-                  <Chip color="var(--admin-bad)">archived</Chip>
+                  <Chip hue="hue-red">archived</Chip>
                 )}
                 {item.packageDeprecated && (
-                  <Chip color="var(--admin-bad)">
+                  <Chip hue="hue-red">
                     deprecated: {item.packageDeprecated.slice(0, 60)}
                   </Chip>
                 )}
                 {item.staleReasons.map((r) => (
-                  <Chip key={r} color="var(--admin-warn)">
+                  <Chip key={r} hue="hue-amber">
                     {STALE_REASON_LABEL[r] ?? r}
                   </Chip>
                 ))}
                 {item.sandboxStatus && item.sandboxStatus !== 'pending' && (
                   <Chip
-                    color={
+                    hue={
                       item.sandboxStatus === 'ok'
-                        ? 'var(--admin-ok)'
+                        ? 'hue-green'
                         : item.sandboxStatus === 'needs_credentials'
-                          ? 'var(--accent-color)'
-                          : 'var(--admin-warn)'
+                          ? 'hue-cyan'
+                          : 'hue-amber'
                     }
                   >
-                    <Terminal className="w-3 h-3" />
+                    <Terminal size={12} aria-hidden="true" />
                     sandbox {item.sandboxStatus.replace(/_/g, ' ')}
                     {item.sandboxToolCount
                       ? ` · ${item.sandboxToolCount} tools`
@@ -600,49 +552,36 @@ export function AdminTriageQueue() {
 
               {showStderr.has(item.id) &&
                 (item.sandboxStderr || item.sandboxError) && (
-                  <pre
-                    style={{
-                      margin: 0,
-                      padding: '0.6rem',
-                      borderRadius: '8px',
-                      background: 'var(--bg-color)',
-                      color: 'var(--text-secondary)',
-                      fontSize: '0.72rem',
-                      whiteSpace: 'pre-wrap',
-                      overflowWrap: 'anywhere',
-                      maxHeight: '12rem',
-                      overflowY: 'auto',
-                    }}
-                  >
+                  <pre className="adm-pre">
                     {item.sandboxError ? `${item.sandboxError}\n\n` : ''}
                     {item.sandboxStderr}
                   </pre>
                 )}
 
-              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+              <div className="adm-actions">
                 <button
                   type="button"
-                  className="admin-tab-btn"
+                  className="btn btn-sm adm-btn-tint hue-green"
                   disabled={isBusy}
                   onClick={() => void decide(item, true)}
                 >
-                  <Check className="w-4 h-4" /> {acceptLabel}
+                  <Check size={14} aria-hidden="true" /> {acceptLabel}
                 </button>
                 <button
                   type="button"
-                  className="admin-tab-btn"
+                  className="btn btn-sm adm-btn-tint hue-red"
                   disabled={isBusy}
                   onClick={() => void decide(item, false)}
                 >
-                  <X className="w-4 h-4" /> {rejectLabel}
+                  <X size={14} aria-hidden="true" /> {rejectLabel}
                 </button>
                 <button
                   type="button"
-                  className="admin-tab-btn"
+                  className="btn btn-sm btn-secondary"
                   disabled={isBusy}
                   onClick={() => void retriage(item)}
                 >
-                  <Sparkles className="w-4 h-4" /> Ask Jev
+                  <Sparkles size={14} aria-hidden="true" /> Ask Jev
                 </button>
               </div>
             </div>

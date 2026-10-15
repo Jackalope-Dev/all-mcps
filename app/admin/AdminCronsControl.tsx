@@ -5,16 +5,27 @@ import {
   Cpu,
   Crown,
   ExternalLink,
+  Loader2,
   Play,
+  ScanSearch,
   Search,
   Sparkles,
   Trash2,
-  Wrench,
   Zap,
 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from '@/components/ui/Toast';
-import { computeQualityScore, tierColor } from '@/lib/qualityScore';
+import { computeQualityScore, type QualityTier } from '@/lib/qualityScore';
+import { AdminCardHead } from './AdminUi';
+
+/** Quality-tier hue (theme-aware palette, unlike the raw tierColor hexes). */
+const TIER_HUE: Record<QualityTier, string> = {
+  Excellent: 'hue-green',
+  Great: 'hue-cyan',
+  Good: 'hue-amber',
+  Fair: 'hue-indigo',
+  Emerging: '',
+};
 
 type UtilityAction = {
   id: string;
@@ -22,7 +33,7 @@ type UtilityAction = {
   category: string;
   description: string;
   icon: any;
-  color: string;
+  hue: string;
 };
 
 const UTILITY_ACTIONS: UtilityAction[] = [
@@ -33,7 +44,7 @@ const UTILITY_ACTIONS: UtilityAction[] = [
     description:
       'Rechecks listing HTTP endpoints, reciprocal badges, GitHub stars, npm downloads, and active health states.',
     icon: Activity,
-    color: '#10b981',
+    hue: 'hue-green',
   },
   {
     id: 'ai-content',
@@ -42,7 +53,7 @@ const UTILITY_ACTIONS: UtilityAction[] = [
     description:
       'Generates AI summaries, plain-language overviews, key features, and install commands for scraped MCP listings.',
     icon: Sparkles,
-    color: '#0284c7',
+    hue: 'hue-blue',
   },
   {
     id: 'enrich',
@@ -51,7 +62,7 @@ const UTILITY_ACTIONS: UtilityAction[] = [
     description:
       'Attempts remote MCP tool list introspection for active listings and stores callable JSON tool schemas.',
     icon: Cpu,
-    color: '#8b5cf6',
+    hue: 'hue-violet',
   },
   {
     id: 'indexnow',
@@ -60,7 +71,7 @@ const UTILITY_ACTIONS: UtilityAction[] = [
     description:
       'Notifies Bing, Yandex, and IndexNow search engines of new and updated listing URLs for rapid indexing.',
     icon: Search,
-    color: '#d97706',
+    hue: 'hue-orange',
   },
   {
     id: 'stale-sweep',
@@ -69,7 +80,7 @@ const UTILITY_ACTIONS: UtilityAction[] = [
     description:
       'Checks npm/PyPI for deprecated or missing packages, flags stale listings (noindex, removed after 30 days), and asks Jev for triage verdicts.',
     icon: Trash2,
-    color: '#64748b',
+    hue: 'hue-teal',
   },
 ];
 
@@ -186,176 +197,63 @@ export function AdminToolsControl() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* Header Banner */}
-      <div className="admin-card" style={{ padding: '1.25rem' }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            marginBottom: '0.5rem',
-          }}
-        >
-          <Wrench size={20} style={{ color: 'var(--accent-color)' }} />
-          <h3
-            style={{
-              fontSize: '1.05rem',
-              fontWeight: 700,
-              margin: 0,
-              color: 'var(--text-primary)',
-            }}
-          >
-            Admin Tools & Maintenance Utilities
-          </h3>
-        </div>
-        <p
-          style={{
-            fontSize: '0.85rem',
-            color: 'var(--text-secondary)',
-            margin: 0,
-            lineHeight: 1.5,
-          }}
-        >
-          Run one-click site maintenance scripts, inspect server quality
-          metrics, or execute quick administrative overrides.
-        </p>
-      </div>
-
-      {/* Interactive Server Inspector Console */}
-      <div className="admin-card" style={{ padding: '1.25rem' }}>
-        <h4
-          style={{
-            margin: '0 0 0.75rem',
-            fontSize: '0.95rem',
-            fontWeight: 700,
-            color: 'var(--text-primary)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}
-        >
-          <Zap size={16} style={{ color: '#d97706' }} />
-          Listing Inspector & Instant Action Bar
-        </h4>
-        <p
-          style={{
-            fontSize: '0.825rem',
-            color: 'var(--text-secondary)',
-            marginBottom: '1rem',
-          }}
-        >
-          Look up any listing by ID to inspect Quality Score, Tool Schemas,
-          Health state, and execute 1-click admin actions.
+    <div className="adm-stack">
+      {/* Listing inspector & instant action bar */}
+      <div className="adm-card">
+        <AdminCardHead
+          icon={Zap}
+          hue="hue-orange"
+          title="Listing inspector & instant actions"
+        />
+        <p className="adm-card-sub">
+          Look up any listing by ID or name to inspect its quality score, health
+          and engagement, and run 1-click admin actions.
         </p>
 
-        <div
-          style={{
-            display: 'flex',
-            gap: '0.5rem',
-            marginBottom: '1rem',
-            flexWrap: 'wrap',
+        <form
+          className="adm-inline-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleInspectLookup();
           }}
         >
-          <input
-            className="form-input"
-            style={{ flex: 1, minWidth: '260px' }}
-            placeholder="Type server ID or name (e.g. allmcps-server)..."
-            value={inspectorId}
-            onChange={(e) => setInspectorId(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleInspectLookup()}
-          />
+          <div className="adm-search">
+            <Search size={16} aria-hidden="true" />
+            <input
+              className="form-input"
+              aria-label="Server ID or name"
+              placeholder="Server ID or name (e.g. allmcps-server)…"
+              value={inspectorId}
+              onChange={(e) => setInspectorId(e.target.value)}
+            />
+          </div>
           <button
-            type="button"
-            onClick={handleInspectLookup}
+            type="submit"
             disabled={inspecting || !inspectorId.trim()}
-            className="admin-btn"
-            style={{
-              background: 'var(--accent-color)',
-              color: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-            }}
+            className="btn btn-sm btn-primary"
           >
-            <Search size={14} /> {inspecting ? 'Inspecting…' : 'Inspect Server'}
+            <ScanSearch size={14} aria-hidden="true" />
+            {inspecting ? 'Inspecting…' : 'Inspect'}
           </button>
-        </div>
+        </form>
 
         {inspectedServer && (
-          <div
-            style={{
-              background: 'rgba(128, 128, 128, 0.05)',
-              border: '1px solid var(--border-color)',
-              borderRadius: '10px',
-              padding: '1rem 1.15rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.85rem',
-            }}
-          >
-            {/* Inspector Summary Header */}
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '0.75rem',
-              }}
-            >
+          <div className="adm-inspect">
+            {/* Summary header */}
+            <div className="adm-inspect-head">
               <div>
-                <h5
-                  style={{
-                    margin: 0,
-                    fontSize: '1.1rem',
-                    fontWeight: 700,
-                    color: 'var(--text-primary)',
-                  }}
-                >
-                  {inspectedServer.name}
-                </h5>
-                <span
-                  style={{
-                    fontSize: '0.78rem',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
+                <h4 className="adm-inspect-name">{inspectedServer.name}</h4>
+                <span className="adm-inspect-id">
                   ID: {inspectedServer.id} · Category:{' '}
                   {inspectedServer.category}
                 </span>
               </div>
               {(() => {
                 const qs = computeQualityScore(inspectedServer);
-                const color = tierColor(qs.tier);
                 return (
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: '1.1rem',
-                        fontWeight: 800,
-                        color: 'var(--text-primary)',
-                      }}
-                    >
-                      {qs.score}/100
-                    </span>
-                    <span
-                      style={{
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        color,
-                        background: `${color}22`,
-                        border: `1px solid ${color}55`,
-                        borderRadius: '999px',
-                        padding: '0.15rem 0.55rem',
-                      }}
-                    >
+                  <div className="adm-score">
+                    <b>{qs.score}/100</b>
+                    <span className={`adm-tag ${TIER_HUE[qs.tier]}`}>
                       {qs.tier}
                     </span>
                   </div>
@@ -363,90 +261,34 @@ export function AdminToolsControl() {
               })()}
             </div>
 
-            {/* Vitals Pills */}
-            <div
-              style={{
-                display: 'flex',
-                gap: '0.5rem',
-                flexWrap: 'wrap',
-                fontSize: '0.78rem',
-              }}
-            >
-              <span
-                style={{
-                  padding: '0.2rem 0.5rem',
-                  borderRadius: '6px',
-                  background: 'rgba(128, 128, 128, 0.1)',
-                  border: '1px solid var(--border-color)',
-                }}
-              >
-                Health:{' '}
-                <strong>{inspectedServer.healthStatus || 'unknown'}</strong>
+            {/* Vitals */}
+            <div className="adm-tags">
+              <span className="adm-tag">
+                Health: <b>{inspectedServer.healthStatus || 'unknown'}</b>
               </span>
-              <span
-                style={{
-                  padding: '0.2rem 0.5rem',
-                  borderRadius: '6px',
-                  background: 'rgba(128, 128, 128, 0.1)',
-                  border: '1px solid var(--border-color)',
-                }}
-              >
-                Views:{' '}
-                <strong>{(inspectedServer.views || 0).toLocaleString()}</strong>
+              <span className="adm-tag">
+                Views: <b>{(inspectedServer.views || 0).toLocaleString()}</b>
               </span>
-              <span
-                style={{
-                  padding: '0.2rem 0.5rem',
-                  borderRadius: '6px',
-                  background: 'rgba(128, 128, 128, 0.1)',
-                  border: '1px solid var(--border-color)',
-                }}
-              >
+              <span className="adm-tag">
                 Upvotes:{' '}
-                <strong>
-                  {(inspectedServer.upvotes || 0).toLocaleString()}
-                </strong>
+                <b>{(inspectedServer.upvotes || 0).toLocaleString()}</b>
               </span>
               {inspectedServer.isPremium && (
-                <span
-                  style={{
-                    padding: '0.2rem 0.5rem',
-                    borderRadius: '6px',
-                    background: 'rgba(2, 132, 199, 0.15)',
-                    color: '#0284c7',
-                    fontWeight: 700,
-                  }}
-                >
-                  ★ Premium Dofollow
+                <span className="adm-tag hue-violet">
+                  <Crown size={11} aria-hidden="true" /> Premium dofollow
                 </span>
               )}
             </div>
 
-            {/* Quick Actions Bar */}
-            <div
-              style={{
-                display: 'flex',
-                gap: '0.5rem',
-                flexWrap: 'wrap',
-                paddingTop: '0.5rem',
-                borderTop: '1px solid var(--border-color)',
-              }}
-            >
+            {/* Quick actions */}
+            <div className="adm-actions adm-inspect-actions">
               <button
                 type="button"
                 onClick={() => handleQuickServerAction('feature')}
                 disabled={runningJob !== null}
-                className="admin-btn"
-                style={{
-                  background: '#d97706',
-                  fontSize: '0.78rem',
-                  padding: '0.35rem 0.75rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
-                }}
+                className="btn btn-sm adm-btn-tint hue-orange"
               >
-                <Zap size={13} /> Grant 14d Boost
+                <Zap size={14} aria-hidden="true" /> Grant 14d boost
               </button>
               <button
                 type="button"
@@ -456,194 +298,69 @@ export function AdminToolsControl() {
                   )
                 }
                 disabled={runningJob !== null}
-                className="admin-btn"
-                style={{
-                  background: '#0284c7',
-                  fontSize: '0.78rem',
-                  padding: '0.35rem 0.75rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
-                }}
+                className="btn btn-sm adm-btn-tint hue-violet"
               >
-                <Crown size={13} />{' '}
-                {inspectedServer.isPremium ? 'Unset Premium' : 'Mark Premium'}
+                <Crown size={14} aria-hidden="true" />{' '}
+                {inspectedServer.isPremium ? 'Unset premium' : 'Mark premium'}
               </button>
               <a
                 href={`/mcp/${inspectedServer.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="admin-btn"
-                style={{
-                  background: 'rgba(128, 128, 128, 0.1)',
-                  color: 'var(--text-primary)',
-                  border: '1px solid var(--border-color)',
-                  fontSize: '0.78rem',
-                  padding: '0.35rem 0.75rem',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
-                  textDecoration: 'none',
-                }}
+                className="btn btn-sm btn-secondary"
               >
-                <ExternalLink size={13} /> View Listing
+                <ExternalLink size={14} aria-hidden="true" /> View listing
               </a>
             </div>
           </div>
         )}
       </div>
 
-      {/* One-Click Maintenance Utility Actions Grid */}
-      <ul
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: '1.25rem',
-          listStyle: 'none',
-          margin: 0,
-          padding: 0,
-        }}
-      >
+      {/* One-click maintenance jobs */}
+      <ul className="adm-jobs">
         {UTILITY_ACTIONS.map((job) => {
           const Icon = job.icon;
           const isRunning = runningJob === job.id;
           const result = lastResults[job.id];
 
           return (
-            <li
-              key={job.id}
-              className="admin-card"
-              style={{
-                padding: '1.25rem',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: '0.75rem',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 8,
-                        background: `${job.color}15`,
-                        border: `1px solid ${job.color}40`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Icon className="w-4 h-4" style={{ color: job.color }} />
-                    </div>
-                    <div>
-                      <h4
-                        style={{
-                          fontSize: '0.95rem',
-                          fontWeight: 600,
-                          margin: 0,
-                          color: 'var(--text-primary)',
-                        }}
-                      >
-                        {job.name}
-                      </h4>
-                      <span
-                        style={{
-                          fontSize: '0.75rem',
-                          color: 'var(--text-secondary)',
-                        }}
-                      >
-                        {job.category}
-                      </span>
-                    </div>
-                  </div>
+            <li key={job.id} className="adm-card adm-job">
+              <div className="adm-job-head">
+                <span className={`tint-tile ${job.hue}`} aria-hidden="true">
+                  <Icon size={16} />
+                </span>
+                <div>
+                  <h4 className="adm-job-name">{job.name}</h4>
+                  <span className="adm-job-cat">{job.category}</span>
                 </div>
-
-                <p
-                  style={{
-                    fontSize: '0.85rem',
-                    color: 'var(--text-secondary)',
-                    lineHeight: 1.4,
-                    marginBottom: '1rem',
-                  }}
-                >
-                  {job.description}
-                </p>
-
-                {result && (
-                  <div
-                    style={{
-                      background: 'rgba(128, 128, 128, 0.05)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '6px',
-                      padding: '0.5rem 0.75rem',
-                      fontSize: '0.75rem',
-                      marginBottom: '1rem',
-                      maxHeight: '120px',
-                      overflowY: 'auto',
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        color: result.status < 400 ? '#10b981' : '#ef4444',
-                        marginBottom: '0.25rem',
-                        fontWeight: 600,
-                      }}
-                    >
-                      <span>Status {result.status}</span>
-                      <span>{result.time}</span>
-                    </div>
-                    <pre
-                      style={{
-                        margin: 0,
-                        fontFamily: 'monospace',
-                        fontSize: '0.7rem',
-                        color: 'var(--text-secondary)',
-                        whiteSpace: 'pre-wrap',
-                      }}
-                    >
-                      {result.text}
-                    </pre>
-                  </div>
-                )}
               </div>
+
+              <p className="adm-job-desc">{job.description}</p>
+
+              {result && (
+                <div
+                  className={`adm-job-result ${result.status < 400 ? 'hue-green' : 'hue-red'}`}
+                >
+                  <div className="adm-job-result-head">
+                    <span>Status {result.status}</span>
+                    <span>{result.time}</span>
+                  </div>
+                  <pre className="adm-pre">{result.text}</pre>
+                </div>
+              )}
 
               <button
                 type="button"
                 onClick={() => handleRunJob(job.id)}
                 disabled={isRunning || runningJob !== null}
-                className="admin-btn"
-                style={{
-                  background: isRunning ? 'var(--text-secondary)' : job.color,
-                  color: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.35rem',
-                  width: '100%',
-                  marginTop: '0.5rem',
-                }}
+                className="btn btn-sm btn-secondary adm-job-run"
               >
-                <Play
-                  className={`w-4 h-4 ${isRunning ? 'animate-spin' : ''}`}
-                />
-                {isRunning ? 'Executing script...' : 'Run Action Now'}
+                {isRunning ? (
+                  <Loader2 size={14} aria-hidden="true" className="acct-spin" />
+                ) : (
+                  <Play size={14} aria-hidden="true" />
+                )}
+                {isRunning ? 'Running…' : 'Run now'}
               </button>
             </li>
           );

@@ -4,10 +4,10 @@ import {
   AlertTriangle,
   CheckCircle2,
   ExternalLink,
+  Megaphone,
   PauseCircle,
   PlayCircle,
   Plus,
-  Sparkles,
   Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -19,12 +19,22 @@ import {
   parseAdRevision,
 } from '../../lib/adRevision';
 import { calculateCtr, formatUsdAmount, type SponsorAd } from '../../lib/ads';
+import { AdminEmpty } from './AdminUi';
 
 const AD_FIELD_LABELS: Record<keyof EditableAdFields, string> = {
   title: 'Title',
   description: 'Description',
   ctaText: 'Button text',
   targetUrl: 'Destination URL',
+};
+
+/** Status pill hue: running green, awaiting review amber, rejected red. */
+const AD_STATUS_HUE: Record<SponsorAd['status'], string> = {
+  active: 'hue-green',
+  pending_approval: 'hue-amber',
+  rejected: 'hue-red',
+  paused: '',
+  completed: 'hue-blue',
 };
 
 interface AdminAdsControlProps {
@@ -134,231 +144,70 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
   };
 
   return (
-    <div>
-      {/* Top Metrics Row */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: '1rem',
-          marginBottom: '2rem',
-        }}
-      >
-        <div
-          className="surface"
-          style={{
-            borderRadius: '12px',
-            padding: '1rem',
-            border: '1px solid var(--border-color)',
-          }}
-        >
-          <div
-            style={{
-              fontSize: '0.75rem',
-              color: 'var(--text-secondary)',
-              marginBottom: '0.25rem',
-            }}
-          >
-            Total Ad Revenue
-          </div>
-          <div
-            style={{
-              fontSize: '1.5rem',
-              fontWeight: 800,
-              color: 'var(--accent-color)',
-            }}
-          >
-            {formatUsdAmount(totalRevenueCents)}
-          </div>
+    <div className="adm-stack">
+      {/* Top metrics strip */}
+      <dl className="adm-metrics">
+        <div className="adm-metric is-accent">
+          <dt>Total ad revenue</dt>
+          <dd>{formatUsdAmount(totalRevenueCents)}</dd>
         </div>
+        <div className="adm-metric">
+          <dt>Active campaigns</dt>
+          <dd>{activeAds.length}</dd>
+        </div>
+        <div
+          className={`adm-metric${pendingAds.length > 0 ? ' is-accent hue-amber' : ''}`}
+        >
+          <dt>Pending review</dt>
+          <dd>{pendingAds.length}</dd>
+        </div>
+        <div className="adm-metric">
+          <dt>Impressions served</dt>
+          <dd>{totalImpressionsServed.toLocaleString()}</dd>
+        </div>
+        <div className="adm-metric">
+          <dt>Overall CTR</dt>
+          <dd>
+            {overallCtr}% <small>({totalClicks} clicks)</small>
+          </dd>
+        </div>
+      </dl>
 
-        <div
-          className="surface"
-          style={{
-            borderRadius: '12px',
-            padding: '1rem',
-            border: '1px solid var(--border-color)',
-          }}
-        >
-          <div
-            style={{
-              fontSize: '0.75rem',
-              color: 'var(--text-secondary)',
-              marginBottom: '0.25rem',
-            }}
+      {/* Filter */}
+      <div className="adm-chip-row scroll-x fade-x">
+        {(
+          [
+            ['pending', 'Pending review', pendingAds.length],
+            ['edits', 'Edits', editAds.length],
+            ['active', 'Active', activeAds.length],
+            ['all', 'All campaigns', ads.length],
+          ] as const
+        ).map(([value, label, count]) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setFilter(value)}
+            className="chip"
+            aria-pressed={filter === value}
           >
-            Active Campaigns
-          </div>
-          <div
-            style={{
-              fontSize: '1.5rem',
-              fontWeight: 800,
-              color: 'var(--text-primary)',
-            }}
-          >
-            {activeAds.length}
-          </div>
-        </div>
-
-        <div
-          className="surface"
-          style={{
-            borderRadius: '12px',
-            padding: '1rem',
-            border: '1px solid var(--border-color)',
-          }}
-        >
-          <div
-            style={{
-              fontSize: '0.75rem',
-              color: 'var(--text-secondary)',
-              marginBottom: '0.25rem',
-            }}
-          >
-            Pending Review
-          </div>
-          <div
-            style={{
-              fontSize: '1.5rem',
-              fontWeight: 800,
-              color: pendingAds.length > 0 ? '#facc15' : 'var(--text-primary)',
-            }}
-          >
-            {pendingAds.length}
-          </div>
-        </div>
-
-        <div
-          className="surface"
-          style={{
-            borderRadius: '12px',
-            padding: '1rem',
-            border: '1px solid var(--border-color)',
-          }}
-        >
-          <div
-            style={{
-              fontSize: '0.75rem',
-              color: 'var(--text-secondary)',
-              marginBottom: '0.25rem',
-            }}
-          >
-            Impressions Served
-          </div>
-          <div
-            style={{
-              fontSize: '1.5rem',
-              fontWeight: 800,
-              color: 'var(--text-primary)',
-            }}
-          >
-            {totalImpressionsServed.toLocaleString()}
-          </div>
-        </div>
-
-        <div
-          className="surface"
-          style={{
-            borderRadius: '12px',
-            padding: '1rem',
-            border: '1px solid var(--border-color)',
-          }}
-        >
-          <div
-            style={{
-              fontSize: '0.75rem',
-              color: 'var(--text-secondary)',
-              marginBottom: '0.25rem',
-            }}
-          >
-            Overall CTR
-          </div>
-          <div
-            style={{
-              fontSize: '1.5rem',
-              fontWeight: 800,
-              color: 'var(--accent-color)',
-            }}
-          >
-            {overallCtr}% ({totalClicks} clicks)
-          </div>
-        </div>
+            {label}
+            <span className="chip-count">{count}</span>
+          </button>
+        ))}
       </div>
 
-      {/* Filter Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-        <button
-          type="button"
-          onClick={() => setFilter('pending')}
-          className={`btn btn-sm ${filter === 'pending' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ gap: '6px' }}
-        >
-          Pending Review ({pendingAds.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setFilter('edits')}
-          className={`btn btn-sm ${filter === 'edits' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ gap: '6px' }}
-        >
-          Edits ({editAds.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setFilter('active')}
-          className={`btn btn-sm ${filter === 'active' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ gap: '6px' }}
-        >
-          Active ({activeAds.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setFilter('all')}
-          className={`btn btn-sm ${filter === 'all' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ gap: '6px' }}
-        >
-          All Campaigns ({ads.length})
-        </button>
-      </div>
-
-      {/* Ads List */}
+      {/* Ads list */}
       {filteredAds.length === 0 ? (
-        <div
-          className="surface"
-          style={{
-            borderRadius: '14px',
-            padding: '3rem 1.5rem',
-            textAlign: 'center',
-            border: '1px solid var(--border-color)',
-            color: 'var(--text-secondary)',
-          }}
+        <AdminEmpty
+          icon={Megaphone}
+          title="No campaigns in this view"
+          hue="hue-cyan"
+          boxed
         >
-          <Sparkles
-            size={28}
-            style={{
-              margin: '0 auto 0.75rem',
-              color: 'var(--accent-color)',
-              opacity: 0.7,
-            }}
-          />
-          <div
-            style={{
-              fontSize: '1rem',
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-              marginBottom: '0.25rem',
-            }}
-          >
-            No campaigns in this view
-          </div>
-          <div style={{ fontSize: '0.85rem' }}>
-            New ad submissions from /advertise will appear here for moderation.
-          </div>
-        </div>
+          New ad submissions from /advertise will appear here for moderation.
+        </AdminEmpty>
       ) : (
-        <div
-          style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
-        >
+        <div className="adm-stack">
           {filteredAds.map((ad) => {
             const isLoading = actionLoading === ad.id;
             const progress = Math.min(
@@ -374,161 +223,74 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
             const ctr = calculateCtr(ad.clicksCount, ad.impressionsServed);
 
             return (
-              <div
+              <article
                 key={ad.id}
-                className="surface"
-                style={{
-                  borderRadius: '16px',
-                  padding: '1.5rem',
-                  border: '1px solid var(--border-color)',
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                  gap: '1.5rem',
-                  alignItems: 'start',
-                }}
+                className={`adm-ad${isLoading ? ' is-busy' : ''}`}
               >
-                {/* Left: Info & Moderation Details */}
-                <div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      marginBottom: '0.5rem',
-                    }}
-                  >
+                {/* Left: info & moderation */}
+                <div className="adm-ad-main">
+                  <div className="adm-ad-tags">
                     <span
-                      style={{
-                        fontSize: '0.7rem',
-                        fontWeight: 700,
-                        textTransform: 'uppercase',
-                        padding: '2px 8px',
-                        borderRadius: '10px',
-                        background:
-                          ad.status === 'active'
-                            ? 'rgba(34,197,94,0.15)'
-                            : ad.status === 'pending_approval'
-                              ? 'rgba(234,179,8,0.15)'
-                              : 'rgba(148,163,184,0.15)',
-                        color:
-                          ad.status === 'active'
-                            ? '#4ade80'
-                            : ad.status === 'pending_approval'
-                              ? '#facc15'
-                              : '#94a3b8',
-                      }}
+                      className={`adm-tag is-dot ${AD_STATUS_HUE[ad.status]}`}
                     >
                       {ad.status.replace('_', ' ')}
                     </span>
-                    <span
-                      style={{
-                        fontSize: '0.75rem',
-                        color: 'var(--text-secondary)',
-                      }}
-                    >
-                      Placement:{' '}
-                      <strong style={{ color: 'var(--text-primary)' }}>
-                        {ad.placement}
-                      </strong>
+                    <span>
+                      Placement <strong>{ad.placement}</strong>
                     </span>
-                    <span
-                      style={{
-                        fontSize: '0.75rem',
-                        color: 'var(--text-secondary)',
-                      }}
-                    >
-                      Bid:{' '}
-                      <strong style={{ color: 'var(--accent-color)' }}>
+                    <span>
+                      Bid{' '}
+                      <strong className="adm-accent">
                         ${(ad.bidCpm / 100).toFixed(2)} CPM
                       </strong>
                     </span>
                     {!ad.stripePaymentIntentId && (
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          fontSize: '0.7rem',
-                          fontWeight: 700,
-                          textTransform: 'uppercase',
-                          padding: '2px 8px',
-                          borderRadius: '10px',
-                          background: 'rgba(239,68,68,0.15)',
-                          color: '#f87171',
-                        }}
-                      >
-                        <AlertTriangle size={11} /> Payment Unverified
+                      <span className="adm-tag hue-red">
+                        <AlertTriangle size={11} aria-hidden="true" /> Payment
+                        unverified
                       </span>
                     )}
                   </div>
 
-                  <h3
-                    style={{
-                      margin: '0 0 0.35rem',
-                      fontSize: '1.15rem',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {ad.title}
-                  </h3>
-                  <p
-                    style={{
-                      margin: '0 0 0.75rem',
-                      fontSize: '0.85rem',
-                      color: 'var(--text-secondary)',
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    {ad.description}
-                  </p>
+                  <h3 className="adm-ad-title">{ad.title}</h3>
+                  <p className="adm-ad-desc">{ad.description}</p>
 
-                  <div
-                    style={{
-                      fontSize: '0.8rem',
-                      color: 'var(--text-secondary)',
-                      marginBottom: '0.75rem',
-                    }}
-                  >
+                  <dl className="adm-kv">
                     <div>
-                      Target:{' '}
-                      <a
-                        href={ad.targetUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ color: 'var(--accent-color)' }}
-                      >
-                        {ad.targetUrl}{' '}
-                        <ExternalLink size={11} style={{ display: 'inline' }} />
-                      </a>
+                      <dt>Target</dt>
+                      <dd>
+                        <a
+                          href={ad.targetUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="adm-link adm-link--wrap"
+                        >
+                          {ad.targetUrl}{' '}
+                          <ExternalLink size={11} aria-hidden="true" />
+                        </a>
+                      </dd>
                     </div>
                     <div>
-                      Advertiser:{' '}
-                      <span style={{ color: 'var(--text-primary)' }}>
-                        {ad.advertiserEmail}
-                      </span>
+                      <dt>Advertiser</dt>
+                      <dd>{ad.advertiserEmail}</dd>
                     </div>
                     <div>
-                      Paid:{' '}
-                      <strong style={{ color: 'var(--text-primary)' }}>
-                        {formatUsdAmount(ad.amountPaidCents || 0)}
-                      </strong>{' '}
-                      for {ad.totalImpressionsPurchased.toLocaleString()}{' '}
-                      impressions
+                      <dt>Paid</dt>
+                      <dd>
+                        <strong>
+                          {formatUsdAmount(ad.amountPaidCents || 0)}
+                        </strong>{' '}
+                        for {ad.totalImpressionsPurchased.toLocaleString()}{' '}
+                        impressions
+                      </dd>
                     </div>
-                  </div>
+                  </dl>
 
                   {/* Delivery progress */}
-                  <div style={{ marginBottom: '1.25rem' }}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        fontSize: '0.75rem',
-                        marginBottom: '4px',
-                      }}
-                    >
+                  <div className="adm-progress-block">
+                    <div className="adm-progress-head">
                       <span>
-                        Progress: {ad.impressionsServed.toLocaleString()} /{' '}
+                        {ad.impressionsServed.toLocaleString()} /{' '}
                         {ad.totalImpressionsPurchased.toLocaleString()} views
                       </span>
                       <span>
@@ -536,20 +298,14 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
                       </span>
                     </div>
                     <div
-                      style={{
-                        background: 'rgba(255,255,255,0.08)',
-                        height: '6px',
-                        borderRadius: '6px',
-                        overflow: 'hidden',
-                      }}
+                      className="adm-progress"
+                      role="progressbar"
+                      aria-label="Impressions delivered"
+                      aria-valuenow={progress}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
                     >
-                      <div
-                        style={{
-                          background: 'var(--brand-gradient)',
-                          width: `${progress}%`,
-                          height: '100%',
-                        }}
-                      />
+                      <span style={{ width: `${progress}%` }} />
                     </div>
                   </div>
 
@@ -570,25 +326,23 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
                     }}
                   />
 
-                  {/* Moderation Action Buttons */}
-                  <div
-                    style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}
-                  >
+                  {/* Moderation actions */}
+                  <div className="adm-actions">
                     {ad.status === 'pending_approval' && (
                       <>
                         <button
                           type="button"
                           onClick={() => handleAction(ad.id, 'approve')}
                           disabled={isLoading || !ad.stripePaymentIntentId}
-                          className="btn btn-sm btn-primary"
-                          style={{ gap: '4px' }}
+                          className="btn btn-sm adm-btn-tint hue-green"
                           title={
                             !ad.stripePaymentIntentId
                               ? 'Payment not yet confirmed by Stripe webhook'
                               : undefined
                           }
                         >
-                          <CheckCircle2 size={13} /> Approve &amp; Run
+                          <CheckCircle2 size={14} aria-hidden="true" /> Approve
+                          &amp; run
                         </button>
                         <button
                           type="button"
@@ -598,14 +352,9 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
                               handleAction(ad.id, 'reject', { reason });
                           }}
                           disabled={isLoading}
-                          className="btn btn-sm btn-secondary"
-                          style={{
-                            color: '#f87171',
-                            borderColor: 'rgba(239,68,68,0.3)',
-                            gap: '4px',
-                          }}
+                          className="btn btn-sm adm-btn-tint hue-red"
                         >
-                          <AlertTriangle size={13} /> Reject
+                          <AlertTriangle size={14} aria-hidden="true" /> Reject
                         </button>
                       </>
                     )}
@@ -626,9 +375,8 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
                         }}
                         disabled={isLoading}
                         className="btn btn-sm btn-secondary"
-                        style={{ gap: '4px' }}
                       >
-                        <PauseCircle size={13} /> Pause
+                        <PauseCircle size={14} aria-hidden="true" /> Pause
                       </button>
                     )}
 
@@ -637,10 +385,9 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
                         type="button"
                         onClick={() => handleAction(ad.id, 'resume')}
                         disabled={isLoading}
-                        className="btn btn-sm btn-primary"
-                        style={{ gap: '4px' }}
+                        className="btn btn-sm adm-btn-tint hue-green"
                       >
-                        <PlayCircle size={13} /> Resume
+                        <PlayCircle size={14} aria-hidden="true" /> Resume
                       </button>
                     )}
 
@@ -661,9 +408,8 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
                           }}
                           disabled={isLoading}
                           className="btn btn-sm btn-secondary"
-                          style={{ gap: '4px' }}
                         >
-                          <Plus size={13} /> Add Impressions
+                          <Plus size={14} aria-hidden="true" /> Add impressions
                         </button>
                       )}
 
@@ -678,32 +424,23 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
                         (!!ad.stripePaymentIntentId &&
                           (ad.status === 'active' || ad.status === 'paused'))
                       }
-                      className="btn btn-sm btn-secondary"
-                      style={{ color: '#94a3b8' }}
+                      className="btn btn-sm btn-ghost"
+                      aria-label="Delete campaign"
                       title={
                         ad.stripePaymentIntentId &&
                         (ad.status === 'active' || ad.status === 'paused')
                           ? 'Paid and still running — reject it first to issue a refund, then delete'
-                          : undefined
+                          : 'Delete campaign'
                       }
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={14} aria-hidden="true" />
                     </button>
                   </div>
                 </div>
 
-                {/* Right: Live Preview Box */}
-                <div>
-                  <div
-                    style={{
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      color: 'var(--text-secondary)',
-                      marginBottom: '0.5rem',
-                    }}
-                  >
-                    Live Preview
-                  </div>
+                {/* Right: live preview */}
+                <div className="adm-ad-preview">
+                  <div className="adm-preview-label">Live preview</div>
                   <SponsorAdUnit
                     placement="directory_inline"
                     previewAd={{
@@ -715,7 +452,7 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
                     }}
                   />
                 </div>
-              </div>
+              </article>
             );
           })}
         </div>
@@ -742,84 +479,54 @@ function PendingAdEdit({
   const keys = Object.keys(proposed) as (keyof EditableAdFields)[];
 
   return (
-    <div
-      style={{
-        border: '1px solid var(--accent-color)',
-        borderRadius: '10px',
-        padding: '0.85rem',
-        marginBottom: '0.9rem',
-        background: 'var(--bg-muted)',
-      }}
-    >
-      <div
-        style={{
-          fontSize: '0.8rem',
-          fontWeight: 700,
-          color: 'var(--text-primary)',
-          marginBottom: '0.5rem',
-        }}
-      >
-        Pending edit · submitted{' '}
-        {new Date(revision.submittedAt).toLocaleString()}
+    <div className="adm-callout">
+      <div>
+        <div className="adm-callout-title">
+          Pending edit · submitted{' '}
+          {new Date(revision.submittedAt).toLocaleString()}
+        </div>
+        <div className="adm-callout-sub">
+          Delivery is unaffected: placement, bid and impressions stay as they
+          are.
+        </div>
       </div>
-      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-        Delivery is unaffected: placement, bid and impressions stay as they are.
-      </div>
-      <dl style={{ margin: '0.6rem 0', fontSize: '0.8rem' }}>
+      <dl className="adm-diff">
         {keys.map((key) => (
-          <div key={key} style={{ marginBottom: '0.45rem' }}>
-            <dt style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
-              {AD_FIELD_LABELS[key]}
-            </dt>
-            <dd style={{ margin: 0, wordBreak: 'break-word' }}>
-              <span
-                style={{
-                  textDecoration: 'line-through',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                {ad[key]}
-              </span>
-              <br />
-              <span style={{ color: 'var(--admin-ok)' }}>{proposed[key]}</span>
+          <div key={key}>
+            <dt className="adm-diff-key">{AD_FIELD_LABELS[key]}</dt>
+            <dd>
+              <div className="adm-diff-old">{ad[key]}</div>
+              <div className="adm-diff-new">{proposed[key]}</div>
             </dd>
           </div>
         ))}
       </dl>
-      <div style={{ marginBottom: '0.6rem' }}>
-        <SponsorAdUnit
-          placement="directory_inline"
-          previewAd={{
-            title: proposed.title ?? ad.title,
-            description: proposed.description ?? ad.description,
-            ctaText: proposed.ctaText ?? ad.ctaText,
-            targetUrl: proposed.targetUrl ?? ad.targetUrl,
-            logoUrl: ad.logoUrl,
-          }}
-        />
-      </div>
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+      <SponsorAdUnit
+        placement="directory_inline"
+        previewAd={{
+          title: proposed.title ?? ad.title,
+          description: proposed.description ?? ad.description,
+          ctaText: proposed.ctaText ?? ad.ctaText,
+          targetUrl: proposed.targetUrl ?? ad.targetUrl,
+          logoUrl: ad.logoUrl,
+        }}
+      />
+      <div className="adm-actions">
         <button
           type="button"
           onClick={onApprove}
           disabled={disabled}
-          className="btn btn-sm btn-primary"
-          style={{ gap: '4px' }}
+          className="btn btn-sm adm-btn-tint hue-green"
         >
-          <CheckCircle2 size={13} /> Approve edit
+          <CheckCircle2 size={14} aria-hidden="true" /> Approve edit
         </button>
         <button
           type="button"
           onClick={onReject}
           disabled={disabled}
-          className="btn btn-sm btn-secondary"
-          style={{
-            color: '#f87171',
-            borderColor: 'rgba(239,68,68,0.3)',
-            gap: '4px',
-          }}
+          className="btn btn-sm adm-btn-tint hue-red"
         >
-          <AlertTriangle size={13} /> Reject edit
+          <AlertTriangle size={14} aria-hidden="true" /> Reject edit
         </button>
       </div>
     </div>

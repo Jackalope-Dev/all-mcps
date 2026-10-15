@@ -1,7 +1,10 @@
 import { asc, count, desc, eq, isNotNull, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
+import { Globe, LogOut, ShieldAlert } from 'lucide-react';
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { PageShell } from '../../components/PageShell';
 import {
   blogDrafts,
   reports,
@@ -256,31 +259,27 @@ export default async function AdminPage() {
 
   if ((session.user as any).role !== 'admin') {
     return (
-      <main
-        className="container animate-fade-in"
-        style={{ padding: '4rem 1rem', textAlign: 'center' }}
-      >
-        <h1 style={{ marginBottom: '1rem' }}>Unauthorized</h1>
-        <p style={{ color: 'var(--text-secondary)' }}>
-          This account doesn&apos;t have admin access.
-        </p>
-        <p
-          style={{
-            color: 'var(--text-secondary)',
-            fontSize: '0.85rem',
-            marginTop: '1.5rem',
-          }}
-        >
-          Just been granted access? Roles are cached at sign-in, so a stale
-          session won&apos;t pick it up.{' '}
-          <a
-            href={`/api/auth/signout?callbackUrl=${encodeURIComponent('/login?callbackUrl=%2Fadmin')}`}
-          >
-            Log out and sign in again
-          </a>
-          .
-        </p>
-      </main>
+      <PageShell variant="narrow" className="adm">
+        <div className="adm-denied">
+          <span className="tint-tile hue-amber" aria-hidden="true">
+            <ShieldAlert size={22} />
+          </span>
+          <h1 className="adm-denied-title">Unauthorized</h1>
+          <p className="adm-denied-sub">
+            This account doesn&apos;t have admin access.
+          </p>
+          <p className="adm-denied-fine">
+            Just been granted access? Roles are cached at sign-in, so a stale
+            session won&apos;t pick it up.{' '}
+            <a
+              href={`/api/auth/signout?callbackUrl=${encodeURIComponent('/login?callbackUrl=%2Fadmin')}`}
+            >
+              Log out and sign in again
+            </a>
+            .
+          </p>
+        </div>
+      </PageShell>
     );
   }
 
@@ -299,68 +298,41 @@ export default async function AdminPage() {
   } = await getAdminData();
 
   return (
-    <main
-      className="container animate-fade-in"
-      style={{ padding: '2.5rem 1rem 4rem' }}
-    >
-      <div style={{ maxWidth: '1100px', margin: '0 auto 2rem' }}>
-        <div
-          style={{
-            marginBottom: '2rem',
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-            gap: '1rem',
-          }}
-        >
-          <div>
-            <h1
-              style={{
-                margin: '0 0 0.25rem',
-                fontSize: '1.75rem',
-                fontWeight: 800,
-              }}
-            >
-              Admin Console
-            </h1>
-            <p
-              style={{
-                color: 'var(--text-secondary)',
-                fontSize: '0.9rem',
-                margin: 0,
-              }}
-            >
-              Control center for directory moderation, catalog management,
-              social automation, and admin tools.
-            </p>
-          </div>
+    <PageShell variant="default" className="adm">
+      <header className="adm-head">
+        <div>
+          <h1 className="text-page-title">Admin console</h1>
+          <p className="text-lead">
+            Moderation, catalog management, sponsors, automation and maintenance
+            for AllMCPs.
+          </p>
+        </div>
+        <div className="adm-head-actions">
+          <Link href="/" className="btn btn-ghost btn-sm">
+            <Globe size={14} aria-hidden="true" /> View site
+          </Link>
           <a
             href={`/api/auth/signout?callbackUrl=${encodeURIComponent('/')}`}
-            style={{
-              fontSize: '0.8rem',
-              color: 'var(--text-secondary)',
-              fontWeight: 600,
-              whiteSpace: 'nowrap',
-            }}
+            className="btn btn-secondary btn-sm"
           >
-            Log out
+            <LogOut size={14} aria-hidden="true" /> Log out
           </a>
         </div>
+      </header>
 
-        <AdminClient
-          initialPending={pending as any}
-          initialPendingEdits={pendingEdits as any}
-          initialPendingClaims={pendingClaims as any}
-          initialPendingLogos={pendingLogos as any}
-          initialPendingScreenshots={pendingScreenshots as any}
-          initialOpenReports={openReports as any}
-          initialPendingReviewComments={pendingReviewComments as any}
-          recentlyAdded={recentlyAdded as any}
-          initialAds={ads as any}
-          initialBlogReadyCount={blogReadyCount}
-          stats={stats}
-        />
-      </div>
-    </main>
+      <AdminClient
+        initialPending={pending as any}
+        initialPendingEdits={pendingEdits as any}
+        initialPendingClaims={pendingClaims as any}
+        initialPendingLogos={pendingLogos as any}
+        initialPendingScreenshots={pendingScreenshots as any}
+        initialOpenReports={openReports as any}
+        initialPendingReviewComments={pendingReviewComments as any}
+        recentlyAdded={recentlyAdded as any}
+        initialAds={ads as any}
+        initialBlogReadyCount={blogReadyCount}
+        stats={stats}
+      />
+    </PageShell>
   );
 }

@@ -11,7 +11,44 @@ import {
   Sparkles,
 } from 'lucide-react';
 import type { AdminStats } from '@/lib/adminStats';
+import { AdminCardHead } from './AdminUi';
 import { CatalogCoverageCard } from './CatalogCoverageCard';
+
+/** Ranked share bars (label, count, percent of total). */
+function ShareBars({
+  entries,
+  hue,
+  empty,
+}: {
+  entries: [string, number][];
+  hue: string;
+  empty: string;
+}) {
+  if (entries.length === 0) {
+    return <p className="adm-card-empty">{empty}</p>;
+  }
+  const total = entries.reduce((acc, curr) => acc + curr[1], 0);
+  return (
+    <ul className={`adm-bars ${hue}`}>
+      {entries.map(([key, count]) => {
+        const percent = Math.round((count / (total || 1)) * 100);
+        return (
+          <li key={key}>
+            <div className="adm-bar-row">
+              <span className="adm-bar-label">{key.replace('_', ' ')}</span>
+              <span className="adm-num">
+                {count.toLocaleString()} ({percent}%)
+              </span>
+            </div>
+            <div className="adm-bar">
+              <span style={{ width: `${percent}%` }} />
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 export function AdminAnalyticsView({ stats }: { stats: AdminStats }) {
   const callerEntries = Object.entries(stats.callerCounts || {}).sort(
@@ -22,507 +59,146 @@ export function AdminAnalyticsView({ stats }: { stats: AdminStats }) {
   );
 
   return (
-    <div
-      className="admin-analytics-shell"
-      style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
-    >
+    <div className="adm-stack">
       <CatalogCoverageCard />
 
-      <div
-        className="admin-grid-2"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: '1.5rem',
-        }}
-      >
-        {/* LLM & Agent Callers Card */}
-        <div className="admin-card" style={{ padding: '1.25rem' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              marginBottom: '1rem',
-            }}
-          >
-            <Bot
-              className="w-5 h-5 text-cyan-400"
-              style={{ color: 'var(--accent-color)' }}
-            />
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>
-              API & Agent Access
-            </h3>
-          </div>
-          <p
-            style={{
-              fontSize: '0.85rem',
-              color: 'var(--text-secondary)',
-              marginBottom: '1rem',
-            }}
-          >
+      <div className="adm-grid-2">
+        {/* LLM & agent callers */}
+        <div className="adm-card">
+          <AdminCardHead icon={Bot} hue="hue-cyan" title="API & agent access" />
+          <p className="adm-card-sub">
             Calls to programmatic endpoints (/api/v1/*, feeds) by AI agent
             client types.
           </p>
-
-          {callerEntries.length === 0 ? (
-            <div
-              style={{
-                padding: '1.5rem',
-                textAlign: 'center',
-                color: 'var(--text-secondary)',
-                fontSize: '0.85rem',
-              }}
-            >
-              No API caller logs recorded yet.
-            </div>
-          ) : (
-            <ul
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.75rem',
-                listStyle: 'none',
-                margin: 0,
-                padding: 0,
-              }}
-            >
-              {callerEntries.map(([caller, count]) => {
-                const total = callerEntries.reduce(
-                  (acc, curr) => acc + curr[1],
-                  0,
-                );
-                const percent = Math.round((count / (total || 1)) * 100);
-                return (
-                  <li key={caller}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        fontSize: '0.85rem',
-                        marginBottom: '0.25rem',
-                      }}
-                    >
-                      <span
-                        style={{ fontWeight: 500, textTransform: 'capitalize' }}
-                      >
-                        {caller.replace('_', ' ')}
-                      </span>
-                      <span style={{ color: 'var(--text-secondary)' }}>
-                        {count.toLocaleString()} ({percent}%)
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '6px',
-                        background: 'rgba(128, 128, 128, 0.15)',
-                        borderRadius: '3px',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: `${percent}%`,
-                          height: '100%',
-                          background:
-                            'linear-gradient(90deg, var(--accent-color), #007BFF)',
-                          borderRadius: '3px',
-                        }}
-                      />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          <ShareBars
+            entries={callerEntries}
+            hue="hue-cyan"
+            empty="No API caller logs recorded yet."
+          />
         </div>
 
-        {/* Surface Impressions Breakdown Card */}
-        <div className="admin-card" style={{ padding: '1.25rem' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              marginBottom: '1rem',
-            }}
-          >
-            <BarChart2 className="w-5 h-5" style={{ color: '#10b981' }} />
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>
-              Surface Impressions
-            </h3>
-          </div>
-          <p
-            style={{
-              fontSize: '0.85rem',
-              color: 'var(--text-secondary)',
-              marginBottom: '1rem',
-            }}
-          >
+        {/* Surface impressions */}
+        <div className="adm-card">
+          <AdminCardHead
+            icon={BarChart2}
+            hue="hue-green"
+            title="Surface impressions"
+          />
+          <p className="adm-card-sub">
             Impressions captured by site surface location (homepage, search,
             category hubs).
           </p>
-
-          {surfaceEntries.length === 0 ? (
-            <div
-              style={{
-                padding: '1.5rem',
-                textAlign: 'center',
-                color: 'var(--text-secondary)',
-                fontSize: '0.85rem',
-              }}
-            >
-              No surface impression logs recorded yet.
-            </div>
-          ) : (
-            <ul
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.75rem',
-                listStyle: 'none',
-                margin: 0,
-                padding: 0,
-              }}
-            >
-              {surfaceEntries.map(([surface, count]) => {
-                const total = surfaceEntries.reduce(
-                  (acc, curr) => acc + curr[1],
-                  0,
-                );
-                const percent = Math.round((count / (total || 1)) * 100);
-                return (
-                  <li key={surface}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        fontSize: '0.85rem',
-                        marginBottom: '0.25rem',
-                      }}
-                    >
-                      <span
-                        style={{ fontWeight: 500, textTransform: 'capitalize' }}
-                      >
-                        {surface.replace('_', ' ')}
-                      </span>
-                      <span style={{ color: 'var(--text-secondary)' }}>
-                        {count.toLocaleString()} ({percent}%)
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '6px',
-                        background: 'rgba(128, 128, 128, 0.15)',
-                        borderRadius: '3px',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: `${percent}%`,
-                          height: '100%',
-                          background:
-                            'linear-gradient(90deg, #10b981, #059669)',
-                          borderRadius: '3px',
-                        }}
-                      />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          <ShareBars
+            entries={surfaceEntries}
+            hue="hue-green"
+            empty="No surface impression logs recorded yet."
+          />
         </div>
       </div>
 
-      {/* Logo Sources Breakdown */}
-      <div className="admin-card" style={{ padding: '1.25rem' }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            marginBottom: '1rem',
-          }}
-        >
-          <Layers
-            className="w-5 h-5 text-blue-400"
-            style={{ color: '#007BFF' }}
-          />
-          <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>
-            Logo Source Distribution
-          </h3>
-        </div>
-        <p
-          style={{
-            fontSize: '0.85rem',
-            color: 'var(--text-secondary)',
-            marginBottom: '1rem',
-          }}
-        >
+      {/* Logo sources */}
+      <div className="adm-card">
+        <AdminCardHead
+          icon={Layers}
+          hue="hue-blue"
+          title="Logo source distribution"
+        />
+        <p className="adm-card-sub">
           Where listing logos originate across active and submitted items.
         </p>
-
-        <ul
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-            gap: '0.75rem',
-            listStyle: 'none',
-            margin: 0,
-            padding: 0,
-          }}
-        >
+        <ul className="adm-tiles">
           {Object.entries(stats.logoSourceCounts).map(([src, count]) => (
-            <li
-              key={src}
-              style={{
-                background: 'rgba(128, 128, 128, 0.05)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '8px',
-                padding: '0.75rem',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: '0.75rem',
-                  color: 'var(--text-secondary)',
-                  textTransform: 'uppercase',
-                  marginBottom: '0.25rem',
-                }}
-              >
-                {src.replace('_', ' ')}
-              </div>
-              <div
-                style={{
-                  fontSize: '1.1rem',
-                  fontWeight: 700,
-                  color: 'var(--text-primary)',
-                }}
-              >
-                {count.toLocaleString()}
-              </div>
+            <li key={src} className="adm-tile">
+              <div className="adm-tile-label">{src.replace('_', ' ')}</div>
+              <div className="adm-tile-value">{count.toLocaleString()}</div>
             </li>
           ))}
         </ul>
       </div>
 
-      {/* Recent Tool Introspection Errors Card */}
+      {/* Recent tool introspection errors */}
       {stats.recentToolsErrors && stats.recentToolsErrors.length > 0 && (
-        <div
-          className="admin-card"
-          style={{ padding: '1.25rem', borderLeft: '4px solid #f59e0b' }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              marginBottom: '0.75rem',
-            }}
-          >
-            <AlertCircle className="w-5 h-5" style={{ color: '#f59e0b' }} />
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>
-              Recent MCP Introspection Failures
-            </h3>
-          </div>
-          <p
-            style={{
-              fontSize: '0.85rem',
-              color: 'var(--text-secondary)',
-              marginBottom: '1rem',
-            }}
-          >
+        <div className="adm-card adm-card--warn">
+          <AdminCardHead
+            icon={AlertCircle}
+            hue="hue-amber"
+            title="Recent MCP introspection failures"
+          />
+          <p className="adm-card-sub">
             Listings that failed remote tool discovery on their last check.
           </p>
-
-          <ul
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.75rem',
-              listStyle: 'none',
-              margin: 0,
-              padding: 0,
-            }}
-          >
+          <ul className="adm-rows">
             {stats.recentToolsErrors.map((item) => (
-              <li
-                key={item.id}
-                style={{
-                  background: 'rgba(128, 128, 128, 0.04)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '8px',
-                  padding: '0.75rem 1rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.35rem',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
+              <li key={item.id} className="is-stacked">
+                <div className="adm-row-top">
                   <a
                     href={`/mcp/${item.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{
-                      fontWeight: 700,
-                      color: 'var(--text-primary)',
-                      textDecoration: 'none',
-                      fontSize: '0.9rem',
-                    }}
+                    className="adm-row-link"
                   >
                     {item.name}
                   </a>
-                  <span
-                    style={{
-                      fontSize: '0.75rem',
-                      color: 'var(--text-secondary)',
-                    }}
-                  >
+                  <span className="adm-num">
                     {item.toolsCheckedAt
                       ? new Date(item.toolsCheckedAt).toLocaleDateString()
                       : 'Unchecked'}
                   </span>
                 </div>
-                <code
-                  style={{
-                    fontSize: '0.78rem',
-                    color: '#ef4444',
-                    background: 'rgba(239,68,68,0.1)',
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '4px',
-                    whiteSpace: 'pre-wrap',
-                  }}
-                >
-                  {item.toolsError}
-                </code>
+                <code className="adm-error-code">{item.toolsError}</code>
               </li>
             ))}
           </ul>
         </div>
       )}
 
-      {/* Popular Listings & Engagement Card */}
-      <div className="admin-card" style={{ padding: '1.25rem' }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '1rem',
-            flexWrap: 'wrap',
-            gap: '0.5rem',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Sparkles className="w-5 h-5" style={{ color: '#d97706' }} />
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>
-              Top Viewed MCP Servers
-            </h3>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              gap: '1rem',
-              fontSize: '0.85rem',
-              color: 'var(--text-secondary)',
-            }}
-          >
-            <span
-              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-            >
-              <Eye className="w-4 h-4" />{' '}
-              {stats.engagement.totalViews.toLocaleString()} Views
-            </span>
-            <span
-              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-            >
-              <Heart className="w-4 h-4 text-red-400" />{' '}
-              {stats.engagement.totalUpvotes.toLocaleString()} Upvotes
-            </span>
-            <span
-              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-            >
-              <Download className="w-4 h-4 text-emerald-400" />{' '}
-              {stats.engagement.totalCopies.toLocaleString()} Installs
-            </span>
-          </div>
-        </div>
-
-        <ol
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.5rem',
-            listStyle: 'none',
-            margin: 0,
-            padding: 0,
-          }}
-        >
-          {stats.topByViews.map((item, idx) => (
-            <li
-              key={item.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0.75rem 1rem',
-                background: 'rgba(128, 128, 128, 0.04)',
-                borderRadius: '8px',
-                border: '1px solid var(--border-color)',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: '0.85rem',
-                    fontWeight: 700,
-                    color: 'var(--text-secondary)',
-                    width: '20px',
-                  }}
-                >
-                  #{idx + 1}
-                </span>
-                <a
-                  href={`/mcp/${item.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    fontWeight: 600,
-                    color: 'var(--text-primary)',
-                    textDecoration: 'none',
-                  }}
-                >
-                  {item.name}
-                </a>
-              </div>
-              <span
-                style={{
-                  fontSize: '0.85rem',
-                  color: 'var(--accent-color)',
-                  fontWeight: 600,
-                }}
-              >
-                {item.views.toLocaleString()} views
+      {/* Popular listings & engagement */}
+      <div className="adm-card">
+        <AdminCardHead
+          icon={Sparkles}
+          hue="hue-orange"
+          title="Top viewed MCP servers"
+          aside={
+            <div className="adm-inline-stats">
+              <span>
+                <Eye size={14} aria-hidden="true" />
+                {stats.engagement.totalViews.toLocaleString()} views
               </span>
-            </li>
-          ))}
-        </ol>
+              <span>
+                <Heart size={14} aria-hidden="true" />
+                {stats.engagement.totalUpvotes.toLocaleString()} upvotes
+              </span>
+              <span>
+                <Download size={14} aria-hidden="true" />
+                {stats.engagement.totalCopies.toLocaleString()} installs
+              </span>
+            </div>
+          }
+        />
+        {stats.topByViews.length === 0 ? (
+          <p className="adm-card-empty">No listing views recorded yet.</p>
+        ) : (
+          <ol className="adm-rows">
+            {stats.topByViews.map((item, idx) => (
+              <li key={item.id}>
+                <span className="adm-row-start">
+                  <span className="adm-rank">#{idx + 1}</span>
+                  <a
+                    href={`/mcp/${item.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="adm-row-link"
+                  >
+                    {item.name}
+                  </a>
+                </span>
+                <span className="adm-num adm-num--accent">
+                  {item.views.toLocaleString()} views
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
     </div>
   );

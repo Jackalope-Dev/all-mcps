@@ -2,12 +2,18 @@
 
 import {
   BarChart3,
+  Check,
+  CheckCircle2,
+  ChevronRight,
   Clock,
   FileText,
   List,
   Mail,
+  MailX,
   Megaphone,
+  Send,
   Sparkles,
+  Trash2,
   Wrench,
   X,
 } from 'lucide-react';
@@ -15,6 +21,7 @@ import { useState } from 'react';
 import type { AdminStats } from '@/lib/adminStats';
 import { toast } from '../../components/ui/Toast';
 import { notifyAdminStatsChanged } from '../../lib/adminStatsRefresh';
+import { hueClass } from '../../lib/palette';
 import { parsePendingRevision } from '../../lib/pendingRevision';
 import { AdminAdsControl } from './AdminAdsControl';
 import { AdminAnalyticsView } from './AdminAnalyticsView';
@@ -22,6 +29,7 @@ import { AdminAutomationPanel } from './AdminAutomationPanel';
 import { AdminBlogDrafts } from './AdminBlogDrafts';
 import { AdminToolsControl } from './AdminCronsControl';
 import { AdminTriageQueue } from './AdminTriageQueue';
+import { AdminEmpty, AdminModal, AdminSectionHead } from './AdminUi';
 import ManageListings, { type ListingFilters } from './ManageListings';
 import { type KpiCardSelection, StatsBar } from './StatsBar';
 
@@ -338,35 +346,60 @@ export default function AdminClient({
   const navItems = [
     {
       id: 'moderation',
-      label: 'Moderation Queue',
+      label: 'Moderation',
       icon: Clock,
       badge: totalPending > 0 ? totalPending : undefined,
-      badgeColor: '#d97706',
+      badgeHue: 'hue-amber',
     },
     { id: 'triage', label: 'Triage (Jev)', icon: Sparkles },
-    { id: 'listings', label: 'Listings Directory', icon: List },
+    { id: 'listings', label: 'Listings', icon: List },
     {
       id: 'ads',
-      label: 'Ads & Sponsors',
+      label: 'Ads & sponsors',
       icon: Megaphone,
       badge:
         initialAds.filter((a) => a.status === 'pending_approval').length ||
         undefined,
-      badgeColor: '#00E5FF',
+      badgeHue: 'hue-cyan',
     },
     {
       id: 'blog',
-      label: 'Blog Drafts',
+      label: 'Blog drafts',
       icon: FileText,
       badge: blogReadyCount > 0 ? blogReadyCount : undefined,
-      badgeColor: '#10b981',
+      badgeHue: 'hue-green',
     },
-    { id: 'analytics', label: 'Analytics & Logs', icon: BarChart3 },
-    { id: 'tools', label: 'Admin Tools & Actions', icon: Wrench },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'tools', label: 'Tools', icon: Wrench },
   ];
 
+  const modTabs = [
+    {
+      id: 'submissions',
+      label: 'Submissions',
+      count: manualPending.length,
+      extra: syncPending.length > 0 ? `+${syncPending.length} auto` : '',
+    },
+    { id: 'edits', label: 'Edits', count: pendingEdits.length, extra: '' },
+    { id: 'claims', label: 'Claims', count: pendingClaims.length, extra: '' },
+    { id: 'logos', label: 'Logos', count: pendingLogos.length, extra: '' },
+    {
+      id: 'screenshots',
+      label: 'Screenshots',
+      count: pendingScreenshots.length,
+      extra: '',
+    },
+    {
+      id: 'reviews',
+      label: 'Review comments',
+      count: pendingReviewComments.length,
+      extra: '',
+    },
+    { id: 'reports', label: 'Reports', count: openReports.length, extra: '' },
+  ] as const;
+
   return (
-    <div className="admin-shell">
+    <div className="adm-shell">
       {/* KPI Stats Deck */}
       <StatsBar
         initialStats={stats}
@@ -374,8 +407,8 @@ export default function AdminClient({
         onSelectTab={(tab: any) => setActiveTab(tab)}
       />
 
-      {/* Main Responsive Tab Navigation Bar */}
-      <nav className="admin-tabs-nav">
+      {/* Main tab navigation */}
+      <nav className="adm-tabs" aria-label="Admin sections">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -384,15 +417,13 @@ export default function AdminClient({
               type="button"
               key={item.id}
               onClick={() => setActiveTab(item.id as any)}
-              className={`admin-tab-btn ${isActive ? 'active' : ''}`}
+              className="adm-tab"
+              aria-current={isActive ? 'page' : undefined}
             >
-              <Icon className="w-4 h-4" />
+              <Icon size={16} aria-hidden="true" />
               <span>{item.label}</span>
               {item.badge !== undefined && (
-                <span
-                  className="admin-tab-badge"
-                  style={{ background: item.badgeColor }}
-                >
+                <span className={`adm-tab-count ${item.badgeHue}`}>
                   {item.badge}
                 </span>
               )}
@@ -403,28 +434,12 @@ export default function AdminClient({
 
       {/* TAB 1: OVERVIEW */}
       {activeTab === 'overview' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <section>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '1rem',
-              }}
-            >
-              <div>
-                <h2 className="admin-section-title" style={{ margin: 0 }}>
-                  Recently Approved Listings
-                </h2>
-                <p
-                  className="admin-section-desc"
-                  style={{ margin: 0, marginTop: '0.25rem' }}
-                >
-                  The most recently added live listings — newest first.
-                </p>
-              </div>
-            </div>
+        <div className="adm-stack-lg">
+          <section className="adm-section">
+            <AdminSectionHead
+              title="Recently approved listings"
+              description="The most recently added live listings — newest first."
+            />
             <RecentlyAddedTable
               servers={recentlyAdded}
               loadingId={loadingId}
@@ -432,8 +447,8 @@ export default function AdminClient({
             />
           </section>
 
-          <section>
-            <h2 className="admin-section-title">Site Operations Overview</h2>
+          <section className="adm-section">
+            <AdminSectionHead title="Site operations overview" />
             <AdminAnalyticsView stats={stats} />
           </section>
         </div>
@@ -441,171 +456,40 @@ export default function AdminClient({
 
       {/* TAB 2: MODERATION QUEUE */}
       {activeTab === 'moderation' && (
-        <div
-          style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
-        >
-          {/* Moderation Sub-Tabs */}
-          <div
-            style={{
-              display: 'flex',
-              gap: '0.5rem',
-              flexWrap: 'wrap',
-              borderBottom: '1px solid var(--border-color)',
-              paddingBottom: '0.75rem',
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setModSubTab('submissions')}
-              className={`admin-btn ${modSubTab === 'submissions' ? 'admin-btn-primary' : ''}`}
-              style={{
-                background:
-                  modSubTab === 'submissions'
-                    ? 'var(--accent-color)'
-                    : 'rgba(128, 128, 128, 0.08)',
-                color:
-                  modSubTab === 'submissions'
-                    ? '#ffffff'
-                    : 'var(--text-secondary)',
-                border:
-                  modSubTab === 'submissions'
-                    ? '1px solid var(--accent-color)'
-                    : '1px solid var(--border-color)',
-              }}
-            >
-              Submissions ({manualPending.length}
-              {syncPending.length > 0 ? ` +${syncPending.length} auto` : ''})
-            </button>
-            <button
-              type="button"
-              onClick={() => setModSubTab('edits')}
-              className={`admin-btn ${modSubTab === 'edits' ? 'admin-btn-primary' : ''}`}
-              style={{
-                background:
-                  modSubTab === 'edits'
-                    ? 'var(--accent-color)'
-                    : 'rgba(128, 128, 128, 0.08)',
-                color:
-                  modSubTab === 'edits' ? '#ffffff' : 'var(--text-secondary)',
-                border:
-                  modSubTab === 'edits'
-                    ? '1px solid var(--accent-color)'
-                    : '1px solid var(--border-color)',
-              }}
-            >
-              Edits ({pendingEdits.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setModSubTab('claims')}
-              className={`admin-btn ${modSubTab === 'claims' ? 'admin-btn-primary' : ''}`}
-              style={{
-                background:
-                  modSubTab === 'claims'
-                    ? 'var(--accent-color)'
-                    : 'rgba(128, 128, 128, 0.08)',
-                color:
-                  modSubTab === 'claims' ? '#ffffff' : 'var(--text-secondary)',
-                border:
-                  modSubTab === 'claims'
-                    ? '1px solid var(--accent-color)'
-                    : '1px solid var(--border-color)',
-              }}
-            >
-              Claims ({pendingClaims.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setModSubTab('logos')}
-              className={`admin-btn ${modSubTab === 'logos' ? 'admin-btn-primary' : ''}`}
-              style={{
-                background:
-                  modSubTab === 'logos'
-                    ? 'var(--accent-color)'
-                    : 'rgba(128, 128, 128, 0.08)',
-                color:
-                  modSubTab === 'logos' ? '#ffffff' : 'var(--text-secondary)',
-                border:
-                  modSubTab === 'logos'
-                    ? '1px solid var(--accent-color)'
-                    : '1px solid var(--border-color)',
-              }}
-            >
-              Logos ({pendingLogos.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setModSubTab('screenshots')}
-              className={`admin-btn ${modSubTab === 'screenshots' ? 'admin-btn-primary' : ''}`}
-              style={{
-                background:
-                  modSubTab === 'screenshots'
-                    ? 'var(--accent-color)'
-                    : 'rgba(128, 128, 128, 0.08)',
-                color:
-                  modSubTab === 'screenshots'
-                    ? '#ffffff'
-                    : 'var(--text-secondary)',
-                border:
-                  modSubTab === 'screenshots'
-                    ? '1px solid var(--accent-color)'
-                    : '1px solid var(--border-color)',
-              }}
-            >
-              Screenshots ({pendingScreenshots.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setModSubTab('reviews')}
-              className={`admin-btn ${modSubTab === 'reviews' ? 'admin-btn-primary' : ''}`}
-              style={{
-                background:
-                  modSubTab === 'reviews'
-                    ? 'var(--accent-color)'
-                    : 'rgba(128, 128, 128, 0.08)',
-                color:
-                  modSubTab === 'reviews' ? '#ffffff' : 'var(--text-secondary)',
-                border:
-                  modSubTab === 'reviews'
-                    ? '1px solid var(--accent-color)'
-                    : '1px solid var(--border-color)',
-              }}
-            >
-              Review Comments ({pendingReviewComments.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setModSubTab('reports')}
-              className={`admin-btn ${modSubTab === 'reports' ? 'admin-btn-primary' : ''}`}
-              style={{
-                background:
-                  modSubTab === 'reports'
-                    ? 'var(--accent-color)'
-                    : 'rgba(128, 128, 128, 0.08)',
-                color:
-                  modSubTab === 'reports' ? '#ffffff' : 'var(--text-secondary)',
-                border:
-                  modSubTab === 'reports'
-                    ? '1px solid var(--accent-color)'
-                    : '1px solid var(--border-color)',
-              }}
-            >
-              Reports ({openReports.length})
-            </button>
+        <div className="adm-section">
+          {/* Moderation sub-tabs */}
+          <div className="adm-subnav scroll-x fade-x">
+            {modTabs.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setModSubTab(t.id)}
+                className="chip"
+                aria-pressed={modSubTab === t.id}
+              >
+                {t.label}
+                <span className="chip-count">
+                  {t.count}
+                  {t.extra ? ` ${t.extra}` : ''}
+                </span>
+              </button>
+            ))}
           </div>
 
           {modSubTab === 'submissions' && (
-            <section>
-              <h2 className="admin-section-title">
-                Pending Submissions (
-                {manualPending.length < stats.pendingCounts.submissions
-                  ? `${manualPending.length} of ${stats.pendingCounts.submissions}`
-                  : manualPending.length}
-                )
-              </h2>
+            <section className="adm-section">
+              <AdminSectionHead
+                title="Pending submissions"
+                count={
+                  manualPending.length < stats.pendingCounts.submissions
+                    ? `${manualPending.length} of ${stats.pendingCounts.submissions}`
+                    : manualPending.length
+                }
+                description="Manual submissions, paid priority reviews and intake-flagged ones first."
+              />
               <ServerTable
                 servers={manualPending}
-                empty="No manual submissions waiting on you!"
+                empty="No manual submissions waiting on you."
                 loadingId={loadingId}
                 onApprove={(id) => handleAction(id, 'approve')}
                 onReject={(server) =>
@@ -618,63 +502,59 @@ export default function AdminClient({
                 }
               />
               {syncPending.length > 0 && (
-                <details style={{ marginTop: '1.5rem' }}>
-                  <summary
-                    style={{
-                      cursor: 'pointer',
-                      fontWeight: 600,
-                      color: 'var(--text-secondary)',
-                      fontSize: '0.9rem',
-                    }}
-                  >
-                    Auto-sync queue ({syncPending.length}
-                    {syncPending.length < stats.pendingCounts.syncQueue
-                      ? ` of ${stats.pendingCounts.syncQueue}`
-                      : ''}
-                    ) — no submitter, self-resolving
+                <details className="adm-disclosure">
+                  <summary>
+                    <ChevronRight size={16} aria-hidden="true" />
+                    <span className="adm-disclosure-title">
+                      Auto-sync queue
+                      <span className="adm-count">
+                        {syncPending.length}
+                        {syncPending.length < stats.pendingCounts.syncQueue
+                          ? ` of ${stats.pendingCounts.syncQueue}`
+                          : ''}
+                      </span>
+                    </span>
+                    <span className="adm-disclosure-hint">
+                      No submitter, self-resolving
+                    </span>
                   </summary>
-                  <p
-                    style={{
-                      color: 'var(--text-secondary)',
-                      fontSize: '0.85rem',
-                      margin: '0.5rem 0 1rem',
-                    }}
-                  >
-                    These came from the registry sync
-                    (scripts/ingest-sources.mjs), not a manual submission. The
-                    daily auto-promote cron re-checks each one is still alive
-                    after a 7-day dwell and either promotes it to active or,
-                    after 30 days with no working interface, removes it — no
-                    admin action needed. Listed here for visibility;
-                    approve/reject still works as a manual override.
-                  </p>
-                  <ServerTable
-                    servers={syncPending}
-                    empty="No auto-sync listings waiting."
-                    loadingId={loadingId}
-                    onApprove={(id) => handleAction(id, 'approve')}
-                    onReject={(server) =>
-                      openRejectModal(
-                        server.id,
-                        server.name,
-                        'reject',
-                        server.submitterEmail,
-                      )
-                    }
-                  />
+                  <div className="adm-disclosure-body">
+                    <p className="adm-sub">
+                      These came from the registry sync
+                      (scripts/ingest-sources.mjs), not a manual submission. The
+                      daily auto-promote cron re-checks each one is still alive
+                      after a 7-day dwell and either promotes it to active or,
+                      after 30 days with no working interface, removes it — no
+                      admin action needed. Listed here for visibility;
+                      approve/reject still works as a manual override.
+                    </p>
+                    <ServerTable
+                      servers={syncPending}
+                      empty="No auto-sync listings waiting."
+                      loadingId={loadingId}
+                      onApprove={(id) => handleAction(id, 'approve')}
+                      onReject={(server) =>
+                        openRejectModal(
+                          server.id,
+                          server.name,
+                          'reject',
+                          server.submitterEmail,
+                        )
+                      }
+                    />
+                  </div>
                 </details>
               )}
             </section>
           )}
 
           {modSubTab === 'edits' && (
-            <section>
-              <h2 className="admin-section-title">
-                Pending Owner Edits ({pendingEdits.length})
-              </h2>
-              <p className="admin-section-desc">
-                Owner-submitted revisions. Approving applies them immediately.
-              </p>
+            <section className="adm-section">
+              <AdminSectionHead
+                title="Pending owner edits"
+                count={pendingEdits.length}
+                description="Owner-submitted revisions. Approving applies them immediately."
+              />
               <PendingEditsTable
                 servers={pendingEdits}
                 loadingId={loadingId}
@@ -687,13 +567,12 @@ export default function AdminClient({
           )}
 
           {modSubTab === 'claims' && (
-            <section>
-              <h2 className="admin-section-title">
-                Pending Ownership Claims ({pendingClaims.length})
-              </h2>
-              <p className="admin-section-desc">
-                Claimants who verified website ownership via DNS or site badge.
-              </p>
+            <section className="adm-section">
+              <AdminSectionHead
+                title="Pending ownership claims"
+                count={pendingClaims.length}
+                description="Claimants who verified website ownership via DNS or site badge."
+              />
               <PendingClaimsTable
                 servers={pendingClaims}
                 loadingId={loadingId}
@@ -706,14 +585,12 @@ export default function AdminClient({
           )}
 
           {modSubTab === 'logos' && (
-            <section>
-              <h2 className="admin-section-title">
-                Pending Custom Logos ({pendingLogos.length})
-              </h2>
-              <p className="admin-section-desc">
-                Logos uploaded by verified owners awaiting approval before
-                publication.
-              </p>
+            <section className="adm-section">
+              <AdminSectionHead
+                title="Pending custom logos"
+                count={pendingLogos.length}
+                description="Logos uploaded by verified owners awaiting approval before publication."
+              />
               <PendingLogosTable
                 servers={pendingLogos}
                 loadingId={loadingId}
@@ -726,14 +603,12 @@ export default function AdminClient({
           )}
 
           {modSubTab === 'screenshots' && (
-            <section>
-              <h2 className="admin-section-title">
-                Pending Screenshots ({pendingScreenshots.length})
-              </h2>
-              <p className="admin-section-desc">
-                Screenshots uploaded by verified owners awaiting approval before
-                publication.
-              </p>
+            <section className="adm-section">
+              <AdminSectionHead
+                title="Pending screenshots"
+                count={pendingScreenshots.length}
+                description="Screenshots uploaded by verified owners awaiting approval before publication."
+              />
               <PendingScreenshotsTable
                 servers={pendingScreenshots}
                 loadingId={loadingId}
@@ -746,15 +621,18 @@ export default function AdminClient({
           )}
 
           {modSubTab === 'reviews' && (
-            <section>
-              <h2 className="admin-section-title">
-                Pending Review Comments ({pendingReviewComments.length})
-              </h2>
-              <p className="admin-section-desc">
-                Star ratings publish immediately and aren&rsquo;t gated here —
-                only the written comment text needs approval before it&rsquo;s
-                shown publicly.
-              </p>
+            <section className="adm-section">
+              <AdminSectionHead
+                title="Pending review comments"
+                count={pendingReviewComments.length}
+                description={
+                  <>
+                    Star ratings publish immediately and aren&rsquo;t gated here
+                    — only the written comment text needs approval before
+                    it&rsquo;s shown publicly.
+                  </>
+                }
+              />
               <PendingReviewsTable
                 reviews={pendingReviewComments}
                 loadingId={loadingId}
@@ -774,15 +652,18 @@ export default function AdminClient({
           )}
 
           {modSubTab === 'reports' && (
-            <section>
-              <h2 className="admin-section-title">
-                Open Reports ({openReports.length})
-              </h2>
-              <p className="admin-section-desc">
-                Visitor-flagged problems, triage-only — never directly affects a
-                listing&rsquo;s public score. Act on the listing itself
-                (edit/unpublish) via Manage Listings if a report is valid.
-              </p>
+            <section className="adm-section">
+              <AdminSectionHead
+                title="Open reports"
+                count={openReports.length}
+                description={
+                  <>
+                    Visitor-flagged problems, triage-only — never directly
+                    affects a listing&rsquo;s public score. Act on the listing
+                    itself (edit/unpublish) via Listings if a report is valid.
+                  </>
+                }
+              />
               <PendingReportsTable
                 reports={openReports}
                 loadingId={loadingId}
@@ -798,195 +679,81 @@ export default function AdminClient({
 
       {/* TAB: JEV TRIAGE QUEUE */}
       {activeTab === 'triage' && (
-        <>
+        <div className="adm-stack-lg">
           <AdminAutomationPanel />
           <AdminTriageQueue />
-        </>
+        </div>
       )}
 
       {/* TAB 3: LISTINGS DIRECTORY */}
       {activeTab === 'listings' && (
-        <section>
-          <div style={{ marginBottom: '1rem' }}>
-            <h2 className="admin-section-title">Manage Directory Listings</h2>
-            <p className="admin-section-desc">
-              Search, filter, edit metadata, adjust status, grant boost
-              placements, or view deep inspector metadata.
-            </p>
-          </div>
+        <section className="adm-section">
+          <AdminSectionHead
+            title="Directory listings"
+            description="Search, filter, edit metadata, adjust status, grant boost placements, or open the inspector."
+          />
           <ManageListings initialFilters={activeListingsFilters} />
         </section>
       )}
 
       {/* TAB: ADS & SPONSORS */}
       {activeTab === 'ads' && (
-        <section>
-          <div style={{ marginBottom: '1rem' }}>
-            <h2 className="admin-section-title">
-              Sponsor Ads & Placement Network
-            </h2>
-            <p className="admin-section-desc">
-              Review sponsor campaigns, approve submissions, monitor impression
-              delivery, and track click-through performance.
-            </p>
-          </div>
+        <section className="adm-section">
+          <AdminSectionHead
+            title="Sponsor ads"
+            description="Review sponsor campaigns, approve submissions, monitor impression delivery, and track click-through."
+          />
           <AdminAdsControl initialAds={initialAds} />
         </section>
       )}
 
       {/* TAB: BLOG DRAFTS */}
       {activeTab === 'blog' && (
-        <section>
-          <div style={{ marginBottom: '1rem' }}>
-            <h2 className="admin-section-title">Blog Drafts</h2>
-            <p className="admin-section-desc">
-              Posts written and self-reviewed by the blog pipeline. Read one,
-              then approve to commit it to main and deploy.
-            </p>
-          </div>
+        <section className="adm-section">
+          <AdminSectionHead
+            title="Blog drafts"
+            description="Posts written and self-reviewed by the blog pipeline. Read one, then approve to commit it to main and deploy."
+          />
           <AdminBlogDrafts onCountChange={setBlogReadyCount} />
         </section>
       )}
 
       {/* TAB 4: ANALYTICS & LOGS */}
       {activeTab === 'analytics' && (
-        <section>
-          <h2 className="admin-section-title">Analytics & Logs</h2>
+        <section className="adm-section">
+          <AdminSectionHead
+            title="Analytics & logs"
+            description="Catalog coverage, demand gaps, agent traffic, surface impressions and engagement."
+          />
           <AdminAnalyticsView stats={stats} />
         </section>
       )}
 
       {/* TAB 6: ADMIN TOOLS & UTILITIES */}
       {(activeTab === 'tools' || (activeTab as string) === 'crons') && (
-        <section>
-          <h2 className="admin-section-title">
-            Admin Tools & Maintenance Utilities
-          </h2>
+        <section className="adm-section">
+          <AdminSectionHead
+            title="Tools & maintenance"
+            description="Run one-click maintenance jobs, inspect a listing's quality score, or apply quick overrides."
+          />
           <AdminToolsControl />
         </section>
       )}
 
-      {/* Rejection Reason & Email Modal */}
+      {/* Rejection reason & email modal */}
       {rejectingItem && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            background: 'rgba(0, 0, 0, 0.6)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem',
-          }}
-        >
-          <div
-            className="admin-card"
-            style={{
-              maxWidth: '520px',
-              width: '100%',
-              padding: '1.5rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-              boxShadow: 'var(--shadow-md)',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <h3
-                style={{
-                  margin: 0,
-                  fontSize: '1.1rem',
-                  fontWeight: 700,
-                  color: 'var(--text-primary)',
-                }}
-              >
-                Reject & Send Feedback
-              </h3>
+        <AdminModal
+          title="Reject & send feedback"
+          subtitle={rejectingItem.name}
+          icon={MailX}
+          hue="hue-red"
+          onClose={() => setRejectingItem(null)}
+          footer={
+            <>
               <button
                 type="button"
                 onClick={() => setRejectingItem(null)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  padding: '0.25rem',
-                }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div
-              style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}
-            >
-              Rejecting:{' '}
-              <strong style={{ color: 'var(--text-primary)' }}>
-                {rejectingItem.name}
-              </strong>
-              {rejectingItem.submitterEmail ? (
-                <div
-                  style={{ marginTop: '0.35rem', color: 'var(--text-primary)' }}
-                >
-                  Notification email will be sent to:{' '}
-                  <strong>{rejectingItem.submitterEmail}</strong>
-                </div>
-              ) : (
-                <div style={{ marginTop: '0.35rem', fontStyle: 'italic' }}>
-                  No submitter email attached (anonymous submission).
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label
-                htmlFor="admin-rejection-reason"
-                style={{
-                  display: 'block',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  color: 'var(--text-primary)',
-                  marginBottom: '0.35rem',
-                }}
-              >
-                Rejection Reason / Feedback to Submitter:
-              </label>
-              <textarea
-                id="admin-rejection-reason"
-                className="form-input"
-                rows={4}
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Enter rejection reason or instructions..."
-                style={{ width: '100%', fontSize: '0.85rem', lineHeight: 1.4 }}
-              />
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: '0.5rem',
-                marginTop: '0.5rem',
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setRejectingItem(null)}
-                className="admin-btn"
-                style={{
-                  background: 'rgba(128, 128, 128, 0.15)',
-                  color: 'var(--text-primary)',
-                  border: '1px solid var(--border-color)',
-                }}
+                className="btn btn-secondary btn-sm"
               >
                 Cancel
               </button>
@@ -999,14 +766,38 @@ export default function AdminClient({
                   setRejectingItem(null);
                 }}
                 disabled={loadingId === rejectingItem.id}
-                className="admin-btn"
-                style={{ background: '#b91c1c', color: '#ffffff' }}
+                className="btn btn-sm adm-btn-danger-solid"
               >
-                Confirm Rejection & Send Email
+                Confirm rejection & send email
               </button>
-            </div>
+            </>
+          }
+        >
+          <p className="adm-dialog-note">
+            <Mail size={14} aria-hidden="true" />
+            {rejectingItem.submitterEmail ? (
+              <span>
+                Notification email will be sent to{' '}
+                <strong>{rejectingItem.submitterEmail}</strong>
+              </span>
+            ) : (
+              <span>No submitter email attached (anonymous submission).</span>
+            )}
+          </p>
+          <div className="adm-field">
+            <label htmlFor="admin-rejection-reason">
+              Rejection reason / feedback to submitter
+            </label>
+            <textarea
+              id="admin-rejection-reason"
+              className="form-input adm-textarea"
+              rows={5}
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Enter rejection reason or instructions..."
+            />
           </div>
-        </div>
+        </AdminModal>
       )}
     </div>
   );
@@ -1023,6 +814,76 @@ function shortUrl(url: string): string {
   }
 }
 
+function fmtDay(v: string): string {
+  return new Date(v).toLocaleDateString();
+}
+
+/** Full-width empty row for a moderation table. */
+function EmptyRow({ colSpan, text }: { colSpan: number; text: string }) {
+  return (
+    <tr className="adm-table-empty">
+      <td colSpan={colSpan}>
+        <AdminEmpty icon={CheckCircle2} title="All clear">
+          {text}
+        </AdminEmpty>
+      </td>
+    </tr>
+  );
+}
+
+/** Approve / reject pair shared by every moderation queue. */
+function DecisionButtons({
+  busy,
+  onApprove,
+  onReject,
+}: {
+  busy: boolean;
+  onApprove: () => void;
+  onReject: () => void;
+}) {
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onApprove}
+        disabled={busy}
+        className="btn btn-sm adm-btn-tint hue-green"
+      >
+        <Check size={14} aria-hidden="true" /> Approve
+      </button>
+      <button
+        type="button"
+        onClick={onReject}
+        disabled={busy}
+        className="btn btn-sm adm-btn-tint hue-red"
+      >
+        <X size={14} aria-hidden="true" /> Reject
+      </button>
+    </>
+  );
+}
+
+function ListingLink({
+  serverId,
+  serverName,
+}: {
+  serverId: string;
+  serverName?: string | null;
+}) {
+  return serverName ? (
+    <a
+      href={`/mcp/${serverId}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="adm-row-link"
+    >
+      {serverName}
+    </a>
+  ) : (
+    <span className="adm-anon">{serverId} (removed)</span>
+  );
+}
+
 function ServerTable({
   servers,
   empty,
@@ -1037,11 +898,11 @@ function ServerTable({
   onReject: (server: Server) => void;
 }) {
   return (
-    <div className="admin-card">
-      <table className="admin-table">
+    <div className="adm-table-wrap">
+      <table className="adm-table">
         <thead>
           <tr>
-            <th>Name & Details</th>
+            <th>Name & details</th>
             <th>Links</th>
             <th>Submitted</th>
             <th>Actions</th>
@@ -1049,11 +910,7 @@ function ServerTable({
         </thead>
         <tbody>
           {servers.length === 0 ? (
-            <tr>
-              <td colSpan={4} className="admin-table-empty">
-                {empty}
-              </td>
-            </tr>
+            <EmptyRow colSpan={4} text={empty} />
           ) : (
             servers.map((server) => {
               const tagsList = Array.isArray(server.tags)
@@ -1119,132 +976,70 @@ function ServerTable({
 
               return (
                 <tr key={server.id}>
-                  <td data-label="Name">
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.4rem',
-                        flexWrap: 'wrap',
-                      }}
-                    >
+                  <td data-label="Name" className="adm-cell-main">
+                    <div className="adm-name">
                       {server.logoUrl && (
                         <img
                           src={server.logoUrl}
                           alt=""
                           width={20}
                           height={20}
-                          style={{ borderRadius: 4, flexShrink: 0 }}
+                          className="adm-logo"
                         />
                       )}
                       <strong>{server.name}</strong>
                       {server.reviewPriority && (
-                        <span className="admin-badge admin-badge-priority">
-                          PRIORITY
-                        </span>
+                        <span className="adm-tag hue-amber">Priority</span>
                       )}
                       {server.reviewFlagged && (
-                        <span className="admin-badge admin-badge-flagged">
-                          NEEDS LOOK
-                        </span>
+                        <span className="adm-tag hue-red">Needs a look</span>
                       )}
                       {server.isPremium && (
-                        <span className="admin-badge admin-badge-premium">
-                          PREMIUM
-                        </span>
+                        <span className="adm-tag hue-violet">Premium</span>
                       )}
                       {server.category && (
                         <span
-                          className="admin-badge"
-                          style={{
-                            color: 'var(--text-secondary)',
-                            background: 'rgba(128, 128, 128, 0.12)',
-                          }}
+                          className={`adm-tag ${hueClass(server.category)}`}
                         >
                           {server.category}
                         </span>
                       )}
                     </div>
 
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                        marginTop: '0.35rem',
-                        fontSize: '0.825rem',
-                        color: 'var(--text-secondary)',
-                      }}
-                    >
-                      <Mail
-                        size={13}
-                        style={{ color: 'var(--accent-color)', flexShrink: 0 }}
-                      />
+                    <div className="adm-meta-line">
+                      <Mail size={13} aria-hidden="true" />
                       <span>Submitter:</span>
                       {server.submitterEmail ? (
-                        <strong style={{ color: 'var(--text-primary)' }}>
-                          {server.submitterEmail}
-                        </strong>
+                        <strong>{server.submitterEmail}</strong>
                       ) : (
-                        <span style={{ fontStyle: 'italic', opacity: 0.8 }}>
-                          Anonymous
-                        </span>
+                        <span className="adm-anon">Anonymous</span>
                       )}
                     </div>
 
-                    <div className="admin-desc-line">{server.description}</div>
+                    <div className="adm-desc">{server.description}</div>
 
                     {chips.length > 0 && (
-                      <div
-                        style={{
-                          marginTop: '0.5rem',
-                          display: 'flex',
-                          flexWrap: 'wrap',
-                          gap: '0.35rem',
-                        }}
-                      >
+                      <div className="adm-facts">
                         {chips.map((chip) => (
                           <span
                             key={chip.label}
                             title={`${chip.label}: ${chip.value}`}
-                            style={{
-                              fontSize: '0.75rem',
-                              color: 'var(--text-secondary)',
-                              background: 'var(--bg-muted)',
-                              border: '1px solid var(--border-color)',
-                              borderRadius: '4px',
-                              padding: '0.15rem 0.4rem',
-                              maxWidth: '260px',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
+                            className="adm-fact"
                           >
-                            <strong style={{ color: 'var(--text-primary)' }}>
-                              {chip.label}:
-                            </strong>{' '}
-                            {chip.value}
+                            <b>{chip.label}:</b> {chip.value}
                           </span>
                         ))}
                       </div>
                     )}
                   </td>
                   <td data-label="Links">
-                    <div className="admin-links-cell">
+                    <div className="adm-links">
                       <a
                         href={server.url}
                         target="_blank"
                         rel="noopener noreferrer"
                         title={server.url}
-                        style={{
-                          color: 'var(--accent-color)',
-                          fontSize: '0.8rem',
-                          maxWidth: '220px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          display: 'block',
-                        }}
+                        className="adm-link"
                       >
                         {shortUrl(server.url)}
                       </a>
@@ -1254,47 +1049,23 @@ function ServerTable({
                           target="_blank"
                           rel="noopener noreferrer"
                           title={server.websiteUrl}
-                          style={{
-                            color: 'var(--accent-color)',
-                            fontSize: '0.8rem',
-                            maxWidth: '220px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            display: 'block',
-                          }}
+                          className="adm-link"
                         >
                           {shortUrl(server.websiteUrl)}
                         </a>
                       )}
                     </div>
                   </td>
-                  <td
-                    data-label="Submitted"
-                    style={{ color: 'var(--text-secondary)' }}
-                  >
-                    {new Date(server.createdAt).toLocaleDateString()}
+                  <td data-label="Submitted" className="adm-cell-date">
+                    {fmtDay(server.createdAt)}
                   </td>
                   <td data-label="Actions">
-                    <div className="admin-actions">
-                      <button
-                        type="button"
-                        onClick={() => onApprove(server.id)}
-                        disabled={loadingId === server.id}
-                        className="admin-btn"
-                        style={{ background: '#047857' }}
-                      >
-                        Approve
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onReject(server)}
-                        disabled={loadingId === server.id}
-                        className="admin-btn"
-                        style={{ background: '#b91c1c' }}
-                      >
-                        Reject
-                      </button>
+                    <div className="adm-actions">
+                      <DecisionButtons
+                        busy={loadingId === server.id}
+                        onApprove={() => onApprove(server.id)}
+                        onReject={() => onReject(server)}
+                      />
                     </div>
                   </td>
                 </tr>
@@ -1317,8 +1088,8 @@ function RecentlyAddedTable({
   onResendApproval: (id: string) => void;
 }) {
   return (
-    <div className="admin-card">
-      <table className="admin-table">
+    <div className="adm-table-wrap">
+      <table className="adm-table">
         <thead>
           <tr>
             <th>Name</th>
@@ -1330,55 +1101,37 @@ function RecentlyAddedTable({
         </thead>
         <tbody>
           {servers.length === 0 ? (
-            <tr>
-              <td colSpan={5} className="admin-table-empty">
-                No live listings yet.
-              </td>
-            </tr>
+            <EmptyRow colSpan={5} text="No live listings yet." />
           ) : (
             servers.map((server) => (
               <tr key={server.id}>
                 <td data-label="Name">
-                  <strong>{server.name}</strong>
-                  {server.isPremium && (
-                    <span
-                      className="admin-badge"
-                      style={{
-                        color: '#00E5FF',
-                        background: 'rgba(0,229,255,0.1)',
-                      }}
-                    >
-                      PREMIUM
-                    </span>
-                  )}
-                  {server.isOfficial && (
-                    <span
-                      className="admin-badge"
-                      style={{
-                        color: '#10b981',
-                        background: 'rgba(16,185,129,0.1)',
-                      }}
-                    >
-                      OFFICIAL
-                    </span>
-                  )}
+                  <div className="adm-name">
+                    <strong>{server.name}</strong>
+                    {server.isPremium && (
+                      <span className="adm-tag hue-violet">Premium</span>
+                    )}
+                    {server.isOfficial && (
+                      <span className="adm-tag hue-green">Official</span>
+                    )}
+                  </div>
                 </td>
-                <td
-                  data-label="Category"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
-                  {server.category || '—'}
+                <td data-label="Category">
+                  {server.category ? (
+                    <span className={`adm-tag ${hueClass(server.category)}`}>
+                      {server.category}
+                    </span>
+                  ) : (
+                    <span className="adm-anon">—</span>
+                  )}
                 </td>
                 <td data-label="Links">
-                  <div className="admin-links-cell">
+                  <div className="adm-links adm-links--row">
                     <a
                       href={`/mcp/${server.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{
-                        color: 'var(--accent-color)',
-                        fontSize: '0.85rem',
-                      }}
+                      className="adm-link"
                     >
                       Listing
                     </a>
@@ -1386,10 +1139,7 @@ function RecentlyAddedTable({
                       href={server.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{
-                        color: 'var(--accent-color)',
-                        fontSize: '0.85rem',
-                      }}
+                      className="adm-link"
                     >
                       Repo
                     </a>
@@ -1398,33 +1148,27 @@ function RecentlyAddedTable({
                         href={server.websiteUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={{
-                          color: 'var(--accent-color)',
-                          fontSize: '0.85rem',
-                        }}
+                        className="adm-link"
                       >
                         Website
                       </a>
                     )}
                   </div>
                 </td>
-                <td
-                  data-label="Added"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
-                  {new Date(server.createdAt).toLocaleDateString()}
+                <td data-label="Added" className="adm-cell-date">
+                  {fmtDay(server.createdAt)}
                 </td>
                 <td data-label="Actions">
-                  <div className="admin-actions">
+                  <div className="adm-actions">
                     <button
                       type="button"
                       onClick={() => onResendApproval(server.id)}
                       disabled={loadingId === server.id}
-                      className="admin-btn"
-                      style={{ background: '#007BFF' }}
+                      className="btn btn-sm btn-secondary"
                       title="Re-send the listing-approved email"
                     >
-                      Resend approval email
+                      <Send size={14} aria-hidden="true" /> Resend approval
+                      email
                     </button>
                   </div>
                 </td>
@@ -1449,8 +1193,8 @@ function PendingEditsTable({
   onReject: (server: Server) => void;
 }) {
   return (
-    <div className="admin-card">
-      <table className="admin-table">
+    <div className="adm-table-wrap">
+      <table className="adm-table">
         <thead>
           <tr>
             <th>Listing</th>
@@ -1461,11 +1205,7 @@ function PendingEditsTable({
         </thead>
         <tbody>
           {servers.length === 0 ? (
-            <tr>
-              <td colSpan={4} className="admin-table-empty">
-                No pending edits!
-              </td>
-            </tr>
+            <EmptyRow colSpan={4} text="No pending edits." />
           ) : (
             servers.map((server) => {
               const pending = parsePendingRevision(server.pendingRevision);
@@ -1483,66 +1223,36 @@ function PendingEditsTable({
               return (
                 <tr key={server.id}>
                   <td data-label="Listing">
-                    <strong>{server.name}</strong>
+                    <strong className="adm-strong">{server.name}</strong>
                   </td>
-                  <td data-label="Proposed changes">
-                    {fields.map((field) => {
-                      const currentRaw = serverRow[field as string];
-                      return (
-                        <div key={field} style={{ marginBottom: '0.5rem' }}>
-                          <div
-                            style={{
-                              fontSize: '0.7rem',
-                              color: 'var(--text-secondary)',
-                              textTransform: 'uppercase',
-                            }}
-                          >
-                            {field}
+                  <td data-label="Proposed changes" className="adm-cell-main">
+                    <div className="adm-diff">
+                      {fields.map((field) => {
+                        const currentRaw = serverRow[field as string];
+                        return (
+                          <div key={field}>
+                            <div className="adm-diff-key">{field}</div>
+                            <div className="adm-diff-old">
+                              {formatVal(currentRaw)}
+                            </div>
+                            <div className="adm-diff-new">
+                              {formatVal(pending.proposed[field])}
+                            </div>
                           </div>
-                          <div
-                            style={{
-                              fontSize: '0.8rem',
-                              textDecoration: 'line-through',
-                              color: 'var(--text-secondary)',
-                            }}
-                          >
-                            {formatVal(currentRaw)}
-                          </div>
-                          <div
-                            style={{ fontSize: '0.85rem', color: '#10b981' }}
-                          >
-                            {formatVal(pending.proposed[field])}
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </td>
-                  <td
-                    data-label="Submitted"
-                    style={{ color: 'var(--text-secondary)' }}
-                  >
-                    {new Date(pending.submittedAt).toLocaleDateString()}
+                  <td data-label="Submitted" className="adm-cell-date">
+                    {fmtDay(pending.submittedAt)}
                   </td>
                   <td data-label="Actions">
-                    <div className="admin-actions">
-                      <button
-                        type="button"
-                        onClick={() => onApprove(server.id)}
-                        disabled={loadingId === server.id}
-                        className="admin-btn"
-                        style={{ background: '#047857' }}
-                      >
-                        Approve
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onReject(server)}
-                        disabled={loadingId === server.id}
-                        className="admin-btn"
-                        style={{ background: '#b91c1c' }}
-                      >
-                        Reject
-                      </button>
+                    <div className="adm-actions">
+                      <DecisionButtons
+                        busy={loadingId === server.id}
+                        onApprove={() => onApprove(server.id)}
+                        onReject={() => onReject(server)}
+                      />
                     </div>
                   </td>
                 </tr>
@@ -1567,8 +1277,8 @@ function PendingClaimsTable({
   onReject: (server: Server) => void;
 }) {
   return (
-    <div className="admin-card">
-      <table className="admin-table">
+    <div className="adm-table-wrap">
+      <table className="adm-table">
         <thead>
           <tr>
             <th>Listing</th>
@@ -1579,28 +1289,22 @@ function PendingClaimsTable({
         </thead>
         <tbody>
           {servers.length === 0 ? (
-            <tr>
-              <td colSpan={4} className="admin-table-empty">
-                No pending claims!
-              </td>
-            </tr>
+            <EmptyRow colSpan={4} text="No pending claims." />
           ) : (
             servers.map((server) => (
               <tr key={server.id}>
                 <td data-label="Listing">
-                  <strong>{server.name}</strong>
+                  <strong className="adm-strong">{server.name}</strong>
                 </td>
                 <td data-label="Repo">
                   <a
                     href={server.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{
-                      color: 'var(--accent-color)',
-                      fontSize: '0.85rem',
-                    }}
+                    title={server.url}
+                    className="adm-link"
                   >
-                    Repo
+                    {shortUrl(server.url)}
                   </a>
                 </td>
                 <td data-label="Proven website">
@@ -1609,38 +1313,21 @@ function PendingClaimsTable({
                       href={server.pendingClaimWebsiteUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{
-                        color: 'var(--accent-color)',
-                        fontSize: '0.85rem',
-                        overflowWrap: 'anywhere',
-                      }}
+                      className="adm-link adm-link--wrap"
                     >
                       {server.pendingClaimWebsiteUrl}
                     </a>
                   ) : (
-                    '—'
+                    <span className="adm-anon">—</span>
                   )}
                 </td>
                 <td data-label="Actions">
-                  <div className="admin-actions">
-                    <button
-                      type="button"
-                      onClick={() => onApprove(server.id)}
-                      disabled={loadingId === server.id}
-                      className="admin-btn"
-                      style={{ background: '#047857' }}
-                    >
-                      Approve
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onReject(server)}
-                      disabled={loadingId === server.id}
-                      className="admin-btn"
-                      style={{ background: '#b91c1c' }}
-                    >
-                      Reject
-                    </button>
+                  <div className="adm-actions">
+                    <DecisionButtons
+                      busy={loadingId === server.id}
+                      onApprove={() => onApprove(server.id)}
+                      onReject={() => onReject(server)}
+                    />
                   </div>
                 </td>
               </tr>
@@ -1664,8 +1351,8 @@ function PendingLogosTable({
   onReject: (server: Server) => void;
 }) {
   return (
-    <div className="admin-card">
-      <table className="admin-table">
+    <div className="adm-table-wrap">
+      <table className="adm-table">
         <thead>
           <tr>
             <th>Listing</th>
@@ -1675,16 +1362,12 @@ function PendingLogosTable({
         </thead>
         <tbody>
           {servers.length === 0 ? (
-            <tr>
-              <td colSpan={3} className="admin-table-empty">
-                No pending logos!
-              </td>
-            </tr>
+            <EmptyRow colSpan={3} text="No pending logos." />
           ) : (
             servers.map((server) => (
               <tr key={server.id}>
                 <td data-label="Listing">
-                  <strong>{server.name}</strong>
+                  <strong className="adm-strong">{server.name}</strong>
                 </td>
                 <td data-label="Preview">
                   {server.pendingLogoKey && (
@@ -1694,30 +1377,17 @@ function PendingLogosTable({
                       alt={`${server.name} pending logo`}
                       width={64}
                       height={64}
-                      style={{ borderRadius: 8, display: 'block' }}
+                      className="adm-thumb adm-thumb--logo"
                     />
                   )}
                 </td>
                 <td data-label="Actions">
-                  <div className="admin-actions">
-                    <button
-                      type="button"
-                      onClick={() => onApprove(server.id)}
-                      disabled={loadingId === server.id}
-                      className="admin-btn"
-                      style={{ background: '#047857' }}
-                    >
-                      Approve
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onReject(server)}
-                      disabled={loadingId === server.id}
-                      className="admin-btn"
-                      style={{ background: '#b91c1c' }}
-                    >
-                      Reject
-                    </button>
+                  <div className="adm-actions">
+                    <DecisionButtons
+                      busy={loadingId === server.id}
+                      onApprove={() => onApprove(server.id)}
+                      onReject={() => onReject(server)}
+                    />
                   </div>
                 </td>
               </tr>
@@ -1741,8 +1411,8 @@ function PendingScreenshotsTable({
   onReject: (server: Server) => void;
 }) {
   return (
-    <div className="admin-card">
-      <table className="admin-table">
+    <div className="adm-table-wrap">
+      <table className="adm-table">
         <thead>
           <tr>
             <th>Listing</th>
@@ -1752,16 +1422,12 @@ function PendingScreenshotsTable({
         </thead>
         <tbody>
           {servers.length === 0 ? (
-            <tr>
-              <td colSpan={3} className="admin-table-empty">
-                No pending screenshots!
-              </td>
-            </tr>
+            <EmptyRow colSpan={3} text="No pending screenshots." />
           ) : (
             servers.map((server) => (
               <tr key={server.id}>
                 <td data-label="Listing">
-                  <strong>{server.name}</strong>
+                  <strong className="adm-strong">{server.name}</strong>
                 </td>
                 <td data-label="Preview">
                   {server.pendingScreenshotKey && (
@@ -1769,36 +1435,19 @@ function PendingScreenshotsTable({
                     <img
                       src={`/api/admin/logo-preview?key=${encodeURIComponent(server.pendingScreenshotKey)}`}
                       alt={`${server.name} pending screenshot`}
-                      width={120}
-                      height={70}
-                      style={{
-                        borderRadius: 8,
-                        display: 'block',
-                        objectFit: 'cover',
-                      }}
+                      width={160}
+                      height={94}
+                      className="adm-thumb adm-thumb--shot"
                     />
                   )}
                 </td>
                 <td data-label="Actions">
-                  <div className="admin-actions">
-                    <button
-                      type="button"
-                      onClick={() => onApprove(server.id)}
-                      disabled={loadingId === server.id}
-                      className="admin-btn"
-                      style={{ background: '#047857' }}
-                    >
-                      Approve
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onReject(server)}
-                      disabled={loadingId === server.id}
-                      className="admin-btn"
-                      style={{ background: '#b91c1c' }}
-                    >
-                      Reject
-                    </button>
+                  <div className="adm-actions">
+                    <DecisionButtons
+                      busy={loadingId === server.id}
+                      onApprove={() => onApprove(server.id)}
+                      onReject={() => onReject(server)}
+                    />
                   </div>
                 </td>
               </tr>
@@ -1822,8 +1471,8 @@ function PendingReportsTable({
   onDismiss: (id: number) => void;
 }) {
   return (
-    <div className="admin-card">
-      <table className="admin-table">
+    <div className="adm-table-wrap">
+      <table className="adm-table">
         <thead>
           <tr>
             <th>Listing</th>
@@ -1835,74 +1484,48 @@ function PendingReportsTable({
         </thead>
         <tbody>
           {reports.length === 0 ? (
-            <tr>
-              <td colSpan={5} className="admin-table-empty">
-                No open reports!
-              </td>
-            </tr>
+            <EmptyRow colSpan={5} text="No open reports." />
           ) : (
             reports.map((r) => (
               <tr key={r.id}>
                 <td data-label="Listing">
-                  {r.serverName ? (
-                    <a
-                      href={`/mcp/${r.serverId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: 'var(--accent-color)' }}
-                    >
-                      <strong>{r.serverName}</strong>
-                    </a>
-                  ) : (
-                    <span style={{ fontStyle: 'italic', opacity: 0.8 }}>
-                      {r.serverId} (removed)
-                    </span>
-                  )}
+                  <ListingLink
+                    serverId={r.serverId}
+                    serverName={r.serverName}
+                  />
                 </td>
                 <td data-label="Reason">
-                  {REPORT_REASON_LABELS[r.reason] || r.reason}
-                </td>
-                <td data-label="Details" style={{ maxWidth: 280 }}>
-                  {r.details ? (
-                    <span
-                      style={{
-                        fontSize: '0.85rem',
-                        color: 'var(--text-secondary)',
-                      }}
-                    >
-                      {r.details}
-                    </span>
-                  ) : (
-                    <span style={{ opacity: 0.6 }}>—</span>
-                  )}
-                </td>
-                <td data-label="Reported">
                   <span
-                    style={{
-                      fontSize: '0.8rem',
-                      color: 'var(--text-secondary)',
-                    }}
+                    className={`adm-tag ${r.reason === 'malicious' ? 'hue-red' : 'hue-amber'}`}
                   >
-                    {new Date(r.createdAt).toLocaleDateString()}
+                    {REPORT_REASON_LABELS[r.reason] || r.reason}
                   </span>
                 </td>
+                <td data-label="Details" className="adm-cell-text">
+                  {r.details ? (
+                    <span className="adm-muted">{r.details}</span>
+                  ) : (
+                    <span className="adm-anon">—</span>
+                  )}
+                </td>
+                <td data-label="Reported" className="adm-cell-date">
+                  {fmtDay(r.createdAt)}
+                </td>
                 <td data-label="Actions">
-                  <div className="admin-actions">
+                  <div className="adm-actions">
                     <button
                       type="button"
                       onClick={() => onReviewed(r.id)}
                       disabled={loadingId === String(r.id)}
-                      className="admin-btn"
-                      style={{ background: '#047857' }}
+                      className="btn btn-sm adm-btn-tint hue-green"
                     >
-                      Mark Reviewed
+                      <Check size={14} aria-hidden="true" /> Mark reviewed
                     </button>
                     <button
                       type="button"
                       onClick={() => onDismiss(r.id)}
                       disabled={loadingId === String(r.id)}
-                      className="admin-btn"
-                      style={{ background: 'rgba(128, 128, 128, 0.3)' }}
+                      className="btn btn-sm btn-secondary"
                     >
                       Dismiss
                     </button>
@@ -1931,8 +1554,8 @@ function PendingReviewsTable({
   onDelete: (id: number) => void;
 }) {
   return (
-    <div className="admin-card">
-      <table className="admin-table">
+    <div className="adm-table-wrap">
+      <table className="adm-table">
         <thead>
           <tr>
             <th>Listing</th>
@@ -1944,71 +1567,41 @@ function PendingReviewsTable({
         </thead>
         <tbody>
           {reviews.length === 0 ? (
-            <tr>
-              <td colSpan={5} className="admin-table-empty">
-                No pending review comments!
-              </td>
-            </tr>
+            <EmptyRow colSpan={5} text="No pending review comments." />
           ) : (
             reviews.map((r) => (
               <tr key={r.id}>
                 <td data-label="Listing">
-                  {r.serverName ? (
-                    <a
-                      href={`/mcp/${r.serverId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: 'var(--accent-color)' }}
-                    >
-                      <strong>{r.serverName}</strong>
-                    </a>
-                  ) : (
-                    <span style={{ fontStyle: 'italic', opacity: 0.8 }}>
-                      {r.serverId} (removed)
-                    </span>
-                  )}
+                  <ListingLink
+                    serverId={r.serverId}
+                    serverName={r.serverName}
+                  />
                 </td>
-                <td data-label="Reviewer">
-                  <span style={{ fontSize: '0.85rem' }}>
-                    {r.reviewerEmail || 'Unknown'}
-                  </span>
+                <td data-label="Reviewer" className="adm-cell-wrap">
+                  {r.reviewerEmail || <span className="adm-anon">Unknown</span>}
                 </td>
                 <td data-label="Rating">
-                  <span style={{ fontSize: '0.85rem' }}>
+                  <span
+                    className="adm-stars"
+                    role="img"
+                    aria-label={`${r.rating} out of 5 stars`}
+                  >
                     {'★'.repeat(r.rating)}
-                    {'☆'.repeat(5 - r.rating)}
+                    <span className="adm-stars-off">
+                      {'☆'.repeat(5 - r.rating)}
+                    </span>
                   </span>
                 </td>
-                <td data-label="Comment" style={{ maxWidth: 300 }}>
-                  <span
-                    style={{
-                      fontSize: '0.85rem',
-                      color: 'var(--text-secondary)',
-                    }}
-                  >
-                    {r.comment}
-                  </span>
+                <td data-label="Comment" className="adm-cell-text">
+                  <span className="adm-muted">{r.comment}</span>
                 </td>
                 <td data-label="Actions">
-                  <div className="admin-actions">
-                    <button
-                      type="button"
-                      onClick={() => onApprove(r.id)}
-                      disabled={loadingId === String(r.id)}
-                      className="admin-btn"
-                      style={{ background: '#047857' }}
-                    >
-                      Approve
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onReject(r)}
-                      disabled={loadingId === String(r.id)}
-                      className="admin-btn"
-                      style={{ background: '#b91c1c' }}
-                    >
-                      Reject
-                    </button>
+                  <div className="adm-actions">
+                    <DecisionButtons
+                      busy={loadingId === String(r.id)}
+                      onApprove={() => onApprove(r.id)}
+                      onReject={() => onReject(r)}
+                    />
                     <button
                       type="button"
                       onClick={() => {
@@ -2021,11 +1614,10 @@ function PendingReviewsTable({
                         }
                       }}
                       disabled={loadingId === String(r.id)}
-                      className="admin-btn"
-                      style={{ background: 'rgba(128, 128, 128, 0.3)' }}
+                      className="btn btn-sm btn-ghost"
                       title="Delete the whole review (rating + comment) — for spam/abuse"
                     >
-                      Delete
+                      <Trash2 size={14} aria-hidden="true" /> Delete
                     </button>
                   </div>
                 </td>

@@ -495,7 +495,7 @@ export function AdminInlineName({
             }
           }}
           style={{
-            background: 'var(--bg-card)',
+            background: 'var(--surface-1)',
             color: 'var(--text-primary)',
             border: '1px solid #ef4444',
             borderRadius: '6px',
@@ -651,8 +651,8 @@ export function AdminInlineCategory({
           disabled={saving}
           ref={(el) => el?.focus()}
           style={{
-            background: 'var(--bg-card, #ffffff)',
-            color: 'var(--text-primary, #0f172a)',
+            background: 'var(--surface-1)',
+            color: 'var(--text-primary)',
             border: '1px solid #ef4444',
             borderRadius: '6px',
             padding: '0.2rem 0.5rem',
@@ -667,8 +667,8 @@ export function AdminInlineCategory({
               key={cat}
               value={cat}
               style={{
-                background: 'var(--bg-card, #ffffff)',
-                color: 'var(--text-primary, #0f172a)',
+                background: 'var(--surface-2)',
+                color: 'var(--text-primary)',
               }}
             >
               {cat}
@@ -803,7 +803,7 @@ export function AdminInlineDescription({
           padding: '1.25rem',
           borderRadius: '12px',
           border: '1px solid rgba(239, 68, 68, 0.4)',
-          background: 'var(--bg-card)',
+          background: 'var(--surface-1)',
           display: 'flex',
           flexDirection: 'column',
           gap: '0.75rem',
@@ -838,7 +838,7 @@ export function AdminInlineDescription({
           ref={(el) => el?.focus()}
           style={{
             width: '100%',
-            background: 'var(--bg-card)',
+            background: 'var(--surface-1)',
             color: 'var(--text-primary)',
             border: '1px solid var(--border-color)',
             borderRadius: '8px',
@@ -1043,12 +1043,12 @@ export function AdminInlineLinkPopover({
             left: 0,
             marginTop: '0.4rem',
             zIndex: 100,
-            background: 'var(--bg-card, #18181b)',
+            background: 'var(--surface-1)',
             color: 'var(--text-primary)',
             padding: '0.75rem',
             borderRadius: '10px',
             border: '1px solid var(--border-color)',
-            boxShadow: '0 12px 24px rgba(0,0,0,0.4)',
+            boxShadow: 'var(--shadow-popover)',
             width: '320px',
           }}
         >

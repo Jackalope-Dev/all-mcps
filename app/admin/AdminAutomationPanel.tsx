@@ -3,6 +3,7 @@
 import { Bot, ChevronDown, ChevronRight, Undo2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from '../../components/ui/Toast';
+import { AdminSectionHead } from './AdminUi';
 
 type Mode = 'off' | 'shadow' | 'live';
 type Decision = 'approve' | 'reject' | 'hold';
@@ -43,10 +44,11 @@ type GateView = {
 const SUGGEST_LIVE_AGREEMENT = 0.95;
 const SUGGEST_LIVE_MIN_COMPARED = 30;
 
-const DECISION_COLOR: Record<Decision, string> = {
-  approve: 'var(--admin-ok)',
-  reject: 'var(--admin-bad)',
-  hold: 'var(--text-secondary)',
+/** Status hue per decision: approve green, reject red, hold neutral. */
+const DECISION_HUE: Record<Decision, string> = {
+  approve: 'hue-green',
+  reject: 'hue-red',
+  hold: '',
 };
 
 function pct(n: number): string {
@@ -120,289 +122,194 @@ export function AdminAutomationPanel() {
   if (!gates) return null;
 
   return (
-    <section
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.75rem',
-        marginBottom: '1.5rem',
-      }}
-    >
-      <div>
-        <h2
-          className="admin-section-title"
-          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-        >
-          <Bot className="w-5 h-5" /> Automation
-        </h2>
-        <p className="admin-section-desc">
-          Shadow records what a gate would do and compares it with what you did
-          on the same listing. Turn a gate live once its agreement is high
-          enough — live decisions send the same emails as your clicks, and
-          approvals can be undone below.
-        </p>
-      </div>
+    <section className="adm-section">
+      <AdminSectionHead
+        title={
+          <>
+            <Bot size={18} aria-hidden="true" /> Automation
+          </>
+        }
+        description="Shadow records what a gate would do and compares it with what you did on the same listing. Turn a gate live once its agreement is high enough — live decisions send the same emails as your clicks, and approvals can be undone below."
+      />
 
-      {gates.map((g) => {
-        const { stats } = g;
-        const agreement =
-          stats.compared > 0 ? stats.agreed / stats.compared : null;
-        const decided = stats.approve + stats.reject;
-        const ready =
-          agreement !== null &&
-          stats.compared >= SUGGEST_LIVE_MIN_COMPARED &&
-          agreement >= SUGGEST_LIVE_AGREEMENT;
-        return (
-          <div
-            key={g.gate}
-            style={{
-              padding: '1rem',
-              borderRadius: '12px',
-              background: 'var(--card-bg)',
-              border: '1px solid var(--border-color)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.6rem',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                alignItems: 'center',
-                gap: '0.75rem',
-                justifyContent: 'space-between',
-              }}
-            >
-              <strong style={{ color: 'var(--text-primary)' }}>
-                {g.label}
-              </strong>
-              <div className="segmented">
-                {(['off', 'shadow', 'live'] as const).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    disabled={busy}
-                    onClick={() => setMode(g, m)}
-                    className={g.mode === m ? 'is-active' : undefined}
-                    aria-pressed={g.mode === m}
-                  >
-                    {m === 'off' ? 'Off' : m === 'shadow' ? 'Shadow' : 'Live'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <p
-              style={{
-                margin: 0,
-                fontSize: '0.8rem',
-                color: 'var(--text-secondary)',
-                lineHeight: 1.5,
-              }}
-            >
-              {g.detail} Bar: Jev ≥ {pct(g.bar.confidence)} confident, MCP ≥{' '}
-              {pct(g.bar.mcpProbability)}, and a sandbox run, a published
-              package or ≥ {g.bar.stars} stars.
-            </p>
-
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '1.25rem',
-                fontSize: '0.82rem',
-              }}
-            >
-              <span>
-                <strong
-                  style={{
-                    fontSize: '1.1rem',
-                    color:
-                      agreement === null
-                        ? 'var(--text-secondary)'
-                        : agreement >= SUGGEST_LIVE_AGREEMENT
-                          ? 'var(--admin-ok)'
-                          : 'var(--admin-warn)',
-                  }}
-                >
-                  {agreement === null ? '—' : pct(agreement)}
-                </strong>{' '}
-                agreed with you ({stats.agreed}/{stats.compared})
-              </span>
-              <span style={{ color: 'var(--text-secondary)' }}>
-                {decided} decided ({stats.approve} approve, {stats.reject}{' '}
-                reject) · {stats.hold} left for you
-                {stats.holdsDecided > 0
-                  ? ` (${stats.holdsDecided} you've since decided)`
-                  : ''}
-              </span>
-              {stats.acted > 0 && (
-                <span style={{ color: 'var(--text-secondary)' }}>
-                  {stats.acted} acted live · {stats.undone} undone
-                </span>
-              )}
-            </div>
-
-            {g.mode === 'shadow' && ready && (
-              <div style={{ fontSize: '0.8rem', color: 'var(--admin-ok)' }}>
-                Agreed on {pct(agreement as number)} of {stats.compared}{' '}
-                decisions — ready to go live if you're comfortable.
-              </div>
-            )}
-            {g.mode === 'shadow' &&
-              !ready &&
-              stats.compared < SUGGEST_LIVE_MIN_COMPARED && (
-                <div
-                  style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}
-                >
-                  {SUGGEST_LIVE_MIN_COMPARED - stats.compared} more of your
-                  decisions on listings it approved or rejected before a
-                  reliable read.
-                </div>
-              )}
-
-            <button
-              type="button"
-              onClick={() => setOpen((o) => ({ ...o, [g.gate]: !o[g.gate] }))}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.3rem',
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                color: 'var(--text-secondary)',
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-                width: 'fit-content',
-              }}
-            >
-              {open[g.gate] ? (
-                <ChevronDown className="w-4 h-4" />
-              ) : (
-                <ChevronRight className="w-4 h-4" />
-              )}
-              Recent decisions ({g.recent.length})
-            </button>
-
-            {open[g.gate] && (
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.35rem',
-                }}
-              >
-                {g.recent.map((d) => {
-                  const disagree =
-                    d.humanDecision &&
-                    d.decision !== 'hold' &&
-                    d.humanDecision !== d.decision;
-                  return (
-                    <div
-                      key={d.id}
-                      style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        alignItems: 'baseline',
-                        gap: '0.5rem',
-                        fontSize: '0.78rem',
-                        padding: '0.4rem 0.5rem',
-                        borderRadius: '8px',
-                        background: disagree
-                          ? 'var(--admin-chip-bg)'
-                          : 'transparent',
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontWeight: 700,
-                          color: DECISION_COLOR[d.decision],
-                          minWidth: '4rem',
-                        }}
-                      >
-                        {d.decision}
-                      </span>
-                      <a
-                        href={`/mcp/${d.serverId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          color: 'var(--text-primary)',
-                          fontWeight: 600,
-                        }}
-                      >
-                        {d.name ?? d.serverId}
-                      </a>
-                      <span style={{ color: 'var(--text-secondary)', flex: 1 }}>
-                        {d.reason}
-                      </span>
-                      {d.humanDecision && (
-                        <span
-                          style={{
-                            color: disagree
-                              ? 'var(--admin-warn)'
-                              : 'var(--text-secondary)',
-                          }}
-                        >
-                          you: {d.humanDecision}
-                        </span>
-                      )}
-                      {d.mode === 'live' && d.actedAt && !d.undoneAt && (
-                        <>
-                          <span style={{ color: 'var(--accent-color)' }}>
-                            acted
-                          </span>
-                          {d.decision === 'approve' && (
-                            <button
-                              type="button"
-                              className="admin-tab-btn"
-                              disabled={busy}
-                              style={{
-                                fontSize: '0.72rem',
-                                padding: '0.2rem 0.5rem',
-                              }}
-                              onClick={() =>
-                                void post(
-                                  {
-                                    action: 'undo',
-                                    gate: g.gate,
-                                    serverId: d.serverId,
-                                  },
-                                  'Undone',
-                                )
-                              }
-                            >
-                              <Undo2 className="w-3 h-3" /> Undo
-                            </button>
-                          )}
-                        </>
-                      )}
-                      {d.undoneAt && (
-                        <span style={{ color: 'var(--admin-warn)' }}>
-                          undone
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-                {g.recent.length === 0 && (
+      <div className="adm-stack-sm">
+        {gates.map((g) => {
+          const { stats } = g;
+          const agreement =
+            stats.compared > 0 ? stats.agreed / stats.compared : null;
+          const decided = stats.approve + stats.reject;
+          const ready =
+            agreement !== null &&
+            stats.compared >= SUGGEST_LIVE_MIN_COMPARED &&
+            agreement >= SUGGEST_LIVE_AGREEMENT;
+          const scoreHue =
+            agreement === null
+              ? ''
+              : agreement >= SUGGEST_LIVE_AGREEMENT
+                ? 'hue-green'
+                : 'hue-amber';
+          return (
+            <div key={g.gate} className="adm-card adm-gate">
+              <div className="adm-gate-head">
+                <div className="adm-gate-name">
+                  <strong>{g.label}</strong>
                   <span
-                    style={{
-                      fontSize: '0.8rem',
-                      color: 'var(--text-secondary)',
-                    }}
+                    className={`adm-tag is-dot ${g.mode === 'live' ? 'hue-green' : g.mode === 'shadow' ? 'hue-blue' : ''}`}
                   >
-                    Nothing yet — the sweep decides as listings get triaged and
-                    their repo checked.
+                    {g.mode}
+                  </span>
+                </div>
+                <fieldset className="fieldset-plain segmented">
+                  <legend className="sr-only">Mode for {g.label}</legend>
+                  {(['off', 'shadow', 'live'] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => setMode(g, m)}
+                      className={g.mode === m ? 'is-active' : undefined}
+                      aria-pressed={g.mode === m}
+                    >
+                      {m === 'off' ? 'Off' : m === 'shadow' ? 'Shadow' : 'Live'}
+                    </button>
+                  ))}
+                </fieldset>
+              </div>
+
+              <p className="adm-gate-detail">
+                {g.detail} Bar: Jev ≥ {pct(g.bar.confidence)} confident, MCP ≥{' '}
+                {pct(g.bar.mcpProbability)}, and a sandbox run, a published
+                package or ≥ {g.bar.stars} stars.
+              </p>
+
+              <div className="adm-gate-stats">
+                <span>
+                  <strong className={`adm-gate-score ${scoreHue}`}>
+                    {agreement === null ? '—' : pct(agreement)}
+                  </strong>{' '}
+                  agreed with you ({stats.agreed}/{stats.compared})
+                </span>
+                <span>
+                  {decided} decided ({stats.approve} approve, {stats.reject}{' '}
+                  reject) · {stats.hold} left for you
+                  {stats.holdsDecided > 0
+                    ? ` (${stats.holdsDecided} you've since decided)`
+                    : ''}
+                </span>
+                {stats.acted > 0 && (
+                  <span>
+                    {stats.acted} acted live · {stats.undone} undone
                   </span>
                 )}
               </div>
-            )}
-          </div>
-        );
-      })}
+
+              {g.mode === 'shadow' && ready && (
+                <div className="adm-note tint-text hue-green">
+                  Agreed on {pct(agreement as number)} of {stats.compared}{' '}
+                  decisions — ready to go live if you're comfortable.
+                </div>
+              )}
+              {g.mode === 'shadow' &&
+                !ready &&
+                stats.compared < SUGGEST_LIVE_MIN_COMPARED && (
+                  <div className="adm-note">
+                    {SUGGEST_LIVE_MIN_COMPARED - stats.compared} more of your
+                    decisions on listings it approved or rejected before a
+                    reliable read.
+                  </div>
+                )}
+
+              <button
+                type="button"
+                className="adm-disclosure-btn"
+                aria-expanded={Boolean(open[g.gate])}
+                onClick={() => setOpen((o) => ({ ...o, [g.gate]: !o[g.gate] }))}
+              >
+                {open[g.gate] ? (
+                  <ChevronDown size={16} aria-hidden="true" />
+                ) : (
+                  <ChevronRight size={16} aria-hidden="true" />
+                )}
+                Recent decisions ({g.recent.length})
+              </button>
+
+              {open[g.gate] && (
+                <div className="adm-decisions">
+                  {g.recent.map((d) => {
+                    const disagree =
+                      d.humanDecision &&
+                      d.decision !== 'hold' &&
+                      d.humanDecision !== d.decision;
+                    return (
+                      <div
+                        key={d.id}
+                        className={`adm-decision${disagree ? ' is-disagree' : ''}`}
+                      >
+                        <span
+                          className={`adm-decision-verdict ${DECISION_HUE[d.decision]}`}
+                        >
+                          {d.decision}
+                        </span>
+                        <a
+                          href={`/mcp/${d.serverId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="adm-row-link"
+                        >
+                          {d.name ?? d.serverId}
+                        </a>
+                        <span className="adm-decision-reason">{d.reason}</span>
+                        {d.humanDecision && (
+                          <span
+                            className={
+                              disagree ? 'tint-text hue-amber' : 'adm-muted'
+                            }
+                          >
+                            you: {d.humanDecision}
+                          </span>
+                        )}
+                        {d.mode === 'live' && d.actedAt && !d.undoneAt && (
+                          <>
+                            <span className="adm-accent">acted</span>
+                            {d.decision === 'approve' && (
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-secondary adm-btn-xs"
+                                disabled={busy}
+                                onClick={() =>
+                                  void post(
+                                    {
+                                      action: 'undo',
+                                      gate: g.gate,
+                                      serverId: d.serverId,
+                                    },
+                                    'Undone',
+                                  )
+                                }
+                              >
+                                <Undo2 size={12} aria-hidden="true" /> Undo
+                              </button>
+                            )}
+                          </>
+                        )}
+                        {d.undoneAt && (
+                          <span className="tint-text hue-amber">undone</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {g.recent.length === 0 && (
+                    <span className="adm-note">
+                      Nothing yet — the sweep decides as listings get triaged
+                      and their repo checked.
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </section>
   );
 }
