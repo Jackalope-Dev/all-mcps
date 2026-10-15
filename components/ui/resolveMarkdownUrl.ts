@@ -1,5 +1,7 @@
 /**
  * Resolves relative URLs (e.g. `assets/logo.png`, `./LICENSE`) against a repository URL.
+ * Uses `HEAD` rather than a branch name so links follow the repo's actual
+ * default branch (`master`, `trunk`, …) instead of assuming `main`.
  */
 export function resolveUrl(
   url: string | Blob | undefined,
@@ -47,7 +49,7 @@ export function resolveUrl(
   const cleanPath = url.replace(/^\.\//, '').replace(/^\//, '');
 
   if (isImage) {
-    return `https://raw.githubusercontent.com/${owner}/${repo}/main/${cleanPath}`;
+    return `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${cleanPath}`;
   }
-  return `https://github.com/${owner}/${repo}/blob/main/${cleanPath}`;
+  return `https://github.com/${owner}/${repo}/blob/HEAD/${cleanPath}`;
 }

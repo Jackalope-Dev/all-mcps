@@ -103,6 +103,7 @@ type Server = {
   categorySponsorUntil?: string | null;
   isOfficial?: boolean;
   reciprocalBadgeOk?: boolean;
+  readmeBadgeOk?: boolean;
   websiteBacklinkOk?: boolean;
   views?: number;
   copies?: number;
@@ -2123,12 +2124,16 @@ function ListingSetupSteps({
         ? 'Dofollow included (Premium)'
         : server.websiteBacklinkOk
           ? 'AllMCPs badge live'
-          : 'Place the AllMCPs badge',
+          : server.readmeBadgeOk
+            ? 'Add the badge to your website'
+            : 'Place the AllMCPs badge',
       description: server.isPremium
         ? 'Premium listings get a dofollow website link without a reciprocal badge.'
         : server.websiteBacklinkOk
           ? 'We detected your badge — your website link is dofollow.'
-          : 'Embed the free dofollow badge on your site to unlock SEO value.',
+          : server.readmeBadgeOk
+            ? 'Your README badge is detected and counts toward verification. The dofollow website link needs the badge on your website itself.'
+            : 'Embed the free dofollow badge on your site to unlock SEO value.',
       actionLabel:
         server.websiteBacklinkOk || server.isPremium
           ? undefined
