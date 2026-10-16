@@ -1504,14 +1504,19 @@ type SearchOpts = {
   vectorTopK?: number;
 };
 
-/** Ranked ids from D1, or already-built servers when D1 isn't used. */
+/**
+ * Ranked ids from D1, or already-built servers when D1 isn't used. `snapshot`
+ * is the bundled-catalog fallback after a D1 failure: fine to return once,
+ * never to cache (it only knows ~114 listings).
+ */
 type RankedSearch =
   | { kind: 'servers'; servers: Server[] }
+  | { kind: 'snapshot'; servers: Server[] }
   | { kind: 'ids'; ids: string[]; db: D1Drizzle };
 
 export async function searchActiveServers(opts: SearchOpts): Promise<Server[]> {
   const ranked = await rankSearch(opts);
-  if (ranked.kind === 'servers') return ranked.servers;
+  if (ranked.kind !== 'ids') return ranked.servers;
   try {
     return await hydrateSearchResults(ranked.db, ranked.ids);
   } catch (e) {
@@ -1528,8 +1533,9 @@ export async function searchActiveServers(opts: SearchOpts): Promise<Server[]> {
  */
 export async function searchActiveServerIds(
   opts: SearchOpts,
-): Promise<string[]> {
+): Promise<string[] | null> {
   const ranked = await rankSearch(opts);
+  if (ranked.kind === 'snapshot') return null;
   return ranked.kind === 'servers'
     ? ranked.servers.map((s) => s.id)
     : ranked.ids;
@@ -1658,7 +1664,10 @@ async function rankSearch(opts: SearchOpts): Promise<RankedSearch> {
     return { kind: 'ids', ids: rankedIds, db };
   } catch (e) {
     console.error('searchActiveServers: D1 search failed:', errorText(e));
-    return servers(await searchSnapshot(query, category, limit));
+    return {
+      kind: 'snapshot',
+      servers: await searchSnapshot(query, category, limit),
+    };
   }
 }
 

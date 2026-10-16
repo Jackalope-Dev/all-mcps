@@ -168,7 +168,7 @@ async function selectPage(
 }
 
 function cacheKey(p: BrowseParams): string {
-  return `browse/v1/${JSON.stringify(p)}`;
+  return `browse/v2/${JSON.stringify(p)}`;
 }
 
 async function getDb(): Promise<ReturnType<typeof drizzle> | null> {
@@ -210,7 +210,7 @@ async function searchPage(
   db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
   p: BrowseParams,
   now: Date,
-): Promise<{ ids: string[]; total: number | null; capped: boolean }> {
+): Promise<{ ids: string[]; total: number | null; capped: boolean } | null> {
   let rankedIds: string[] | null = null;
   let capped = false;
   if (p.q) {
@@ -220,6 +220,10 @@ async function searchPage(
       limit: SEARCH_POOL,
       vectorTopK: 30,
     });
+    // D1 failed and the search fell back to the bundled snapshot (~114
+    // listings). A page built from that would be cached for a day, so return
+    // nothing cacheable; a stale copy, if any, is still served.
+    if (rankedIds === null) return null;
     capped = rankedIds.length >= SEARCH_POOL;
   }
 
