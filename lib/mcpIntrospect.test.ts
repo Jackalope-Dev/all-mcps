@@ -59,6 +59,21 @@ describe('callMcpEndpoint error reporting', () => {
     expect(r).toEqual({ ok: false, error: 'Bad protocol version' });
   });
 
+  it('includes status and raw error when a JSON-RPC error has no message', async () => {
+    respondWith(
+      () =>
+        new Response(
+          JSON.stringify({ jsonrpc: '2.0', id: 1, error: { code: -32001 } }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        ),
+    );
+    const r = await callMcpEndpoint(URL);
+    expect(r).toEqual({
+      ok: false,
+      error: 'initialize failed (HTTP 200, error {"code":-32001})',
+    });
+  });
+
   it('uses a bare string error from a 2xx body', async () => {
     respondWith(
       () =>

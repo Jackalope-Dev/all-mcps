@@ -85,12 +85,16 @@ function isJsonRpcMessage(msg: any): boolean {
   );
 }
 
-/** A JSON-RPC error's message, or a bare string some servers send as `error`. */
-function errorText(error: any): string | undefined {
-  if (typeof error === 'string') return error || undefined;
-  return typeof error?.message === 'string' && error.message
-    ? error.message
-    : undefined;
+/**
+ * A JSON-RPC error's message, or a bare string some servers send as `error`.
+ * With neither, the fallback carries the HTTP status and the raw error so a
+ * message-less error (e.g. {"code":-32001}) is still diagnosable.
+ */
+function errorText(error: any, status: number, fallback: string): string {
+  if (typeof error === 'string' && error) return error;
+  if (typeof error?.message === 'string' && error.message) return error.message;
+  const raw = JSON.stringify(error)?.slice(0, 200);
+  return `${fallback} (HTTP ${status}${raw ? `, error ${raw}` : ''})`;
 }
 
 async function rpc(
@@ -99,7 +103,7 @@ async function rpc(
   id: number,
   headers: Record<string, string>,
   sessionId?: string,
-): Promise<{ msg: any; sessionId?: string }> {
+): Promise<{ msg: any; status: number; sessionId?: string }> {
   const h: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'application/json, text/event-stream',
@@ -141,7 +145,7 @@ async function rpc(
       res.headers.get('www-authenticate'),
       text,
     );
-  return { msg, sessionId: returnedSession || undefined };
+  return { msg, status: res.status, sessionId: returnedSession || undefined };
 }
 
 /**
@@ -215,7 +219,7 @@ export async function callMcpEndpoint(
     if (init.msg.error)
       return {
         ok: false,
-        error: errorText(init.msg.error) || 'initialize failed',
+        error: errorText(init.msg.error, init.status, 'initialize failed'),
       };
     const serverInfo = init.msg.result?.serverInfo;
     const session = init.sessionId;
@@ -254,7 +258,7 @@ export async function callMcpEndpoint(
     if (call.msg.error)
       return {
         ok: false,
-        error: errorText(call.msg.error) || `${method} failed`,
+        error: errorText(call.msg.error, call.status, `${method} failed`),
         serverInfo,
       };
 
