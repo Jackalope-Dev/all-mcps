@@ -36,6 +36,7 @@ import {
   type RoleEnv,
   workerRole,
 } from './lib/cronSchedule';
+import { withReadReplicaDb } from './lib/d1Replicas';
 
 /**
  * RPC entrypoint on the site Worker that hands the jobs Worker its secrets
@@ -165,7 +166,12 @@ export default {
     if (role === 'site' && jobs && isOffloadedCronPath(pathname)) {
       return jobs.fetch(request);
     }
-    return handler.fetch(request, await withRelayedSecrets(env), ctx);
+    // Anonymous page reads may use a D1 replica (see lib/d1Replicas.ts).
+    const requestEnv = withReadReplicaDb(
+      await withRelayedSecrets(env),
+      request,
+    );
+    return handler.fetch(request, requestEnv, ctx);
   },
 
   async scheduled(
