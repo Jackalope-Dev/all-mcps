@@ -17,7 +17,7 @@ import {
   ENDPOINT_LABELS,
   type Endpoint,
 } from './accessLog';
-import { readEdgeCache, writeEdgeCache } from './edgeCache';
+import { swrEdgeCache } from './edgeCache';
 import { computeQualityScore } from './qualityScore';
 
 /**
@@ -225,93 +225,45 @@ function getSnapshotFallback(): SiteStats {
  */
 let inflightSiteStats: Promise<SiteStats> | null = null;
 
-// The memory cache above is per isolate, and the site runs many: each cold one
-// recomputed every 30-day api_access_logs aggregate (~300k rows apiece), which
-// added up to hundreds of full runs a day. The edge cache is shared by every
-// isolate in a colo, so one computation serves them all until it expires.
 const SHARED_CACHE_KEY = 'site-stats/v2';
 
-/**
- * How long the edge copy is kept past freshness. A stale copy is served while
- * a background refresh recomputes it, so renders only wait on the full
- * computation when a colo has no copy at all.
- */
+/** How long a cached copy is kept past freshness (served while it refreshes). */
 const SHARED_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-
-/** A background refresh that has not finished by then may be retried (a canceled one never settles). */
-const REFRESH_RETRY_MS = 60 * 1000;
 
 type CachedSiteStats = { data: SiteStats; timestamp: number };
 
-function isFresh(entry: CachedSiteStats): boolean {
-  return Date.now() - entry.timestamp < CACHE_TTL_MS;
-}
-
 /**
- * Stale-while-revalidate. Computing the stats takes eight D1 aggregates (six
- * over the 30-day api_access_logs window) plus a paged scan of every active
- * listing, and `/` awaited that inside its ISR re-render whenever the 10-min
- * cache had expired. On a busy D1 the re-render outlived the 25s memory-queue
- * timeout (open-next.config.ts), which logged "TimeoutError: The operation was
- * aborted due to timeout" against the visitor request and left `/` stale.
- * Now an expired copy is returned at once and recomputed in waitUntil.
+ * Stale-while-revalidate via swrEdgeCache: per colo, plus one global copy in
+ * R2. Computing the stats takes eight D1 aggregates (six over the 30-day
+ * api_access_logs window) plus a paged scan of every active listing: 28-45s
+ * on a busy D1. With only the per-colo Cache API in front of it, every colo
+ * without a copy ran that inline inside the `/` render and blew the 25s
+ * memory-queue timeout (open-next.config.ts) — "TimeoutError: The operation
+ * was aborted due to timeout" on GET /. Now a cold colo seeds from R2, and an
+ * expired copy is returned at once and recomputed in waitUntil.
  */
 export async function getSiteStats(): Promise<SiteStats> {
-  if (cachedSiteStats && isFresh(cachedSiteStats)) {
+  if (
+    cachedSiteStats &&
+    Date.now() - cachedSiteStats.timestamp < CACHE_TTL_MS
+  ) {
     return cachedSiteStats.data;
   }
-  if (!cachedSiteStats) {
-    const shared = await readEdgeCache<CachedSiteStats>(SHARED_CACHE_KEY);
-    if (shared && Date.now() - shared.timestamp < SHARED_CACHE_MAX_AGE_MS) {
-      cachedSiteStats = shared;
-    }
-  }
-  if (cachedSiteStats) {
-    if (!isFresh(cachedSiteStats)) await refreshSiteStatsInBackground();
-    return cachedSiteStats.data;
-  }
-  // Nothing cached in this colo yet: compute inline. Concurrent renders on a
-  // cold isolate share one computation.
-  inflightSiteStats ??= loadSiteStats().finally(() => {
-    inflightSiteStats = null;
-  });
-  return inflightSiteStats;
-}
-
-let refreshStartedAt = 0;
-
-async function refreshSiteStatsInBackground(): Promise<void> {
-  if (Date.now() - refreshStartedAt < REFRESH_RETRY_MS) return;
-  refreshStartedAt = Date.now();
-  try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const { ctx } = getCloudflareContext();
-    ctx.waitUntil(
-      loadSiteStats().catch((err) => {
-        console.error('[getSiteStats] background refresh failed:', err);
-      }),
-    );
-  } catch {
-    // No request context (build, tests): the stale copy stands until the next render.
-  }
-}
-
-async function loadSiteStats(): Promise<SiteStats> {
-  // Another isolate in this colo may have refreshed the shared copy already.
-  const shared = await readEdgeCache<CachedSiteStats>(SHARED_CACHE_KEY);
-  if (shared && isFresh(shared)) {
-    cachedSiteStats = shared;
-    return shared.data;
-  }
-  const data = await querySiteStats();
-  if (!data) return cachedSiteStats?.data ?? getSnapshotFallback();
-  cachedSiteStats = { data, timestamp: Date.now() };
-  await writeEdgeCache(
+  // Concurrent renders on one isolate share one lookup.
+  inflightSiteStats ??= swrEdgeCache(
     SHARED_CACHE_KEY,
-    cachedSiteStats,
-    SHARED_CACHE_MAX_AGE_MS / 1000,
-  );
-  return data;
+    { freshMs: CACHE_TTL_MS, maxAgeSeconds: SHARED_CACHE_MAX_AGE_MS / 1000 },
+    querySiteStats,
+  )
+    .then((data) => {
+      if (!data) return cachedSiteStats?.data ?? getSnapshotFallback();
+      cachedSiteStats = { data, timestamp: Date.now() };
+      return data;
+    })
+    .finally(() => {
+      inflightSiteStats = null;
+    });
+  return inflightSiteStats;
 }
 
 /**
