@@ -100,17 +100,51 @@ export async function isSearchFtsReady(
   if (readyState && now - readyState.at < READY_RECHECK_MS) {
     return readyState.value;
   }
-  readyCheck ??= probe()
-    .catch(() => false)
-    .then((value) => {
+  readyCheck ??= probe().then(
+    (value) => {
       readyState = { value, at: now };
       readyCheck = null;
       return value;
-    });
+    },
+    () => {
+      // A busy or reset D1 says nothing about the index: keep what we knew
+      // and look again soon, instead of pinning the heavy LIKE scan for the
+      // full recheck window (that fed the overload it came from).
+      const value = readyState?.value ?? false;
+      readyState = { value, at: now - READY_RECHECK_MS + PROBE_RETRY_MS };
+      readyCheck = null;
+      return value;
+    },
+  );
   return readyCheck;
 }
 
-/** An FTS query failed (table dropped, module missing): use LIKE until the next recheck. */
+const PROBE_RETRY_MS = 30 * 1000;
+
+/** Message text of an error and its `cause` chain (Drizzle wraps the D1 error). */
+export function errorText(e: unknown): string {
+  const parts: string[] = [];
+  let cur: unknown = e;
+  for (let i = 0; cur && i < 5; i++) {
+    const msg = (cur as { message?: unknown }).message;
+    parts.push(typeof msg === 'string' ? msg : String(cur));
+    cur = (cur as { cause?: unknown }).cause;
+  }
+  return parts.join(' <- ');
+}
+
+/**
+ * The index itself is missing or unusable (table dropped, FTS5 or trigram
+ * unavailable), as opposed to a busy, reset or unreachable D1. Only these
+ * should switch an isolate to the LIKE scan.
+ */
+export function isFtsSchemaError(e: unknown): boolean {
+  return /no such (table|module|function|column)|unknown tokenizer|fts5/i.test(
+    errorText(e),
+  );
+}
+
+/** The index is missing (see isFtsSchemaError): use LIKE until the next recheck. */
 export function markSearchFtsUnavailable(now = Date.now()): void {
   readyState = { value: false, at: now };
 }

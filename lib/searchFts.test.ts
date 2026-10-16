@@ -6,11 +6,14 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { servers as serversTable } from '@/db/schema';
 import { buildSearchPrefilter } from './search';
 import {
+  errorText,
   ftsBackfillSql,
   ftsFuzzyMatch,
   ftsKeywordPlan,
   ftsPhrase,
   ftsReadySql,
+  isFtsSchemaError,
+  isSearchFtsReady,
   resetSearchFtsState,
 } from './searchFts';
 
@@ -517,5 +520,51 @@ describe('rollout fallback', () => {
     );
     expect(second).toEqual(['vault-notes']);
     expect(errors).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('transient D1 errors', () => {
+  const overloaded = new Error('Failed query: select ...', {
+    cause: new Error(
+      'D1_ERROR: D1 DB is overloaded. Requests queued for too long.',
+    ),
+  });
+
+  it('only treats a missing index as a reason to use the LIKE scan', () => {
+    expect(isFtsSchemaError(new Error('no such table: servers_fts'))).toBe(
+      true,
+    );
+    expect(
+      isFtsSchemaError(
+        new Error('x', { cause: new Error('no such module: fts5') }),
+      ),
+    ).toBe(true);
+    expect(isFtsSchemaError(overloaded)).toBe(false);
+    expect(
+      isFtsSchemaError(
+        new Error('D1 DB exceeded its CPU time limit and was reset.'),
+      ),
+    ).toBe(false);
+  });
+
+  it('includes the wrapped D1 message in errorText', () => {
+    expect(errorText(overloaded)).toContain('D1 DB is overloaded');
+  });
+
+  it('keeps the known readiness when the probe hits a transient error, and retries soon', async () => {
+    resetSearchFtsState();
+    expect(await isSearchFtsReady(async () => true, 1_000_000)).toBe(true);
+    // Recheck due (5 min later) and the probe fails: still ready.
+    const later = 1_000_000 + 5 * 60 * 1000 + 1;
+    expect(
+      await isSearchFtsReady(async () => {
+        throw overloaded;
+      }, later),
+    ).toBe(true);
+    // Retried within ~30s instead of pinning the answer for 5 minutes.
+    const probe = vi.fn(async () => true);
+    await isSearchFtsReady(probe, later + 31_000);
+    expect(probe).toHaveBeenCalledTimes(1);
+    resetSearchFtsState();
   });
 });
