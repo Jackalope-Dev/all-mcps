@@ -316,6 +316,13 @@
       "when": 1792021175200,
       "tag": "0064_catalog_quality",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "6",
+      "when": 1792113810203,
+      "tag": "0065_search_fts",
+      "breakpoints": true
     }
   ]
 }
