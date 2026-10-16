@@ -141,7 +141,7 @@ export const SITE_JOBS: CronJob[] = [
   { path: '/api/cron/isr-cache-cleanup', secretVar: 'CRON_SECRET' },
 ];
 
-// Runs every 4h (wrangler.jsonc "0 */4 * * *").
+// Runs every 4h at :04 (wrangler.jsonc "4 */4 * * *"), clear of the :00 ticks.
 export const SLOW_JOBS: CronJob[] = [
   // FAQ backfill for listings enriched before ai-content started generating FAQ
   // pairs. Every tick until the backlog is drained, then permanently no-ops. For
@@ -301,7 +301,7 @@ export function jobsForTick(cron: string, role: WorkerRole): CronJob[] {
     // JOBS. A single Worker keeps the default batch it shares with pages.
     case '*/20 * * * *':
       return role === 'site' ? AI_CONTENT_JOBS_DEDICATED : AI_CONTENT_JOBS;
-    case '0 */4 * * *':
+    case '4 */4 * * *':
       return [...SITE_JOBS, ...SLOW_JOBS];
     default:
       // A pattern no longer (or not yet) in wrangler.jsonc, e.g. Cloudflare

@@ -39,12 +39,16 @@
   ],
   "triggers": {
     // The site is the only scheduler (lib/cronSchedule.ts jobsForTick):
-    // "0 */4 * * *" isr-cache-cleanup (runs here) + the slow list,
+    // "4 */4 * * *" isr-cache-cleanup (runs here) + the slow list,
     // "*/15 * * * *" health + enrich, "*/20 * * * *" ai-content as two
     // batch-24 runs. Everything but isr-cache-cleanup executes on
     // all-mcps-jobs. Keep these patterns stable: Cloudflare kept firing the
     // previous set for over an hour after a change here.
-    "crons": ["0 */4 * * *", "*/15 * * * *", "*/20 * * * *"]
+    // The slow list runs at :04, not :00: at :00 it landed on the */15 and
+    // */20 ticks too, and at 00:00Z the three together overloaded D1 and
+    // failed every job in the tick. It takes ~8 min, so it ends before the
+    // :15 tick; if it outgrows that window, split it across two schedules.
+    "crons": ["4 */4 * * *", "*/15 * * * *", "*/20 * * * *"]
   },
   "d1_databases": [
     {

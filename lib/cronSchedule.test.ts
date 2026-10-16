@@ -29,14 +29,18 @@ describe('jobsForTick', () => {
   it('schedules every job on the site, including the site-only cache cleanup', () => {
     expect(jobsForTick('*/15 * * * *', 'site')).toBe(FAST_JOBS);
     expect(jobsForTick('*/20 * * * *', 'site')).toBe(AI_CONTENT_JOBS_DEDICATED);
-    expect(paths(jobsForTick('0 */4 * * *', 'site'))).toEqual(
+    expect(paths(jobsForTick('4 */4 * * *', 'site'))).toEqual(
       paths([...SITE_JOBS, ...SLOW_JOBS]),
     );
     expect(paths(SITE_JOBS)).toEqual([ISR_CLEANUP]);
   });
 
+  it('runs nothing for the retired :00 slow schedule Cloudflare may still fire', () => {
+    expect(jobsForTick('0 */4 * * *', 'site')).toEqual([]);
+  });
+
   it('never runs anything from the jobs Worker schedule', () => {
-    for (const cron of ['0 */4 * * *', '*/15 * * * *', '*/20 * * * *']) {
+    for (const cron of ['4 */4 * * *', '*/15 * * * *', '*/20 * * * *']) {
       expect(jobsForTick(cron, 'jobs')).toEqual([]);
     }
   });
@@ -64,7 +68,7 @@ describe('jobsForTick', () => {
 
   it('keeps the blog pipeline last in the slow list (it spends ~9 min of budget)', () => {
     for (const role of ['site', 'all'] as const) {
-      const slow = paths(jobsForTick('0 */4 * * *', role));
+      const slow = paths(jobsForTick('4 */4 * * *', role));
       expect(slow.at(-1)).toBe('/api/cron/blog-pipeline');
     }
   });
