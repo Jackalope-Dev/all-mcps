@@ -6,17 +6,13 @@ import { ServerRow } from '@/components/directory/ServerRow';
 import { ImpressionBeacon } from '@/components/ImpressionTracker';
 import { PageShell } from '@/components/PageShell';
 import { serializeJsonLd } from '@/lib/jsonLd';
-import { engagementScore } from '@/lib/search';
 import { getServersForTag } from '@/lib/tags';
 
-// getServersForTag re-derives tags for the whole active catalog via regex extraction
-// (see lib/tags.ts) — expensive to re-run on every request. ISR + the R2-backed
-// incrementalCache (open-next.config.ts) let this persist across requests like the
-// other listing pages (categories/[slug], best/[topic]).
+// getServersForTag reads the shared tag index (lib/tags.ts: one catalog walk,
+// cached per colo and in R2) and loads only the rows shown. ISR + the R2-backed
+// incrementalCache (open-next.config.ts) let the page persist across requests
+// like the other listing pages (categories/[slug], best/[topic]).
 export const revalidate = 3600;
-
-/** Rows rendered on the page; larger tags link out to /browse search. */
-const MAX_ROWS = 60;
 
 export async function generateMetadata({
   params,
@@ -24,18 +20,18 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const { servers: matched, rawTag } = await getServersForTag(slug);
+  const { total, rawTag } = await getServersForTag(slug);
 
-  if (matched.length === 0) {
+  if (total === 0) {
     return { title: 'Tag Not Found', robots: { index: false } };
   }
 
   const title = `${rawTag} MCP Servers & Tools`;
-  const description = `Browse ${matched.length} Model Context Protocol (MCP) servers tagged with ${rawTag}. Find and install AI tools for ${rawTag}.`;
+  const description = `Browse ${total} Model Context Protocol (MCP) servers tagged with ${rawTag}. Find and install AI tools for ${rawTag}.`;
   const url = `https://allmcps.com/tags/${slug}`;
   // Guard against thin taxonomy index bloat: only index tag pages with
   // substantial listings (10+) and not overwhelming (>200).
-  const isIndexable = matched.length >= 10 && matched.length <= 200;
+  const isIndexable = total >= 10 && total <= 200;
 
   return {
     title,
@@ -65,9 +61,10 @@ export default async function TagDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const { servers: matched, rawTag } = await getServersForTag(slug);
+  // `shown` is already the top rows by engagementScore, best first.
+  const { servers: shown, total, rawTag } = await getServersForTag(slug);
 
-  if (matched.length === 0) {
+  if (total === 0) {
     notFound();
   }
 
@@ -79,7 +76,7 @@ export default async function TagDetailPage({
       {
         '@type': 'CollectionPage',
         name: `${rawTag} MCP Servers & Tools`,
-        description: `Explore ${matched.length} Model Context Protocol (MCP) servers and tools tagged with ${rawTag}.`,
+        description: `Explore ${total} Model Context Protocol (MCP) servers and tools tagged with ${rawTag}.`,
         url: canonicalUrl,
         isPartOf: {
           '@type': 'WebSite',
@@ -88,8 +85,8 @@ export default async function TagDetailPage({
         },
         mainEntity: {
           '@type': 'ItemList',
-          numberOfItems: matched.length,
-          itemListElement: matched.slice(0, 50).map((s, i) => ({
+          numberOfItems: total,
+          itemListElement: shown.slice(0, 50).map((s, i) => ({
             '@type': 'ListItem',
             position: i + 1,
             url: `https://allmcps.com/mcp/${s.id}`,
@@ -123,10 +120,6 @@ export default async function TagDetailPage({
     ],
   };
 
-  const shown = [...matched]
-    .sort((a, b) => engagementScore(b) - engagementScore(a))
-    .slice(0, MAX_ROWS);
-
   return (
     <PageShell>
       <script
@@ -152,9 +145,9 @@ export default async function TagDetailPage({
         <div className="dir-hero-body">
           <h1 className="text-page-title">{rawTag} MCP servers &amp; tools</h1>
           <p className="dir-hero-lead">
-            {matched.length.toLocaleString()} Model Context Protocol servers
-            tagged &ldquo;{rawTag}&rdquo;, ranked by usage. Connect any of them
-            to Claude Desktop, Cursor or Windsurf in one step.
+            {total.toLocaleString()} Model Context Protocol servers tagged
+            &ldquo;{rawTag}&rdquo;, ranked by usage. Connect any of them to
+            Claude Desktop, Cursor or Windsurf in one step.
           </p>
           <div className="dir-hero-actions">
             <Link
@@ -179,10 +172,10 @@ export default async function TagDetailPage({
           </li>
         ))}
       </ol>
-      {matched.length > shown.length && (
+      {total > shown.length && (
         <div className="dir-more">
           <span className="dir-more-meta tabular">
-            Showing {shown.length} of {matched.length.toLocaleString()}
+            Showing {shown.length} of {total.toLocaleString()}
           </span>
           <Link
             href={`/browse?q=${encodeURIComponent(rawTag)}`}

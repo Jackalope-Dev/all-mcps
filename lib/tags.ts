@@ -1,7 +1,12 @@
 import { cache } from 'react';
 import { parseCategoryLabel } from './categories';
-import { readEdgeCache, writeEdgeCache } from './edgeCache';
-import { iterateActiveServersLight, type Server } from './servers';
+import { swrEdgeCache } from './edgeCache';
+import { engagementScore } from './search';
+import {
+  hydrateServersByIds,
+  iterateActiveServersLight,
+  type Server,
+} from './servers';
 
 function slugifyTag(str: string): string {
   return str
@@ -150,72 +155,137 @@ export type TagWithCount = {
   count: number;
 };
 
-const TAG_COUNTS_CACHE_KEY = 'tag-counts/v1';
-const TAG_COUNTS_TTL_SECONDS = 60 * 60;
+/**
+ * One tag in the shared index: its display label, how many servable listings
+ * carry it, and the ids of the most-engaged of them (engagementScore desc,
+ * catalog order on ties), capped at what any consumer renders.
+ */
+type TagIndexEntry = { label: string; count: number; ids: string[] };
+type TagIndex = Record<string, TagIndexEntry>;
 
 /**
- * Get all tags with server counts across all active servers in the catalog.
- * The count is a full paged catalog scan (~17 D1 reads, several seconds), and
- * /sitemap/core.xml and /tags ran it on every request — so it's kept in the
- * colo edge cache for an hour.
+ * Most ids kept per tag: the rows /tags/[slug] lists (its JSON-LD list takes
+ * the first 50; bigger tags link out to /browse search). `count` stays exact.
  */
-export async function getAllTagsWithCounts(): Promise<TagWithCount[]> {
-  const cached = await readEdgeCache<TagWithCount[]>(TAG_COUNTS_CACHE_KEY);
-  if (cached && cached.length > 0) return cached;
-  const tags = await countTagsAcrossCatalog();
-  // Never pin an empty result (D1 unreachable) for an hour.
-  if (tags.length > 0) {
-    await writeEdgeCache(TAG_COUNTS_CACHE_KEY, tags, TAG_COUNTS_TTL_SECONDS);
-  }
-  return tags;
-}
+const TAG_INDEX_IDS_CAP = 60;
 
-async function countTagsAcrossCatalog(): Promise<TagWithCount[]> {
-  const counts = new Map<string, { label: string; count: number }>();
+/**
+ * Tags are regex-extracted per listing, so there is no SQL that finds one
+ * tag's listings: every tag page and the tag counts used to walk the whole
+ * active catalog (~32k rows, ~17 D1 reads) on each regeneration. After a
+ * deploy (new ISR build id) a crawl over the ~840 tag pages ran hundreds of
+ * those walks and D1 was reset for exceeding its CPU limit. One walk now
+ * builds this index, kept stale-while-revalidate per colo and in R2.
+ */
+const TAG_INDEX_CACHE_KEY = 'tag-index/v1';
+const TAG_INDEX_CACHE = {
+  freshMs: 60 * 60 * 1000,
+  maxAgeSeconds: 24 * 60 * 60,
+};
 
-  // Paged: holding the whole catalog at once overran the Worker memory limit
-  // (this runs inside /sitemap/core.xml and /tags).
-  for await (const page of iterateActiveServersLight()) {
+type TagAccumulator = {
+  label: string;
+  count: number;
+  /** Best-first candidates; trimmed back to the cap as it grows. */
+  top: { id: string; score: number }[];
+};
+
+const byScoreDesc = (a: { score: number }, b: { score: number }) =>
+  b.score - a.score;
+
+async function buildTagIndex(
+  pages: AsyncIterable<Server[]>,
+): Promise<TagIndex> {
+  const acc = new Map<string, TagAccumulator>();
+
+  // Paged: holding the whole catalog at once overran the Worker memory limit.
+  for await (const page of pages) {
     for (const server of page) {
-      const extracted = extractTagsForServer(server);
-      for (const { slug, label } of extracted) {
-        const existing = counts.get(slug);
-        if (existing) {
-          existing.count += 1;
-        } else {
-          counts.set(slug, { label, count: 1 });
+      const score = engagementScore(server);
+      for (const { slug, label } of extractTagsForServer(server)) {
+        let tag = acc.get(slug);
+        if (!tag) {
+          tag = { label, count: 0, top: [] };
+          acc.set(slug, tag);
+        }
+        tag.count += 1;
+        tag.top.push({ id: server.id, score });
+        // Stable sort keeps catalog order on ties, as the full sort did.
+        if (tag.top.length >= TAG_INDEX_IDS_CAP * 2) {
+          tag.top.sort(byScoreDesc);
+          tag.top.length = TAG_INDEX_IDS_CAP;
         }
       }
     }
   }
 
-  return Array.from(counts.entries())
-    .map(([slug, data]) => ({ slug, ...data }))
+  const index: TagIndex = {};
+  for (const [slug, tag] of acc) {
+    index[slug] = {
+      label: tag.label,
+      count: tag.count,
+      ids: tag.top
+        .sort(byScoreDesc)
+        .slice(0, TAG_INDEX_IDS_CAP)
+        .map((t) => t.id),
+    };
+  }
+  return index;
+}
+
+/**
+ * The shared tag index. Built from D1 only: an empty walk (D1 missing or
+ * failing) is never cached, and the page falls back to the static snapshot
+ * catalog, uncached, as the per-request walk did.
+ */
+const getTagIndex = cache(async function getTagIndex(): Promise<TagIndex> {
+  const cached = await swrEdgeCache(
+    TAG_INDEX_CACHE_KEY,
+    TAG_INDEX_CACHE,
+    async () => {
+      try {
+        const index = await buildTagIndex(
+          iterateActiveServersLight(undefined, { snapshotFallback: false }),
+        );
+        return Object.keys(index).length > 0 ? index : null;
+      } catch (e) {
+        // D1 failed mid-walk: a partial index would undercount every tag.
+        console.error('[tags] tag index build failed:', e);
+        return null;
+      }
+    },
+  );
+  return cached ?? buildTagIndex(iterateActiveServersLight());
+});
+
+function lookupTag(index: TagIndex, slug: string): TagIndexEntry | null {
+  return Object.hasOwn(index, slug) ? index[slug] : null;
+}
+
+/**
+ * Every tag with its count of servable listings, most-used first (label on
+ * ties). Served from the shared tag index (/sitemap/core.xml and /tags).
+ */
+export async function getAllTagsWithCounts(): Promise<TagWithCount[]> {
+  const index = await getTagIndex();
+  return Object.entries(index)
+    .map(([slug, { label, count }]) => ({ slug, label, count }))
     .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 }
 
 /**
- * Get all active servers matching a tag slug. Wrapped in React `cache` because
- * /tags/[slug] calls it from both generateMetadata and the page, and each call
- * is a full active-catalog scan on D1.
+ * One tag page's data: the top TAG_INDEX_IDS_CAP listings by engagement
+ * (full rows, best first), the true number of listings carrying the tag, and
+ * its label. An unknown tag has total 0. Wrapped in React `cache` because
+ * /tags/[slug] calls it from both generateMetadata and the page.
  */
 export const getServersForTag = cache(async function getServersForTag(
   targetSlug: string,
-): Promise<{ servers: Server[]; rawTag: string }> {
-  const matched: Server[] = [];
-  let foundLabel = targetSlug;
-
-  // Paged so only the matches outlive each page, not the whole catalog.
-  for await (const page of iterateActiveServersLight()) {
-    for (const server of page) {
-      const extracted = extractTagsForServer(server);
-      const match = extracted.find((t) => t.slug === targetSlug);
-      if (match) {
-        matched.push(server);
-        if (match.label) foundLabel = match.label;
-      }
-    }
+): Promise<{ servers: Server[]; total: number; rawTag: string }> {
+  const tag = lookupTag(await getTagIndex(), targetSlug);
+  if (!tag || tag.count === 0) {
+    return { servers: [], total: 0, rawTag: targetSlug };
   }
-
-  return { servers: matched, rawTag: foundLabel };
+  const servers = await hydrateServersByIds(tag.ids);
+  return { servers, total: tag.count, rawTag: tag.label };
 });
