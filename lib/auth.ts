@@ -32,7 +32,26 @@ export const { handlers, signIn, auth } = NextAuth(async () => {
           // so Cloudflare Workers log drain doesn't trigger false-positive alert incidents.
           return;
         }
-        console.error(error);
+        // console.error(error) reaches Workers logs as a bare stack, so a
+        // failed magic-link sign-in showed only "error=Configuration" with no
+        // reason (Resend rejection vs adapter/D1 failure). Log the type and
+        // the full cause chain explicitly.
+        const parts: string[] = [];
+        let cur: unknown = error;
+        for (let i = 0; cur && i < 5; i++) {
+          const e = cur as { name?: string; type?: string; message?: string };
+          parts.push(
+            `${e.type ?? e.name ?? 'Error'}: ${e.message ?? String(cur)}`,
+          );
+          cur = (cur as { cause?: unknown }).cause;
+        }
+        // Resend errors can echo the address; keep PII out of logs.
+        console.error(
+          '[auth]',
+          parts
+            .join(' <- ')
+            .replace(/[^\s"'<>@,;:]+@[^\s"'<>@,;:]+/g, '<email>'),
+        );
       },
     },
     providers: [
