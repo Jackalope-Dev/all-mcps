@@ -1055,6 +1055,9 @@ const SCORING_SERVER_COLUMNS = {
  */
 const SEARCH_CANDIDATE_CAP = 1500;
 
+/** How long a search waits on the best-effort vector step before going keyword-only. */
+const VECTOR_SEARCH_TIMEOUT_MS = 1500;
+
 /** D1 rejects statements with more than 100 bound parameters. */
 const D1_ID_CHUNK = 90;
 
@@ -1524,16 +1527,31 @@ export async function searchActiveServers(opts: {
     }
   }
 
+  const t0 = Date.now();
+  const phases: Record<string, number | string> = {};
   try {
     let vectorMatches: Array<{ id: string; score: number }> = [];
     if (vectorTopK > 0 && (env as any).VECTOR_INDEX && (env as any).AI) {
       try {
         const { queryVectorIndex } = await import('./vectorSearch');
-        vectorMatches = await queryVectorIndex(query, env, vectorTopK);
+        // Best-effort and unbounded (Workers AI embedding + Vectorize): after
+        // the FTS index made the keyword prefilter ~10ms, uncached searches
+        // still took 12-23s wall at 0.1-0.5s CPU. Keyword-only results beat
+        // making every search wait on a slow embedding.
+        const timedOut = Symbol('timeout');
+        const result = await Promise.race([
+          queryVectorIndex(query, env, vectorTopK),
+          new Promise<typeof timedOut>((resolve) =>
+            setTimeout(() => resolve(timedOut), VECTOR_SEARCH_TIMEOUT_MS),
+          ),
+        ]);
+        if (result === timedOut) phases.vector = 'timeout';
+        else vectorMatches = result;
       } catch {
         /* Vector search is best-effort */
       }
     }
+    phases.vectorMs = Date.now() - t0;
 
     let ranked: SearchCandidate[];
     if (vectorMatches.length > 0) {
@@ -1587,11 +1605,19 @@ export async function searchActiveServers(opts: {
       }
     }
 
+    phases.rankedMs = Date.now() - t0;
     const rankedIds = ranked.map((s) => s.id);
     if (cacheKey) {
       await writeEdgeCache(cacheKey, rankedIds, SEARCH_CACHE_TTL_SECONDS);
     }
-    return hydrateSearchResults(db, rankedIds);
+    const hydrated = await hydrateSearchResults(db, rankedIds);
+    // TEMPORARY (2026-10-15): find where slow uncached searches spend their
+    // time. Remove once known.
+    if (Date.now() - t0 > 3000) {
+      phases.totalMs = Date.now() - t0;
+      console.warn('[search] slow (ms)', JSON.stringify(phases));
+    }
+    return hydrated;
   } catch (e) {
     console.error('searchActiveServers: D1 search failed', e);
     return searchSnapshot(query, category, limit);
