@@ -48,9 +48,11 @@ import {
   type SearchPrefilter,
 } from './search';
 import {
+  errorText,
   type FtsModePlan,
   ftsFuzzyMatch,
   ftsKeywordPlan,
+  isFtsSchemaError,
   isSearchFtsReady,
   markSearchFtsUnavailable,
   SEARCH_FTS_READY_CURSOR,
@@ -1222,8 +1224,14 @@ async function prefilterSearchCandidates(
     try {
       return await ftsPrefilterCandidates(db, plan, modes, category);
     } catch (e) {
-      // Table dropped or FTS5 unavailable: LIKE until the next readiness recheck.
-      console.error('search: FTS prefilter failed, using LIKE scan', e);
+      // Only a missing index justifies the LIKE scan. A busy or reset D1
+      // fails the search like any other D1 error: retrying with a
+      // full-catalog scan (and pinning it for minutes) fed the overload.
+      if (!isFtsSchemaError(e)) throw e;
+      console.error(
+        'search: FTS prefilter failed, using LIKE scan:',
+        errorText(e),
+      );
       markSearchFtsUnavailable();
     }
   }
@@ -1619,7 +1627,7 @@ export async function searchActiveServers(opts: {
     }
     return hydrated;
   } catch (e) {
-    console.error('searchActiveServers: D1 search failed', e);
+    console.error('searchActiveServers: D1 search failed:', errorText(e));
     return searchSnapshot(query, category, limit);
   }
 }
