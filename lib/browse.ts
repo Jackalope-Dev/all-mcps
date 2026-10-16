@@ -1,7 +1,7 @@
 import { type SQL, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import type { BrowseParams } from './browseParams';
-import { readEdgeCache, writeEdgeCache } from './edgeCache';
+import { swrEdgeCache } from './edgeCache';
 import { recordSearchMiss } from './searchMisses';
 import { servableSql } from './servability';
 import {
@@ -189,20 +189,24 @@ export async function browseCatalog(
     return { items, total, capped: false };
   }
 
-  const key = cacheKey(p);
-  const cached = await readEdgeCache<{
-    ids: string[];
-    total: number | null;
-    capped: boolean;
-  }>(key);
-  if (cached) {
-    return {
-      items: await getFeedItemsByIds(cached.ids),
-      total: cached.total,
-      capped: cached.capped,
-    };
-  }
+  // Stale-while-revalidate, kept per colo and globally in R2: the search and
+  // count scan took up to ~55s on a busy D1, and a per-colo cache alone
+  // missed for most visitors (thin traffic per colo), so a tap on a homepage
+  // "Popular" chip often waited on the full search.
+  const cached = await swrEdgeCache(
+    cacheKey(p),
+    { freshMs: CACHE_TTL_SECONDS * 1000, maxAgeSeconds: 24 * 60 * 60 },
+    () => searchPage(db, p, now),
+  );
+  const { ids, total, capped } = cached ?? { ids: [], total: 0, capped: false };
+  return { items: await getFeedItemsByIds(ids), total, capped };
+}
 
+async function searchPage(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  p: BrowseParams,
+  now: Date,
+): Promise<{ ids: string[]; total: number | null; capped: boolean }> {
   let rankedIds: string[] | null = null;
   let capped = false;
   if (p.q) {
@@ -227,14 +231,5 @@ export async function browseCatalog(
     await recordSearchMiss(db, p.q, 'browse', now);
   }
 
-  await writeEdgeCache(
-    key,
-    { ids: page.ids, total: page.total, capped },
-    CACHE_TTL_SECONDS,
-  );
-  return {
-    items: await getFeedItemsByIds(page.ids),
-    total: page.total,
-    capped,
-  };
+  return { ids: page.ids, total: page.total, capped };
 }
