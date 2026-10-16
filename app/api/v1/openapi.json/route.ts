@@ -502,7 +502,7 @@ export async function GET() {
                   badge_markdown: {
                     type: 'string',
                     description:
-                      'Ready-to-paste README badge; placing it also earns a dofollow backlink once detected.',
+                      'Ready-to-paste public README badge; earns a dofollow backlink once detected. It does not prove ownership — claiming uses the personalized badge from claim_url.',
                   },
                 },
               },

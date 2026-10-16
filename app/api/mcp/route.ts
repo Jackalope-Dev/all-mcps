@@ -1000,12 +1000,14 @@ To complete activation, open the checkout URL or trigger autonomous agent paymen
 - **Status**: ${data.status} (Pending Manual Review & Verification)
 - **Claim & Verify URL**: [Verify Listing](${data.claim_url})
 ${enrichedFields.length ? `- **Enrichment captured**: ${enrichedFields.join(' · ')}\n` : ''}
-### Add Verification Badge to your README.md
-To verify your listing automatically and trigger immediate indexing, embed this markdown badge in your GitHub repository:
+### Add the AllMCPs badge to your README.md
+Embed this markdown badge in your GitHub repository. It links back to the listing and earns a reciprocal dofollow backlink once detected:
 
 \`\`\`markdown
 ${data.badge_markdown}
 \`\`\`
+
+This public badge does not prove ownership. To claim the listing, sign in at the Claim & Verify URL and use the personalized badge shown there (its link ends in \`?verify=<account id>\`), or verify through your website's DNS.
 `;
         await logMcp(data.id, 'submit_mcp_server');
         return text(md);

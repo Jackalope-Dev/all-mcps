@@ -13,6 +13,8 @@ import {
 import Link from 'next/link';
 import type React from 'react';
 import { useState } from 'react';
+import { badgeTargetUrl } from '../../lib/badgeLink';
+import { useViewerId } from '../../lib/clientSession';
 import { toast } from '../ui/Toast';
 
 const STEPS = [
@@ -46,13 +48,14 @@ export function SubmitSuccess({
   onSubmitAnother: () => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const viewerId = useViewerId();
   const baseUrl =
     typeof window !== 'undefined'
       ? window.location.origin
       : 'https://allmcps.com';
   const sampleId = submittedId || 'your-server';
   const badgeSrc = `${baseUrl}/api/badge/${sampleId}?style=shield`;
-  const badgeMarkdown = `[![AllMCPs Verified](${badgeSrc})](${baseUrl}/mcp/${sampleId})`;
+  const badgeMarkdown = `[![AllMCPs](${badgeSrc})](${badgeTargetUrl(baseUrl, sampleId, viewerId)})`;
   const pricingHref = (sku?: string) =>
     submittedId
       ? `/pricing?serverId=${encodeURIComponent(submittedId)}${sku ? `&sku=${sku}` : ''}`

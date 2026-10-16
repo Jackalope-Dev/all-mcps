@@ -2,6 +2,8 @@
 
 import { ExternalLink, Search, ShieldCheck, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { badgeTargetUrl } from '../../lib/badgeLink';
+import { useViewerId } from '../../lib/clientSession';
 import { parseServerName } from '../../lib/displayName';
 import { trackShare } from '../../lib/gtag';
 import { CodePanel } from '../tools/CodePanel';
@@ -33,6 +35,7 @@ export function BadgeEmbedBuilder({
     'status' | 'upvotes' | 'views' | 'installs'
   >('status');
   const [badgeTheme, setBadgeTheme] = useState<'dark' | 'light'>('dark');
+  const viewerId = useViewerId();
 
   // Server selection state
   const [customId, setCustomId] = useState(serverId || 'allmcps-server');
@@ -126,7 +129,7 @@ export function BadgeEmbedBuilder({
     ? `?${queryParams.toString()}`
     : '';
   const badgeSrc = `${baseUrl}/api/badge/${cleanId}${queryString}`;
-  const targetUrl = `${baseUrl}/mcp/${cleanId}`;
+  const targetUrl = badgeTargetUrl(baseUrl, cleanId, viewerId);
 
   const badgeHeight =
     badgeStyle === 'directory' ? 40 : badgeStyle === 'featured' ? 32 : 20;
@@ -389,6 +392,25 @@ export function BadgeEmbedBuilder({
                 <code>rel=&quot;nofollow&quot;</code>). Verify your site (badge,
                 meta tag, or DNS) and keep the link dofollow, and your
                 listing&apos;s website link becomes dofollow in return.
+              </span>
+            </li>
+            <li>
+              <ShieldCheck size={15} aria-hidden="true" />
+              <span>
+                {viewerId ? (
+                  <>
+                    <strong>Doubles as your claim proof.</strong> Because
+                    you&apos;re signed in, the link carries your account id, so
+                    this same badge in the repo README verifies ownership when
+                    you claim the listing.
+                  </>
+                ) : (
+                  <>
+                    <strong>Claiming the listing?</strong> Sign in first. The
+                    badge then carries your account id, which the GitHub claim
+                    check needs. This signed-out version can&apos;t claim.
+                  </>
+                )}
               </span>
             </li>
             <li>

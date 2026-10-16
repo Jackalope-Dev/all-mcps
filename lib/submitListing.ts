@@ -178,7 +178,10 @@ export async function submitListing(
   const appUrl = getAppUrl();
   const claimUrl = `${appUrl}/mcp/${id}/claim`;
   const badgeSrc = `${appUrl}/api/badge/${id}?style=shield`;
-  const badgeMarkdown = `[![AllMCPs Verified](${badgeSrc})](${appUrl}/mcp/${id})`;
+  // Anonymous agent submission, so there's no account to personalize for: this
+  // public badge earns backlink credit but can't claim. The claim page issues
+  // the personalized one.
+  const badgeMarkdown = `[![Listed on AllMCPs](${badgeSrc})](${appUrl}/mcp/${id})`;
 
   return {
     ok: true,

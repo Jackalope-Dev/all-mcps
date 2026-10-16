@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 /**
  * Shared browser session fetch so header CTA + PostHog identify don't each
  * hit `/api/auth/session` on every page load.
@@ -16,4 +18,19 @@ export function fetchBrowserSession(): Promise<BrowserSession> {
       .catch(() => null);
   }
   return inflight;
+}
+
+/** Signed-in user's id once the shared session fetch resolves; null otherwise. */
+export function useViewerId(): string | null {
+  const [userId, setUserId] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetchBrowserSession().then((session) => {
+      if (!cancelled) setUserId(session?.user?.id ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return userId;
 }

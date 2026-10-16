@@ -4,6 +4,8 @@ import { Check, Copy, Link2, Share2, X } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { badgeTargetUrl } from '../lib/badgeLink';
+import { useViewerId } from '../lib/clientSession';
 import { parseServerName } from '../lib/displayName';
 import { trackShare } from '../lib/gtag';
 import { BadgeEmbedBuilder } from './ui/BadgeEmbedBuilder';
@@ -25,6 +27,7 @@ export default function ShareModal({
   const [badgeStyle] = useState<'featured' | 'directory'>('featured');
   const [badgeTheme] = useState<'dark' | 'light'>('dark');
   const [linkCopied, setLinkCopied] = useState(false);
+  const viewerId = useViewerId();
 
   useEffect(() => {
     setMounted(true);
@@ -49,13 +52,14 @@ export default function ShareModal({
       : 'https://allmcps.com';
   const listingUrl = `${baseUrl}/mcp/${serverId}`;
   const badgeSrc = `${baseUrl}/api/badge/${serverId}?style=${badgeStyle}&theme=${badgeTheme}`;
+  const badgeTarget = badgeTargetUrl(baseUrl, serverId, viewerId);
   const shareText = `${displayName} MCP server — install in Claude, Cursor & more`;
   const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(listingUrl)}`;
   const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(listingUrl)}`;
 
   const snippets = {
-    badge: `[![Listed on AllMCPs](${badgeSrc})](${baseUrl}/mcp/${serverId})`,
-    badgeHtml: `<a href="${baseUrl}/mcp/${serverId}"><img src="${badgeSrc}" alt="Listed on AllMCPs" height="${badgeStyle === 'directory' ? 40 : 32}" /></a>`,
+    badge: `[![Listed on AllMCPs](${badgeSrc})](${badgeTarget})`,
+    badgeHtml: `<a href="${badgeTarget}"><img src="${badgeSrc}" alt="Listed on AllMCPs" height="${badgeStyle === 'directory' ? 40 : 32}" /></a>`,
     widget: `<iframe src="${baseUrl}/mcp/${serverId}/embed" width="100%" height="260" style="max-width: 350px; border-radius: 12px; overflow: hidden; background: transparent; border: none;"></iframe>`,
     install: `<a href="${baseUrl}/mcp/${serverId}" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: linear-gradient(135deg, #00E5FF, #007BFF); color: #020617; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 600; border-radius: 10px; text-decoration: none; box-shadow: 0 4px 14px rgba(0,123,255,0.25); transition: transform 0.2s, box-shadow 0.2s;">Install ${displayName} via AllMCPs</a>`,
   };

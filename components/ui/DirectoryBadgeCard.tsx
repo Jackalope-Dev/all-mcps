@@ -3,6 +3,8 @@
 import { Check, Copy, ExternalLink, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { badgeTargetUrl } from '../../lib/badgeLink';
+import { useViewerId } from '../../lib/clientSession';
 
 interface DirectoryBadgeCardProps {
   serverId: string;
@@ -17,6 +19,7 @@ export function DirectoryBadgeCard({
     'directory',
   );
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const viewerId = useViewerId();
 
   // Production origin on the server and first client render (so hydration
   // matches), then the real origin once mounted — local/preview hosts get
@@ -26,7 +29,7 @@ export function DirectoryBadgeCard({
     setOrigin(window.location.origin);
   }, []);
   const badgeSrc = `${origin}/api/badge/${serverId}?style=${style}`;
-  const targetUrl = `${origin}/mcp/${serverId}`;
+  const targetUrl = badgeTargetUrl(origin, serverId, viewerId);
 
   const markdownSnippet = `[![AllMCPs](${badgeSrc})](${targetUrl})`;
   const htmlSnippet = `<a href="${targetUrl}"><img src="${badgeSrc}" alt="${serverName} on AllMCPs" /></a>`;

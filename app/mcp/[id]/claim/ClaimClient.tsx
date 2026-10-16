@@ -15,6 +15,7 @@ import { useMemo, useState } from 'react';
 import { CopyBlock } from '../../../../components/ui/CopyBlock';
 import { SignInGate } from '../../../../components/ui/SignInGate';
 import { toast } from '../../../../components/ui/Toast';
+import { badgeTargetUrl } from '../../../../lib/badgeLink';
 import {
   getApexDomain,
   getDnsProviderLinks,
@@ -114,14 +115,15 @@ export default function ClaimClient({
   const badgeHeight =
     badgeStyle === 'directory' ? 40 : badgeStyle === 'featured' ? 32 : 20;
 
-  const badgeMarkdown = `[![AllMCPs](${badgeSrc})](${baseUrl}/mcp/${serverId})`;
-  const badgeHtml = `<a href="${baseUrl}/mcp/${serverId}"><img src="${badgeSrc}" alt="AllMCPs" height="${badgeHeight}" /></a>`;
+  const badgeTarget = badgeTargetUrl(baseUrl, serverId, userId);
+  const badgeMarkdown = `[![AllMCPs](${badgeSrc})](${badgeTarget})`;
+  const badgeHtml = `<a href="${badgeTarget}"><img src="${badgeSrc}" alt="AllMCPs" height="${badgeHeight}" /></a>`;
   const metaTag = personalizedToken
     ? `<meta name="allmcps-verification" content="${personalizedToken}" />`
     : '';
 
   const githubVerifyMarkdown = userId
-    ? `[![AllMCPs Verified](${badgeSrc})](${baseUrl}/mcp/${serverId}?verify=${userId})`
+    ? `[![AllMCPs Verified](${badgeSrc})](${badgeTarget})`
     : null;
   const signInHref = `/login?callbackUrl=${encodeURIComponent(`/mcp/${serverId}/claim`)}`;
 
@@ -154,7 +156,7 @@ export default function ClaimClient({
   };
 
   // Must be the *personalized* badge (githubVerifyMarkdown carries this signed-in
-  // user's verify=<userId> token) — readmeContainsClaimBadge requires that exact
+  // user's verify=<userId> token) — readmeClaimBadgeStatus requires that exact
   // token to match the claimant, so the generic badgeMarkdown here would silently
   // fail verification even after the agent pushes it.
   const agentClaimPromptText = `Read this repository's README.md. Embed the following AllMCPs verification badge into README.md:
