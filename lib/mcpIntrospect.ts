@@ -41,8 +41,9 @@ export type McpResult = {
 class HttpStatusError extends Error {
   status: number;
   wwwAuthenticate: string | null;
-  constructor(status: number, wwwAuthenticate: string | null) {
-    super(`HTTP ${status}`);
+  constructor(status: number, wwwAuthenticate: string | null, body = '') {
+    const snippet = body.replace(/\s+/g, ' ').trim().slice(0, 200);
+    super(snippet ? `HTTP ${status}: ${snippet}` : `HTTP ${status}`);
     this.name = 'HttpStatusError';
     this.status = status;
     this.wwwAuthenticate = wwwAuthenticate;
@@ -74,6 +75,22 @@ function extractJsonRpc(text: string, contentType: string, id: number): any {
   } catch {
     return null;
   }
+}
+
+function isJsonRpcMessage(msg: any): boolean {
+  return (
+    msg != null &&
+    (msg.result !== undefined ||
+      (msg.error != null && typeof msg.error === 'object'))
+  );
+}
+
+/** A JSON-RPC error's message, or a bare string some servers send as `error`. */
+function errorText(error: any): string | undefined {
+  if (typeof error === 'string') return error || undefined;
+  return typeof error?.message === 'string' && error.message
+    ? error.message
+    : undefined;
 }
 
 async function rpc(
@@ -115,8 +132,15 @@ async function rpc(
     throw new HttpStatusError(res.status, res.headers.get('www-authenticate'));
   }
   const msg = extractJsonRpc(text, res.headers.get('content-type') || '', id);
-  if (!msg && !res.ok)
-    throw new HttpStatusError(res.status, res.headers.get('www-authenticate'));
+  // A non-2xx body like {"error":"forbidden"} parses as JSON but is not a
+  // JSON-RPC error (that needs an error *object*). Treating it as one hid the
+  // status and body behind a bare "initialize failed", so report them instead.
+  if (!res.ok && !isJsonRpcMessage(msg))
+    throw new HttpStatusError(
+      res.status,
+      res.headers.get('www-authenticate'),
+      text,
+    );
   return { msg, sessionId: returnedSession || undefined };
 }
 
@@ -191,7 +215,7 @@ export async function callMcpEndpoint(
     if (init.msg.error)
       return {
         ok: false,
-        error: init.msg.error.message || 'initialize failed',
+        error: errorText(init.msg.error) || 'initialize failed',
       };
     const serverInfo = init.msg.result?.serverInfo;
     const session = init.sessionId;
@@ -230,7 +254,7 @@ export async function callMcpEndpoint(
     if (call.msg.error)
       return {
         ok: false,
-        error: call.msg.error.message || `${method} failed`,
+        error: errorText(call.msg.error) || `${method} failed`,
         serverInfo,
       };
 
