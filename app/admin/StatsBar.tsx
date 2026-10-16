@@ -121,7 +121,7 @@ export function StatsBar({
       alert: false,
       action: {
         tab: 'listings',
-        filters: { featured: 'true', status: 'all' },
+        filters: { featured: 'true', status: 'active' },
       } as KpiCardSelection,
     },
     {
@@ -133,7 +133,7 @@ export function StatsBar({
       alert: stats.unhealthyCount > 0,
       action: {
         tab: 'listings',
-        filters: { health: 'unhealthy', status: 'all' },
+        filters: { health: 'unhealthy', status: 'active' },
       } as KpiCardSelection,
     },
     {
@@ -145,7 +145,7 @@ export function StatsBar({
       alert: false,
       action: {
         tab: 'listings',
-        filters: { aiEnriched: 'true', status: 'all' },
+        filters: { aiEnriched: 'true', status: 'active' },
       } as KpiCardSelection,
     },
     {
@@ -166,7 +166,7 @@ export function StatsBar({
       alert: (stats.toolsIntrospectionErrorCount || 0) > 0,
       action: {
         tab: 'listings',
-        filters: { hasToolsError: 'true', status: 'all' },
+        filters: { hasToolsError: 'true', status: 'active' },
       } as KpiCardSelection,
     },
   ];

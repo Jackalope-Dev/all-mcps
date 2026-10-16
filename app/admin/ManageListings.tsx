@@ -138,31 +138,23 @@ export default function ManageListings({
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
-  // Update internal filter state if parent passes new initialFilters (e.g. from KPI card click)
+  // A KPI card click replaces the whole filter set. The KPI deck stays on
+  // screen over this tab, so merging would let an earlier card's filter
+  // (Premium's premium=true) hide rows the new card counted.
   useEffect(() => {
     if (initialFilters) {
-      if (initialFilters.status !== undefined)
-        setStatusFilter(initialFilters.status);
-      if (initialFilters.premium !== undefined)
-        setPremiumFilter(initialFilters.premium);
-      if (initialFilters.featured !== undefined)
-        setFeaturedFilter(initialFilters.featured);
-      if (initialFilters.health !== undefined)
-        setHealthFilter(initialFilters.health);
-      if (initialFilters.aiEnriched !== undefined)
-        setAiFilter(initialFilters.aiEnriched);
-      if (initialFilters.hasTools !== undefined)
-        setToolsFilter(initialFilters.hasTools);
-      if (initialFilters.hasToolsError !== undefined)
-        setHasToolsErrorFilter(initialFilters.hasToolsError);
-      if (initialFilters.categorySponsor !== undefined)
-        setCategorySponsorFilter(initialFilters.categorySponsor);
-      if (initialFilters.pricingModel !== undefined)
-        setPricingModelFilter(initialFilters.pricingModel);
-      if (initialFilters.authType !== undefined)
-        setAuthTypeFilter(initialFilters.authType);
-      if (initialFilters.maintenanceStatus !== undefined)
-        setMaintenanceStatusFilter(initialFilters.maintenanceStatus);
+      setSearch('');
+      setStatusFilter(initialFilters.status ?? 'all');
+      setPremiumFilter(initialFilters.premium ?? '');
+      setFeaturedFilter(initialFilters.featured ?? '');
+      setHealthFilter(initialFilters.health ?? '');
+      setAiFilter(initialFilters.aiEnriched ?? '');
+      setToolsFilter(initialFilters.hasTools ?? '');
+      setHasToolsErrorFilter(initialFilters.hasToolsError ?? '');
+      setCategorySponsorFilter(initialFilters.categorySponsor ?? '');
+      setPricingModelFilter(initialFilters.pricingModel ?? '');
+      setAuthTypeFilter(initialFilters.authType ?? '');
+      setMaintenanceStatusFilter(initialFilters.maintenanceStatus ?? '');
     }
   }, [initialFilters]);
 
