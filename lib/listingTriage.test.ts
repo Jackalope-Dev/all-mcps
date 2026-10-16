@@ -33,10 +33,10 @@ describe('deriveTriageVerdict', () => {
 
   it.each([
     ['is-MCP', { isMcpServer: 0.55 }],
-    ['substance', { isSubstantive: 0.5 }],
+    ['substance', { isSubstantive: 0.35 }],
     ['usability', { isUsable: 0.4 }],
-    ['legitimacy', { isLegitimate: 0.5 }],
-    ['the overall answer', { belongsInDirectory: 0.5 }],
+    ['legitimacy', { isLegitimate: 0.45 }],
+    ['the overall answer', { belongsInDirectory: 0.25 }],
     ['a missing answer', { isUsable: null }],
   ])('asks a human when %s falls short', (_label, patch) => {
     expect(deriveTriageVerdict({ ...strong, ...patch })?.verdict).toBe(

@@ -276,13 +276,18 @@ export type TriageMatrix = {
 };
 
 /**
- * Thresholds for deriveTriageVerdict. Not calibrated against live Jev answers
- * for the new questions yet, so both ends are conservative:
+ * Thresholds for deriveTriageVerdict.
  *
  * - `approveAt`: every required question must clear it. 0.6 on is-MCP matches
  *   the admin's own calls (Oct 2026: every reviewed listing at ≥ 0.6 approved,
- *   69 of 71 at ≤ 0.5 rejected). Usability is a softer bar because a thin
- *   README often hides a real install path.
+ *   69 of 71 at ≤ 0.5 rejected). The others are set against how Jev actually
+ *   answers them, which is far from uniform: on the first 317 pending listings
+ *   belongs-in-directory never went above 0.53 and is-substantive sat near
+ *   0.5 even where is-MCP was high, so the first cut (0.6 everywhere)
+ *   approved none. These bars approve ~20% of that set, in line with the
+ *   admin's historical approval rate; the gates stay in shadow to confirm.
+ *   Usability is a softer bar because a thin README often hides a real
+ *   install path.
  * - `rejectBelow`: one hard question confidently answered no. Same floor as
  *   MCP_SERVER_NOUL_FLOOR (curated lists scored 0.02, real servers ≥ 0.36).
  *   Acting on a reject also needs mcpProbability < JEV_REJECT_MCP_CEILING
@@ -292,10 +297,10 @@ export type TriageMatrix = {
 const TRIAGE_THRESHOLDS = {
   approveAt: {
     isMcpServer: 0.6,
-    isSubstantive: 0.6,
+    isSubstantive: 0.4,
     isUsable: 0.5,
-    isLegitimate: 0.6,
-    belongsInDirectory: 0.6,
+    isLegitimate: 0.5,
+    belongsInDirectory: 0.3,
   },
   rejectBelow: {
     isMcpServer: MCP_SERVER_NOUL_FLOOR,
