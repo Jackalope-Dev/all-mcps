@@ -47,6 +47,14 @@ import {
   type Searchable,
   type SearchPrefilter,
 } from './search';
+import {
+  type FtsModePlan,
+  ftsFuzzyMatch,
+  ftsKeywordPlan,
+  isSearchFtsReady,
+  markSearchFtsUnavailable,
+  SEARCH_FTS_READY_CURSOR,
+} from './searchFts';
 import { servableSql } from './servability';
 import { rankShowcaseServers } from './showcase';
 import { computeTrustTier, type TrustTierInput } from './trustTier';
@@ -1180,16 +1188,17 @@ function prefilterWhere(
 }
 
 /**
- * Prefilter passes over one scan: 'all' = every term group matches (the
- * scorer's strict AND), 'any' = at least one term matches (its relaxed OR),
- * 'fuzzy' = a typo-tolerant trigram hit on name/category/description. Each
- * mode keeps its own top-SEARCH_CANDIDATE_CAP; several modes are unioned so
- * the catalog is scanned once rather than once per mode. 'fuzzy' reads a
- * different haystack, so it can't share a call with the others.
+ * Prefilter passes: 'all' = every term group matches (the scorer's strict AND),
+ * 'any' = at least one term matches (its relaxed OR), 'fuzzy' = a typo-tolerant
+ * trigram hit on name/category/description. Each mode keeps its own
+ * top-SEARCH_CANDIDATE_CAP, ordered by name hits then engagement; several modes
+ * are unioned into one statement. 'fuzzy' reads different columns, so it can't
+ * share a call with the others.
  *
- * The haystack is concatenated once per row in a MATERIALIZED CTE. Inlined, SQLite
- * rebuilds it for every LIKE, which is about 2x slower on a synonym-heavy query
- * (measured ~650ms vs ~310ms on the live catalog).
+ * Reads the servers_fts trigram index once the backfill has marked it ready
+ * (see lib/searchFts.ts), else the LIKE scan. The LIKE scan read every servable
+ * row, raw tools JSON included, on each uncached search: 13-18s in production
+ * under cron load.
  */
 async function prefilterSearchCandidates(
   db: D1Drizzle,
@@ -1197,20 +1206,120 @@ async function prefilterSearchCandidates(
   modes: PrefilterMode[],
   category: string | null,
 ): Promise<SearchCandidate[]> {
-  const fuzzy = modes.includes('fuzzy');
-  if (fuzzy && modes.length > 1) {
+  if (modes.includes('fuzzy') && modes.length > 1) {
     throw new Error('fuzzy prefilter uses its own haystack; run it alone');
   }
+  const ready = await isSearchFtsReady(async () => {
+    const rows = await db.all<{ ok: number }>(
+      sql`SELECT 1 AS ok FROM job_cursors WHERE name = ${SEARCH_FTS_READY_CURSOR}`,
+    );
+    return rows.length > 0;
+  });
+  if (ready) {
+    try {
+      return await ftsPrefilterCandidates(db, plan, modes, category);
+    } catch (e) {
+      // Table dropped or FTS5 unavailable: LIKE until the next readiness recheck.
+      console.error('search: FTS prefilter failed, using LIKE scan', e);
+      markSearchFtsUnavailable();
+    }
+  }
+  return likePrefilterCandidates(db, plan, modes, category);
+}
+
+/** Per-term name-hit count, the first sort key of every prefilter cap. */
+function nameHitsSql(plan: SearchPrefilter, nameCol: string): SQL {
+  return sql.join(
+    plan.terms.map(
+      ([term]) =>
+        sql`(CASE WHEN ${sql.raw(nameCol)} LIKE ${`%${term}%`} THEN 1 ELSE 0 END)`,
+    ),
+    sql` + `,
+  );
+}
+
+const FTS_HAYSTACK_SQL = sql.raw(
+  `(coalesce(f.name, '') || ' ' || coalesce(f.category, '') || ' ' || coalesce(f.description, '') || ' ' || coalesce(f.body, ''))`,
+);
+
+/** Every inner group must match one of its substrings, over the indexed text. */
+function ftsLikeGroupsSql(groups: string[][]): SQL[] {
+  return groups.map(
+    (alts) =>
+      sql`(${sql.join(
+        alts.map((a) => sql`${FTS_HAYSTACK_SQL} LIKE ${`%${a}%`}`),
+        sql` OR `,
+      )})`,
+  );
+}
+
+/**
+ * prefilterSearchCandidates over servers_fts. The index narrows to matching
+ * rowids; only those servers rows are read, for the servable/category filter
+ * and the name-hit/engagement ordering.
+ */
+async function ftsPrefilterCandidates(
+  db: D1Drizzle,
+  plan: SearchPrefilter,
+  modes: PrefilterMode[],
+  category: string | null,
+): Promise<SearchCandidate[]> {
+  const modePlans: FtsModePlan[] = [];
+  for (const mode of modes) {
+    if (mode === 'fuzzy') {
+      const match = ftsFuzzyMatch(plan);
+      if (match) modePlans.push({ kind: 'match', match, likeGroups: [] });
+    } else {
+      const p = ftsKeywordPlan(plan, mode);
+      if (p) modePlans.push(p);
+    }
+  }
+  if (modePlans.length === 0) return [];
+  const nameHits = nameHitsSql(plan, 's.name');
+  const categoryFilter = category ? sql` AND s.category = ${category}` : sql``;
+  const topMatches = (p: FtsModePlan) => {
+    const conds = [
+      ...(p.kind === 'match' ? [sql`servers_fts MATCH ${p.match}`] : []),
+      ...ftsLikeGroupsSql(p.likeGroups),
+    ];
+    return sql`
+      SELECT id FROM (
+        SELECT s.id AS id
+        FROM servers_fts f JOIN servers s ON s.rowid = f.rowid AND s.id = f.id
+        WHERE ${sql.join(conds, sql` AND `)}
+          AND ${sql.raw(servableSql('s'))}${categoryFilter}
+        ORDER BY ${nameHits} DESC, (s.upvotes * 5 + s.copies + s.views * 0.05) DESC
+        LIMIT ${SEARCH_CANDIDATE_CAP}
+      )`;
+  };
+  const rows = await db.all<SearchCandidateRow>(sql`
+    WITH m AS (${sql.join(modePlans.map(topMatches), sql` UNION `)})
+    SELECT ${sql.raw(SEARCH_CANDIDATE_SELECT_SQL)}
+    FROM servers s JOIN m ON m.id = s.id
+  `);
+  return rows.map(toSearchCandidate);
+}
+
+/**
+ * The pre-index prefilter: one full scan of servable rows, LIKE over every
+ * searchable column. Used until servers_fts is backfilled.
+ *
+ * The haystack is concatenated once per row in a MATERIALIZED CTE. Inlined, SQLite
+ * rebuilds it for every LIKE, which is about 2x slower on a synonym-heavy query
+ * (measured ~650ms vs ~310ms on the live catalog).
+ */
+async function likePrefilterCandidates(
+  db: D1Drizzle,
+  plan: SearchPrefilter,
+  modes: PrefilterMode[],
+  category: string | null,
+): Promise<SearchCandidate[]> {
+  const fuzzy = modes.includes('fuzzy');
   const wheres = modes
     .map((mode) => prefilterWhere(plan, mode))
     .filter((w): w is SQL => w !== null);
   if (wheres.length === 0) return [];
-  const nameHits = sql.join(
-    plan.terms.map(
-      ([term]) => sql`(CASE WHEN name LIKE ${`%${term}%`} THEN 1 ELSE 0 END)`,
-    ),
-    sql` + `,
-  );
+  const nameHits = nameHitsSql(plan, 'name');
   const haystack = sql.raw(fuzzy ? FUZZY_HAYSTACK_SQL : SEARCH_HAYSTACK_SQL);
   const categoryFilter = category ? sql` AND category = ${category}` : sql``;
   // Wrapped in a subquery so each branch's ORDER BY/LIMIT applies before the UNION.
@@ -1366,8 +1475,9 @@ async function searchSnapshot(
  * and rank it in JS. At ~22.5k listings and ~23MB of tools JSON that blew the
  * Worker memory limit on every search (outcome: exceededMemory, ~2.6s wall time),
  * even for a query matching one row. Now SQLite discards non-matches with a
- * LIKE prefilter shaped like the scorer's own passes (strict AND, then relaxed OR,
- * then typo-tolerant), the Worker only scores slim candidate rows, and full rows
+ * prefilter shaped like the scorer's own passes (strict AND, then relaxed OR,
+ * then typo-tolerant) over the servers_fts trigram index (LIKE scan until it is
+ * backfilled), the Worker only scores slim candidate rows, and full rows
  * are loaded just for the `limit` results that are returned.
  */
 /** Ranked search ids are reused this long; new listings show up in search after it. */
@@ -1396,7 +1506,7 @@ export async function searchActiveServers(opts: {
   const vectorTopK = opts.vectorTopK ?? 40;
 
   // Agents and the site re-run the same searches. Caching the ranked ids
-  // (not the rows) skips the embedding call and the full-catalog LIKE scan,
+  // (not the rows) skips the embedding call and the prefilter query,
   // while hydrateSearchResults still reads current listing data by id.
   const normalizedQuery = query.trim().toLowerCase().replace(/\s+/g, ' ');
   const cacheKey =
