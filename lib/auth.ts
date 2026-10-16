@@ -48,7 +48,9 @@ export const { handlers, signIn, auth } = NextAuth(async () => {
         // Resend errors can echo the address; keep PII out of logs.
         console.error(
           '[auth]',
-          parts.join(' <- ').replace(/[^s"'<>@,;:]+@[^s"'<>@,;:]+/g, '<email>'),
+          parts
+            .join(' <- ')
+            .replace(/[^\s"'<>@,;:]+@[^\s"'<>@,;:]+/g, '<email>'),
         );
       },
     },
