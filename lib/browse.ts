@@ -7,7 +7,7 @@ import { servableSql } from './servability';
 import {
   type DirectoryFeedItem,
   getFeedItemsByIds,
-  searchActiveServers,
+  searchActiveServerIds,
   snapshotFeedPage,
 } from './servers';
 
@@ -214,13 +214,12 @@ async function searchPage(
   let rankedIds: string[] | null = null;
   let capped = false;
   if (p.q) {
-    const ranked = await searchActiveServers({
+    rankedIds = await searchActiveServerIds({
       query: p.q,
       category: p.category,
       limit: SEARCH_POOL,
       vectorTopK: 30,
     });
-    rankedIds = ranked.map((s) => s.id);
     capped = rankedIds.length >= SEARCH_POOL;
   }
 

@@ -1496,23 +1496,60 @@ const SEARCH_CACHE_TTL_SECONDS = 10 * 60;
 /** Longer queries skip the cache rather than risk an oversized cache key. */
 const SEARCH_CACHE_MAX_QUERY = 200;
 
-export async function searchActiveServers(opts: {
+type SearchOpts = {
   query: string;
   category?: string | null;
   limit: number;
   /** Vectorize neighbours to blend in; 0 skips the embedding call entirely. */
   vectorTopK?: number;
-}): Promise<Server[]> {
+};
+
+/** Ranked ids from D1, or already-built servers when D1 isn't used. */
+type RankedSearch =
+  | { kind: 'servers'; servers: Server[] }
+  | { kind: 'ids'; ids: string[]; db: D1Drizzle };
+
+export async function searchActiveServers(opts: SearchOpts): Promise<Server[]> {
+  const ranked = await rankSearch(opts);
+  if (ranked.kind === 'servers') return ranked.servers;
+  try {
+    return await hydrateSearchResults(ranked.db, ranked.ids);
+  } catch (e) {
+    console.error('searchActiveServers: hydrate failed:', errorText(e));
+    return searchSnapshot(opts.query, opts.category || null, opts.limit);
+  }
+}
+
+/**
+ * Just the ranked ids. Callers that load their own rows (/browse pages 24 at a
+ * time) skip hydrateSearchResults, which reads every ranked listing (~400
+ * rows in 90-id chunks, tool names extracted per row): 2.4-3.3s per search on
+ * prod D1 and enough to hit its CPU limit when busy.
+ */
+export async function searchActiveServerIds(
+  opts: SearchOpts,
+): Promise<string[]> {
+  const ranked = await rankSearch(opts);
+  return ranked.kind === 'servers'
+    ? ranked.servers.map((s) => s.id)
+    : ranked.ids;
+}
+
+async function rankSearch(opts: SearchOpts): Promise<RankedSearch> {
+  const servers = (list: Server[]): RankedSearch => ({
+    kind: 'servers',
+    servers: list,
+  });
   const { query, limit } = opts;
   const category = opts.category || null;
-  if (!query.trim()) return getTopActiveServers(category, limit);
+  if (!query.trim()) return servers(await getTopActiveServers(category, limit));
 
   const plan = buildSearchPrefilter(query);
   // All-punctuation query: a real search with no possible matches (see rankServers).
-  if (plan.terms.length === 0) return [];
+  if (plan.terms.length === 0) return servers([]);
 
   const conn = await getSearchDb();
-  if (!conn) return searchSnapshot(query, category, limit);
+  if (!conn) return servers(await searchSnapshot(query, category, limit));
   const { db, env } = conn;
   const vectorTopK = opts.vectorTopK ?? 40;
 
@@ -1526,13 +1563,7 @@ export async function searchActiveServers(opts: {
       : null;
   if (cacheKey) {
     const cachedIds = await readEdgeCache<string[]>(cacheKey);
-    if (cachedIds) {
-      try {
-        return await hydrateSearchResults(db, cachedIds);
-      } catch {
-        // Fall through to a fresh search.
-      }
-    }
+    if (cachedIds) return { kind: 'ids', ids: cachedIds, db };
   }
 
   const t0 = Date.now();
@@ -1618,17 +1649,16 @@ export async function searchActiveServers(opts: {
     if (cacheKey) {
       await writeEdgeCache(cacheKey, rankedIds, SEARCH_CACHE_TTL_SECONDS);
     }
-    const hydrated = await hydrateSearchResults(db, rankedIds);
     // TEMPORARY (2026-10-15): find where slow uncached searches spend their
     // time. Remove once known.
     if (Date.now() - t0 > 3000) {
       phases.totalMs = Date.now() - t0;
-      console.warn('[search] slow (ms)', JSON.stringify(phases));
+      console.warn('[search] slow ranking (ms)', JSON.stringify(phases));
     }
-    return hydrated;
+    return { kind: 'ids', ids: rankedIds, db };
   } catch (e) {
     console.error('searchActiveServers: D1 search failed:', errorText(e));
-    return searchSnapshot(query, category, limit);
+    return servers(await searchSnapshot(query, category, limit));
   }
 }
 
