@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   batchableRepoSlug,
   buildRepoBatchQuery,
+  fetchRepoSnapshots,
   parseRepoBatchResponse,
 } from './githubBatch';
 
@@ -70,5 +71,54 @@ describe('parseRepoBatchResponse', () => {
     expect(
       parseRepoBatchResponse(['a/b'], { message: 'Bad credentials' }),
     ).toEqual([{ kind: 'error' }]);
+  });
+});
+
+describe('fetchRepoSnapshots', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** Answers every repo as ok, but 502s any query asking for more than `max`. */
+  function stubGraphql(max: number) {
+    const sizes: number[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init: { body: string }) => {
+        const query = JSON.parse(init.body).query as string;
+        const n = (query.match(/: repository\(/g) ?? []).length;
+        sizes.push(n);
+        if (n > max) return new Response('', { status: 502 });
+        const data = Object.fromEntries(
+          Array.from({ length: n }, (_, i) => [`r${i}`, { stargazerCount: 1 }]),
+        );
+        return new Response(JSON.stringify({ data }), { status: 200 });
+      }),
+    );
+    return sizes;
+  }
+
+  const slugs = Array.from({ length: 45 }, (_, i) => `o/r${i}`);
+
+  it('asks GitHub in chunks small enough to finish', async () => {
+    const sizes = stubGraphql(20);
+    const out = await fetchRepoSnapshots(slugs, 't');
+    expect(sizes).toEqual([20, 20, 5]);
+    expect([...out.values()].every((s) => s.kind === 'ok')).toBe(true);
+  });
+
+  it('splits a chunk that times out instead of writing it all off', async () => {
+    const sizes = stubGraphql(10);
+    const out = await fetchRepoSnapshots(slugs.slice(0, 20), 't');
+    expect(sizes).toEqual([20, 10, 10]);
+    expect([...out.values()].every((s) => s.kind === 'ok')).toBe(true);
+  });
+
+  it('gives up on a chunk at the smallest split size', async () => {
+    stubGraphql(0);
+    const out = await fetchRepoSnapshots(slugs.slice(0, 5), 't');
+    expect([...out.values()]).toEqual(
+      Array.from({ length: 5 }, () => ({ kind: 'error' })),
+    );
   });
 });

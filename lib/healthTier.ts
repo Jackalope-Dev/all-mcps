@@ -31,8 +31,7 @@ const HEALTH_TIER_MS = {
  * listings are due every few hours. Otherwise paid, featured and
  * popular listings (200+ views, 5+ upvotes, 1000+ stars) are hot; some use
  * (10+ views, any install copy, 50+ stars) is warm; the rest is cold.
- * Walked with idx_servers_status_last_checked in last_checked_at order, so the
- * cron reads only until it has a batch.
+ * The cron orders the due set by healthPrioritySql, then last_checked_at.
  */
 export function healthDueSql(now: Date): SQL {
   const t = Math.floor(now.getTime() / 1000);
@@ -51,4 +50,15 @@ export function healthDueSql(now: Date): SQL {
       OR coalesce(${servers.copies}, 0) >= 1
       OR coalesce(${servers.githubStars}, 0) >= 50 THEN ${warm}
     ELSE ${cold} END)`;
+}
+
+/**
+ * Sort key that puts failing and never-checked listings ahead of routine
+ * rechecks. Without it a tier change (or a backlog) that makes thousands of
+ * healthy listings due at once queues them ahead of the ones that need a
+ * verdict, since those were stamped more recently. Costs a sort over the due
+ * set instead of an index walk, which D1 handles at catalog size.
+ */
+export function healthPrioritySql(): SQL {
+  return sql`CASE WHEN coalesce(${servers.healthStatus}, 'unknown') IN ('offline', 'unknown') THEN 0 ELSE 1 END`;
 }

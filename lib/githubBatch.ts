@@ -5,7 +5,7 @@ import { githubRepoSlug } from './repoUrl';
  *
  * The REST path cost one API call per listing plus a raw README download every
  * pass, which held the cron to 50 listings per 15 minutes (a full catalog
- * pass took more than a week). One GraphQL query answers ~50 repos for about
+ * pass took more than a week). One GraphQL query answers many repos for about
  * one rate-limit point, and returns the README's git blob id: a content hash,
  * so the README itself is only downloaded when it actually changed.
  */
@@ -29,8 +29,16 @@ export type RepoSnapshot =
   /** No answer worth acting on (rate limit, outage, auth). Keep the last verdict. */
   | { kind: 'error' };
 
-/** Repos per GraphQL request — keeps responses small and well under node limits. */
-const GITHUB_BATCH_SIZE = 50;
+/**
+ * Repos per GraphQL request. Each repo resolves README_PATHS.length git
+ * objects, and GitHub kills a query that runs past ~10s with a bare 502: at
+ * 50 repos every query did (measured ~11s), so every repo came back 'error',
+ * the health cron recorded nothing, and listings sat at 'unknown'. 20 runs in
+ * ~5s; a chunk that still fails is split (MIN_SPLIT_SIZE) rather than lost.
+ */
+const GITHUB_BATCH_SIZE = 20;
+/** Smallest chunk worth splitting again after a 5xx or timeout. */
+const MIN_SPLIT_SIZE = 5;
 
 const README_PATHS = [
   'README.md',
@@ -136,29 +144,49 @@ export async function fetchRepoSnapshots(
   const out = new Map<string, RepoSnapshot>();
   for (let i = 0; i < slugs.length; i += GITHUB_BATCH_SIZE) {
     const chunk = slugs.slice(i, i + GITHUB_BATCH_SIZE);
-    let snapshots: RepoSnapshot[];
-    try {
-      const res = await fetch('https://api.github.com/graphql', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'User-Agent': 'AllMCPs-Health-Checker',
-        },
-        body: JSON.stringify({ query: buildRepoBatchQuery(chunk) }),
-        signal: AbortSignal.timeout(20000),
-      });
-      snapshots = res.ok
-        ? parseRepoBatchResponse(chunk, await res.json())
-        : chunk.map(() => ({ kind: 'error' }) as const);
-    } catch {
-      snapshots = chunk.map(() => ({ kind: 'error' }) as const);
-    }
+    const snapshots = await fetchChunk(chunk, token);
     chunk.forEach((slug, j) => {
       out.set(slug, snapshots[j]);
     });
   }
   return out;
+}
+
+/**
+ * One GraphQL request for `chunk`. A 5xx or timeout means the query ran too
+ * long (one slow repo is enough), so the halves are retried on their own
+ * instead of writing the whole chunk off. Auth and rate-limit failures are
+ * not retried: they would fail the same way.
+ */
+async function fetchChunk(
+  chunk: string[],
+  token: string,
+): Promise<RepoSnapshot[]> {
+  let retryable: boolean;
+  try {
+    const res = await fetch('https://api.github.com/graphql', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'User-Agent': 'AllMCPs-Health-Checker',
+      },
+      body: JSON.stringify({ query: buildRepoBatchQuery(chunk) }),
+      signal: AbortSignal.timeout(20000),
+    });
+    if (res.ok) return parseRepoBatchResponse(chunk, await res.json());
+    retryable = res.status >= 500;
+  } catch {
+    retryable = true;
+  }
+  if (retryable && chunk.length > MIN_SPLIT_SIZE) {
+    const mid = Math.ceil(chunk.length / 2);
+    return [
+      ...(await fetchChunk(chunk.slice(0, mid), token)),
+      ...(await fetchChunk(chunk.slice(mid), token)),
+    ];
+  }
+  return chunk.map(() => ({ kind: 'error' }) as const);
 }
 
 /**

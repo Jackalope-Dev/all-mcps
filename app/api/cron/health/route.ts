@@ -16,7 +16,7 @@ import {
   fetchRepoSnapshots,
   type RepoSnapshot,
 } from '../../../../lib/githubBatch';
-import { healthDueSql } from '../../../../lib/healthTier';
+import { healthDueSql, healthPrioritySql } from '../../../../lib/healthTier';
 import {
   resolveInstallConfig,
   resolveInstallFromText,
@@ -137,7 +137,7 @@ async function selectDueListings(db: Db, now: Date) {
     .from(servers)
     .leftJoin(listingSignals, eq(listingSignals.serverId, servers.id))
     .where(and(eq(servers.status, 'active'), healthDueSql(now)))
-    .orderBy(asc(servers.lastCheckedAt))
+    .orderBy(healthPrioritySql(), asc(servers.lastCheckedAt))
     .limit(BATCH_SIZE);
 }
 
