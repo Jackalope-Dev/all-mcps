@@ -400,6 +400,8 @@ function snapshotLightServers(limit?: number): Server[] {
     views: s.views ?? 0,
     copies: s.copies ?? 0,
     upvotes: s.upvotes ?? 0,
+    githubStars: s.githubStars ?? null,
+    npmDownloads: s.npmDownloads ?? null,
     tags: parseStringArray(s.tags),
     aiUseCases: parseStringArray(s.aiUseCases),
   })) as unknown as Server[];
@@ -482,6 +484,8 @@ type LightPageRow = {
 
 export async function* iterateActiveServersLight(
   pageSize = LIGHT_PAGE_SIZE,
+  /** false: yield nothing when D1 is unavailable (callers that cache the result). */
+  { snapshotFallback = true }: { snapshotFallback?: boolean } = {},
 ): AsyncGenerator<Server[]> {
   const searchDb = await getSearchDb();
   let yielded = false;
@@ -491,7 +495,13 @@ export async function* iterateActiveServersLight(
       for (;;) {
         // Annotated: afterRowid feeding back into the query defeats inference.
         const rows: LightPageRow[] = await searchDb.db
-          .select({ rowid: sql<number>`rowid`, ...DISCOVERY_COLUMNS })
+          .select({
+            rowid: sql<number>`rowid`,
+            ...DISCOVERY_COLUMNS,
+            // engagementScore inputs: the tag index ranks each tag's listings.
+            githubStars: serversTable.githubStars,
+            npmDownloads: serversTable.npmDownloads,
+          })
           .from(serversTable)
           .where(
             afterRowid === null
@@ -512,7 +522,7 @@ export async function* iterateActiveServersLight(
       if (yielded) throw e;
     }
   }
-  if (!yielded) yield snapshotLightServers();
+  if (!yielded && snapshotFallback) yield snapshotLightServers();
 }
 
 /**
