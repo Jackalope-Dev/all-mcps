@@ -229,7 +229,7 @@ let inflightSiteStats: Promise<SiteStats> | null = null;
 // recomputed every 30-day api_access_logs aggregate (~300k rows apiece), which
 // added up to hundreds of full runs a day. The edge cache is shared by every
 // isolate in a colo, so one computation serves them all until it expires.
-const SHARED_CACHE_KEY = 'site-stats/v1';
+const SHARED_CACHE_KEY = 'site-stats/v2';
 
 /**
  * How long the edge copy is kept past freshness. A stale copy is served while
@@ -606,6 +606,12 @@ async function querySiteStats(): Promise<SiteStats | null> {
         country: r.country as string,
         hits: Number(r.hits || 0),
       }));
+
+    // Each query above swallows its own error. When the core catalog
+    // aggregate failed (a D1 reset), the result is mostly the 114-listing
+    // bundled snapshot, and caching it would show "114 servers" on / and
+    // /trust for the 24h the shared copy lives. Keep the last good copy.
+    if (!serverStatsRows[0]) return null;
 
     const dbTotal = Number(
       serverStatsRows[0]?.totalServers ?? fallback.totalServers,
