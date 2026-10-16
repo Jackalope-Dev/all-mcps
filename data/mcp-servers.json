@@ -726,7 +726,7 @@
     "name": "ammawla/encode-toolkit",
     "url": "https://github.com/ammawla/encode-toolkit",
     "description": "MCP server and Claude Plugin for a full ENCODE Project genomic data and analysis toolkit — search, download, track, and analyze functional genomics experiments.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -734,7 +734,7 @@
     "name": "andyliszewski/grounding-ai",
     "url": "https://github.com/andyliszewski/grounding-ai",
     "description": "Build a searchable index from PDFs, EPUBs, and Word docs. Claude queries it via MCP and pulls grounded answers with exact page-and-section citations. Local-first, no cloud dependency.",
-    "category": "🔎 end to end RAG platforms",
+    "category": "🔎 Search & Data Extraction",
     "isOfficial": false
   },
   {
@@ -790,7 +790,7 @@
     "name": "arthurpanhku/DragonMCP",
     "url": "https://github.com/arthurpanhku/DragonMCP",
     "description": "MCP server for Greater China local life services: Meituan/Ele.me food delivery, Didi/Meituan ride-hailing, WeChat Pay/Alipay, Amap/Baidu Maps, 12306 high-speed rail, Taobao/JD/Xianyu e-commerce, Hong Kong government e-services, and more.",
-    "category": "🔒 Delivery",
+    "category": "📦 Delivery",
     "isOfficial": false
   },
   {
@@ -876,7 +876,7 @@
     "name": "cafferychen777/ChatSpatial",
     "url": "https://github.com/cafferychen777/ChatSpatial",
     "description": "MCP server for spatial transcriptomics analysis with 60+ integrated methods covering cell annotation, deconvolution, spatial statistics, and visualization.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -1033,7 +1033,7 @@
     "id": "dudude-bit-yandex-lavka-mcp",
     "name": "Dudude-bit/yandex-lavka-mcp",
     "description": "Order groceries from Yandex Lavka (Russia): search the catalog, build a cart, and place an order with a two-step confirmation before any charge. Unofficial (reverse-engineered private web API); local stdio or remote HTTP with OAuth. uvx yandex-lavka-mcp.",
-    "category": "🔒 Delivery",
+    "category": "📦 Delivery",
     "url": "https://github.com/Dudude-bit/yandex-lavka-mcp",
     "isOfficial": false,
     "status": "active",
@@ -1112,7 +1112,7 @@
     "name": "gogabrielordonez/mcp-ragchat",
     "url": "https://github.com/gogabrielordonez/mcp-ragchat",
     "description": "Add RAG-powered AI chat to any website with one command. Local vector store, multi-provider LLM (OpenAI/Anthropic/Gemini), self-contained chat server and embeddable widget.",
-    "category": "🔎 end to end RAG platforms",
+    "category": "🔎 Search & Data Extraction",
     "isOfficial": false
   },
   {

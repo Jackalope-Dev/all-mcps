@@ -97,9 +97,12 @@ const GITHUB_USER_LOGO_RETRY_MS = 30 * 24 * 60 * 60 * 1000;
  * whether or not they look unenriched. That bucket means both "a developer
  * tool" and "we could not tell", and listings with complete metadata never
  * enter the main batch, so without this slot they would never be re-asked.
- * Category check only (one Jev call, no fetches), so it stays cheap.
+ * Category check only (one Jev call, no fetches), so it stays cheap. At 10 a
+ * tick the ~16k-listing backlog took weeks; Jev calls are network-bound, so
+ * the slot now asks RECAT_CONCURRENCY at once (~4.6k listings a day).
  */
-const RECAT_BATCH_SIZE = 10;
+const RECAT_BATCH_SIZE = 48;
+const RECAT_CONCURRENCY = 8;
 /** A default-category listing Jev answered for is not asked again for this long. */
 const RECAT_RECHECK_MS = 60 * 24 * 60 * 60 * 1000;
 /** No answer (Jev down or unsure): ask again after this long. */
@@ -659,6 +662,7 @@ export async function POST(req: Request) {
           description:
             (updates.description as string | undefined) ?? server.description,
           url: server.url,
+          tools: server.tools,
         },
         server.category,
       );
@@ -685,6 +689,8 @@ export async function POST(req: Request) {
         description: servers.description,
         url: servers.url,
         category: servers.category,
+        aiSummary: servers.aiSummary,
+        tools: servers.tools,
       })
       .from(servers)
       .leftJoin(listingSignals, eq(listingSignals.serverId, servers.id))
@@ -701,26 +707,39 @@ export async function POST(req: Request) {
       )
       .orderBy(asc(listingSignals.categoryCheckedAt))
       .limit(RECAT_BATCH_SIZE + batch.length);
-    for (const row of recatRows
+    const recatQueue = recatRows
       .filter((r) => !batchIds.has(r.id))
-      .slice(0, RECAT_BATCH_SIZE)) {
-      const classified = await classifyCategory(row, row.category);
-      const now = Date.now();
-      // An answer (move or "it really is the default") holds for the full
-      // window; no answer (Jev down or unsure) comes back in a week.
-      const checkedAt = new Date(
-        classified.fromJev ? now : now - RECAT_RECHECK_MS + RECAT_RETRY_MS,
+      .slice(0, RECAT_BATCH_SIZE);
+    for (let i = 0; i < recatQueue.length; i += RECAT_CONCURRENCY) {
+      const wave = recatQueue.slice(i, i + RECAT_CONCURRENCY);
+      const answers = await Promise.all(
+        wave.map((row) => classifyCategory(row, row.category)),
       );
-      await upsertSignals(db, row.id, { categoryCheckedAt: checkedAt });
-      if (classified.fromJev && classified.category !== row.category) {
-        await db
-          .update(servers)
-          .set({ category: classified.category })
-          .where(eq(servers.id, row.id));
-        stats.recategorized++;
-        pagesToRefresh.push(row.id);
-      }
-      stats.recatChecked++;
+      const now = Date.now();
+      const writes: unknown[] = [];
+      wave.forEach((row, j) => {
+        const classified = answers[j];
+        // An answer (move or "it really is the default") holds for the full
+        // window; no answer (Jev down or unsure) comes back in a week.
+        const checkedAt = new Date(
+          classified.fromJev ? now : now - RECAT_RECHECK_MS + RECAT_RETRY_MS,
+        );
+        writes.push(
+          upsertSignals(db, row.id, { categoryCheckedAt: checkedAt }),
+        );
+        if (classified.fromJev && classified.category !== row.category) {
+          writes.push(
+            db
+              .update(servers)
+              .set({ category: classified.category })
+              .where(eq(servers.id, row.id)),
+          );
+          stats.recategorized++;
+          pagesToRefresh.push(row.id);
+        }
+        stats.recatChecked++;
+      });
+      await db.batch(writes as any);
     }
 
     const pages = await refreshListingPages(pagesToRefresh, env);

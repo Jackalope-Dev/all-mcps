@@ -31,11 +31,10 @@
   "📋 Product Management",
   "📐 Architecture & Design",
   "📟 Embedded System",
+  "📦 Delivery",
   "🔄 Version Control",
-  "🔎 end to end RAG platforms",
   "🔎 Search & Data Extraction",
   "🔑 Cryptography",
-  "🔒 Delivery",
   "🔒 Security",
   "🔗 Aggregators",
   "🔬 Research",
@@ -53,6 +52,5 @@
   "🚀 Aerospace & Astrodynamics",
   "🚆 Travel & Transportation",
   "🛒 E-Commerce",
-  "🛠️ Other Tools and Integrations",
-  "Biology, Medicine and Bioinformatics"
+  "🛠️ Other Tools and Integrations"
 ]

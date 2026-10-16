@@ -1,7 +1,7 @@
 import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { getHubCounts, isCategoryHubIndexable } from '@/lib/hubIndexability';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { SponsorAdUnit } from '../../../components/ads/SponsorAdUnit';
@@ -104,7 +104,7 @@ export default async function CategoryLandingPage({
   // Canonical slug redirect (e.g. /categories/end-to-end-rag-platforms -> /categories/search-and-data-extraction)
   const canonicalSlug = categorySlug(category);
   if (slug !== canonicalSlug) {
-    redirect(`/categories/${canonicalSlug}`);
+    permanentRedirect(`/categories/${canonicalSlug}`);
   }
 
   const { label } = parseCategoryLabel(category);
