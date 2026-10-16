@@ -344,6 +344,9 @@ async function fetchSitemapSummaryFromD1(): Promise<SitemapSummary | null> {
   }
 }
 
+/** Thrown inside the cache so a failed scan is never stored. */
+class SitemapSummaryUnavailable extends Error {}
+
 /**
  * Caches the folded D1 scan rather than the rendered sitemap. The routes are
  * `force-dynamic` on purpose: an ISR sitemap gets prerendered at build time,
@@ -353,8 +356,16 @@ async function fetchSitemapSummaryFromD1(): Promise<SitemapSummary | null> {
  * an hour and every other request reuses the (small) summary.
  */
 const getCachedSitemapSummaryFromD1 = unstable_cache(
-  fetchSitemapSummaryFromD1,
-  ['sitemap-summary'],
+  // unstable_cache stores whatever resolves, null included: one failed scan
+  // during a D1 reset was cached for the full hour, and every sitemap hit in
+  // that hour fell through to an uncached ~32k-row scan (3-6s wall, up to
+  // ~1.8s CPU each) on the already struggling D1. Throwing skips the write.
+  async () => {
+    const summary = await fetchSitemapSummaryFromD1();
+    if (!summary) throw new SitemapSummaryUnavailable();
+    return summary;
+  },
+  ['sitemap-summary-v2'],
   { revalidate: SITEMAP_CACHE_SECONDS },
 );
 
@@ -365,15 +376,14 @@ export async function getSitemapSummary(): Promise<SitemapSummary> {
   try {
     summary = await getCachedSitemapSummaryFromD1();
   } catch (e) {
-    console.error('[sitemap] Cached D1 read failed, querying directly:', e);
-  }
-
-  // A null here means either D1 was genuinely unreachable or the cache layer
-  // couldn't reach the request context. Retry uncached before falling back to
-  // the bundled sample, so a cache problem costs a query instead of shipping a
-  // sitemap that's missing almost every listing.
-  if (!summary) {
-    summary = await fetchSitemapSummaryFromD1();
+    // The scan itself just failed: retrying it at once only adds D1 load.
+    if (!(e instanceof SitemapSummaryUnavailable)) {
+      // The cache layer failed (e.g. no request context). Retry uncached
+      // before falling back to the bundled sample, so a cache problem costs a
+      // query instead of shipping a sitemap missing almost every listing.
+      console.error('[sitemap] Cached D1 read failed, querying directly:', e);
+      summary = await fetchSitemapSummaryFromD1();
+    }
   }
   if (summary) return summary;
 

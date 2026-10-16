@@ -13,8 +13,15 @@ import { servers as serversTable } from '@/db/schema';
 
 const sqlite = new DatabaseSync(':memory:');
 
+/** Set to make every query fail, like a D1 CPU-limit reset. */
+const d1 = { failing: false, prepares: 0 };
+
 const d1Shim = {
   prepare(query: string) {
+    d1.prepares++;
+    if (d1.failing) {
+      throw new Error('D1 DB exceeded its CPU time limit and was reset.');
+    }
     let params: unknown[] = [];
     const stmt = {
       bind(...p: unknown[]) {
@@ -141,5 +148,23 @@ describe('createSitemapSummarizer', () => {
     expect(categoryLastMod(summary, (c) => c === COMMS)).toMatch(
       /^2026-\d{2}-\d{2}T12:00:00Z$/,
     );
+  });
+});
+
+describe('getSitemapSummary when D1 fails', () => {
+  it('scans once, without retrying, and falls back to the bundled sample', async () => {
+    d1.failing = true;
+    d1.prepares = 0;
+    try {
+      const summary = await getSitemapSummary();
+      // Only the cached scan ran: a second, uncached scan would just add load
+      // to the D1 that just failed.
+      expect(d1.prepares).toBe(1);
+      expect(summary.listings).not.toContainEqual(
+        expect.objectContaining({ id: 'thin' }),
+      );
+    } finally {
+      d1.failing = false;
+    }
   });
 });
