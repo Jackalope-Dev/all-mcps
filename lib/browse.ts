@@ -143,7 +143,11 @@ async function selectPage(
   // One bound parameter however many ids: json_each unpacks the array in
   // SQLite, which also gives each id its rank (j.key) for relevance order.
   const from = rankedIds
-    ? sql`servers s JOIN json_each(${JSON.stringify(rankedIds)}) j ON j.value = s.id`
+    ? // CROSS JOIN pins json_each as the outer loop, so each id is one primary-key
+      // lookup. As a plain JOIN SQLite scanned every servers row against the id
+      // list: 12.4M rows read and ~3s per query for 402 ids on prod D1 (6ms now),
+      // which failed outright when D1 was busy (500s on /api/browse).
+      sql`json_each(${JSON.stringify(rankedIds)}) j CROSS JOIN servers s ON s.id = j.value`
     : sql`servers s`;
   const where = sql.join(facetConditions(p), sql` AND `);
   const [rows, countRows] = await Promise.all([
