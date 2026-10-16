@@ -45,6 +45,17 @@ import {
 } from '../../../../lib/servers';
 
 const SITE = 'https://allmcps.com';
+
+// ISR like /mcp/[id]: without these the route rendered per request (no-store),
+// so crawlers walking the compare/alternatives matrix re-ran its D1 queries on
+// every hit (the same pair 10-14 times in 30 min, ~3-4s each) and helped push
+// D1 past its CPU limit. Pairs/ids are rendered on first request, then cached.
+export const revalidate = 3600;
+
+export async function generateStaticParams() {
+  return [];
+}
+
 const MAX = 12;
 
 function truncateName(name: string, max: number): string {
