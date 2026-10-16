@@ -61,24 +61,11 @@ export default async function Home() {
   // The discovery pool selects lightweight columns only (see
   // getActiveServersLight) and doubles as the paid-placement source and the
   // fallback; the showcase pool is the quality-ranked curated preview.
-  // TEMPORARY diagnostic (2026-10-15): ISR re-renders of / still time out at
-  // 25s during cron ticks even with all three loads cached stale-while-
-  // revalidate. Log a breakdown when the data phase is slow, to tell a slow
-  // load from slowness elsewhere (render, R2 cache write). Remove once known.
-  const t0 = Date.now();
-  const ms: Record<string, number> = {};
-  const timed = <T,>(name: string, p: Promise<T>) =>
-    p.finally(() => {
-      ms[name] = Date.now() - t0;
-    });
   const [showcaseServers, discoveryPool, siteStats] = await Promise.all([
-    timed('showcase', getShowcaseActiveServers(8)),
-    timed('discovery', getActiveServersLight(200)),
-    timed('siteStats', getSiteStats()),
+    getShowcaseActiveServers(8),
+    getActiveServersLight(200),
+    getSiteStats(),
   ]);
-  if (Date.now() - t0 > 5000) {
-    console.warn('[home] slow data phase (ms)', JSON.stringify(ms));
-  }
   // discoveryPool is capped at 200 rows for ranking, so its length is not the
   // catalog size — use the real active-listing count.
   const catalogTotal = Math.max(siteStats.totalServers, discoveryPool.length);
