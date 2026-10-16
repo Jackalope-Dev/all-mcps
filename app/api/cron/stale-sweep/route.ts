@@ -18,6 +18,7 @@ import {
   autoDecisions,
   listingSignals,
   reports,
+  serverHealthChecks,
   servers,
   stdioVerifications,
 } from '../../../../db/schema';
@@ -39,7 +40,11 @@ import {
   rejectPendingListing,
 } from '../../../../lib/listingApproval';
 import { refreshListingPageInBackground } from '../../../../lib/listingPageRefresh';
-import { reviewColumns, triageListing } from '../../../../lib/listingReview';
+import {
+  reviewColumns,
+  toolNamesFromJson,
+  triageListing,
+} from '../../../../lib/listingReview';
 import {
   bareName,
   checkRegistry,
@@ -60,10 +65,12 @@ import { upsertSignals } from '../../../../lib/signalStore';
 import {
   assessStaleness,
   evidenceReasons,
+  type HealthHistorySummary,
   JEV_REJECT_MCP_CEILING,
   parseStaleReasons,
   pendingAutoRemoveReason,
   shouldAutoRemove,
+  siteDownFromHistory,
 } from '../../../../lib/staleness';
 import {
   findTyposquatTarget,
@@ -213,6 +220,64 @@ async function countMaliciousReporters(
     for (const r of rows) counts.set(r.serverId, Number(r.n));
   }
   return counts;
+}
+
+/**
+ * The current run of failed health checks per listing: everything after its
+ * newest healthy check (lib/staleness.ts siteDownFromHistory). Listings
+ * without a failure since their last healthy check are absent.
+ */
+async function loadFailureStreaks(
+  db: any,
+  ids: string[],
+): Promise<Map<string, HealthHistorySummary>> {
+  const out = new Map<string, HealthHistorySummary>();
+  const c = serverHealthChecks;
+  for (let i = 0; i < ids.length; i += REPORT_ID_CHUNK) {
+    const last = db
+      .select({
+        sid: c.serverId,
+        lastOk: sql<
+          number | null
+        >`max(case when ${c.healthy} = 1 then ${c.checkedAt} end)`.as(
+          'last_ok',
+        ),
+      })
+      .from(c)
+      .where(inArray(c.serverId, ids.slice(i, i + REPORT_ID_CHUNK)))
+      .groupBy(c.serverId)
+      .as('l');
+    // Raw aggregates come back as epoch seconds, not Dates.
+    const rows: {
+      serverId: string;
+      lastOk: number | null;
+      firstFail: number;
+      fails: number;
+    }[] = await db
+      .select({
+        serverId: c.serverId,
+        lastOk: last.lastOk,
+        firstFail: sql<number>`min(${c.checkedAt})`,
+        fails: sql<number>`count(*)`,
+      })
+      .from(c)
+      .innerJoin(last, eq(last.sid, c.serverId))
+      .where(
+        and(
+          eq(c.healthy, false),
+          or(isNull(last.lastOk), sql`${c.checkedAt} > ${last.lastOk}`),
+        ),
+      )
+      .groupBy(c.serverId);
+    for (const r of rows) {
+      out.set(r.serverId, {
+        lastHealthyAt: r.lastOk == null ? null : new Date(r.lastOk * 1000),
+        firstFailAt: new Date(r.firstFail * 1000),
+        fails: Number(r.fails),
+      });
+    }
+  }
+  return out;
 }
 
 export async function POST(req: Request) {
@@ -457,14 +522,20 @@ export async function POST(req: Request) {
       .orderBy(asc(listingSignals.staleCheckedAt))
       .limit(ASSESS_BATCH);
 
-    const [popularPackages, maliciousReporters] = await Promise.all([
-      loadPopularNpmPackages(db),
-      countMaliciousReporters(
-        db,
-        assessRows.map((r) => r.id),
-        now,
-      ),
-    ]);
+    const [popularPackages, maliciousReporters, failureStreaks] =
+      await Promise.all([
+        loadPopularNpmPackages(db),
+        countMaliciousReporters(
+          db,
+          assessRows.map((r) => r.id),
+          now,
+        ),
+        // A GitHub listing's health is its repo, which 'repo-gone' covers.
+        loadFailureStreaks(
+          db,
+          assessRows.filter((r) => !githubRepoSlug(r.url)).map((r) => r.id),
+        ),
+      ]);
 
     let flagged = 0;
     let unflagged = 0;
@@ -501,6 +572,7 @@ export async function POST(req: Request) {
           r.registryCheckedAt != null &&
           r.packageMissingAt == null &&
           !r.packageDeprecated,
+        siteDown: siteDownFromHistory(failureStreaks.get(r.id), now),
         triageVerdict: r.triageVerdict,
         toolPoisoning: hasStrongPoisoning(
           r.poisoning ? safeParseArray(r.poisoning) : null,
@@ -579,7 +651,13 @@ export async function POST(req: Request) {
         name: servers.name,
         description: servers.description,
         url: servers.url,
+        websiteUrl: servers.websiteUrl,
         aiOverview: servers.aiOverview,
+        tools: servers.tools,
+        installKind: servers.installKind,
+        installCommand: servers.installCommand,
+        installPackage: servers.installPackage,
+        remoteEndpointUrl: servers.remoteEndpointUrl,
         githubStars: servers.githubStars,
         npmDownloads: servers.npmDownloads,
         lastCommitAt: servers.lastCommitAt,
@@ -639,6 +717,12 @@ export async function POST(req: Request) {
                 ? r.sandboxStatus
                 : null,
             toolCount: r.toolCount,
+            toolNames: toolNamesFromJson(r.tools),
+            websiteUrl: r.websiteUrl,
+            installKind: r.installKind,
+            installCommand: r.installCommand,
+            installPackage: r.installPackage,
+            remoteEndpointUrl: r.remoteEndpointUrl,
             // Pending listings get no health-cron stars; the repo check's
             // count stands in.
             githubStars: r.githubStars ?? r.repoStars,

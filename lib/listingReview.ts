@@ -212,46 +212,185 @@ export async function alignListings(
 }
 
 /**
- * Admin triage: what should a curator do with this listing? The levels are
- * the actions, same pattern as DUPLICATE_ALIGNMENT_LEVELS.
+ * Admin triage: what should a curator do with this listing?
+ *
+ * This used to be one 3-level Score (reject / needs_review / approve). An
+ * unsure model lands an ordinal rubric on its middle level at low confidence,
+ * so in practice it never said approve — every listing came back
+ * needs_review. Instead Jev now answers several scoped yes/no (noul)
+ * questions, and the verdict is derived from their probabilities by
+ * deriveTriageVerdict with the thresholds below. Each probability is stored
+ * in the reason, so a verdict explains which question decided it.
  */
 const TRIAGE_LEVELS = ['reject', 'needs_review', 'approve'] as const;
 export type TriageVerdict = (typeof TRIAGE_LEVELS)[number];
 
-const triageQuestion: JevScoreQuestion = {
-  type: 'score',
+const isSubstantiveQuestion: JevNoulQuestion = {
+  type: 'noul',
   instructions:
-    'You are curating a directory of MCP (Model Context Protocol) servers. Given the listing and the evidence we collected, what should the curator do? Approve genuine, usable MCP servers. Reject clients, curated lists, tutorials, empty or placeholder repos, forks with no changes, and spam. Choose needs_review only when the evidence genuinely conflicts.',
-  criteria: [
-    'Reject — not a genuine, usable MCP server for this directory.',
-    'Needs review — the evidence conflicts; a human should look.',
-    'Approve — a genuine MCP server worth listing.',
-  ],
+    'This is a real project with its own working implementation. It is not an empty or placeholder repository, a tutorial or course exercise, a hello-world demo, a boilerplate template, an unmodified fork, or spam.',
+  criteria: {
+    true: 'A real project with its own implementation',
+    false:
+      'Empty, placeholder, tutorial, demo, template, unmodified fork, or spam',
+  },
 };
+
+const isUsableQuestion: JevNoulQuestion = {
+  type: 'noul',
+  instructions:
+    'A developer could install or connect to this server today from the information given: a published package, an install command, a hosted endpoint, or clear setup instructions.',
+  criteria: {
+    true: 'There is a clear way to install or connect to it',
+    false: 'No usable install or connection path is given',
+  },
+};
+
+const isLegitimateQuestion: JevNoulQuestion = {
+  type: 'noul',
+  instructions:
+    'This listing is a legitimate, honestly described software project. It is not spam, a marketing or SEO page for an unrelated business, a scam, malware, or an impersonation of another project.',
+  criteria: {
+    true: 'Legitimate and honestly described',
+    false: 'Spam, unrelated marketing, scam, malware, or impersonation',
+  },
+};
+
+const belongsInDirectoryQuestion: JevNoulQuestion = {
+  type: 'noul',
+  instructions:
+    'Taking all the evidence together, a careful curator of a public directory of MCP (Model Context Protocol) servers would list this: it is a genuine, usable MCP server that developers could find useful.',
+  criteria: {
+    true: 'It belongs in the directory',
+    false: 'It does not belong in the directory',
+  },
+};
+
+/** Per-question probabilities, 0..1, or null when that answer was unusable. */
+export type TriageMatrix = {
+  isMcpServer: number | null;
+  isSubstantive: number | null;
+  isUsable: number | null;
+  isLegitimate: number | null;
+  belongsInDirectory: number | null;
+};
+
+/**
+ * Thresholds for deriveTriageVerdict. Not calibrated against live Jev answers
+ * for the new questions yet, so both ends are conservative:
+ *
+ * - `approveAt`: every required question must clear it. 0.6 on is-MCP matches
+ *   the admin's own calls (Oct 2026: every reviewed listing at ≥ 0.6 approved,
+ *   69 of 71 at ≤ 0.5 rejected). Usability is a softer bar because a thin
+ *   README often hides a real install path.
+ * - `rejectBelow`: one hard question confidently answered no. Same floor as
+ *   MCP_SERVER_NOUL_FLOOR (curated lists scored 0.02, real servers ≥ 0.36).
+ *   Acting on a reject also needs mcpProbability < JEV_REJECT_MCP_CEILING
+ *   (lib/staleness.ts), so a reject on substance alone only ever reaches a
+ *   human.
+ */
+const TRIAGE_THRESHOLDS = {
+  approveAt: {
+    isMcpServer: 0.6,
+    isSubstantive: 0.6,
+    isUsable: 0.5,
+    isLegitimate: 0.6,
+    belongsInDirectory: 0.6,
+  },
+  rejectBelow: {
+    isMcpServer: MCP_SERVER_NOUL_FLOOR,
+    isSubstantive: 0.15,
+    isLegitimate: 0.15,
+    belongsInDirectory: 0.15,
+  },
+} as const;
+
+type MatrixKey = keyof TriageMatrix;
+
+/**
+ * The verdict the matrix supports, before hard evidence (settleVerdict), and
+ * how firmly: for approve the weakest required probability, for reject how
+ * sure the strongest "no" is, for needs_review the overall belongs answer.
+ * Null when the is-MCP answer itself is missing.
+ */
+export function deriveTriageVerdict(m: TriageMatrix): {
+  verdict: TriageVerdict;
+  confidence: number | null;
+} | null {
+  if (m.isMcpServer === null) return null;
+
+  const rejecting: number[] = [];
+  for (const [k, floor] of Object.entries(TRIAGE_THRESHOLDS.rejectBelow) as [
+    MatrixKey,
+    number,
+  ][]) {
+    const p = m[k];
+    if (p !== null && p < floor) rejecting.push(p);
+  }
+  if (rejecting.length > 0) {
+    return { verdict: 'reject', confidence: 1 - Math.min(...rejecting) };
+  }
+
+  const required = (
+    Object.entries(TRIAGE_THRESHOLDS.approveAt) as [MatrixKey, number][]
+  ).map(([k, bar]) => ({ p: m[k], bar }));
+  if (required.every(({ p, bar }) => p !== null && p >= bar)) {
+    return {
+      verdict: 'approve',
+      confidence: Math.min(...required.map(({ p }) => p as number)),
+    };
+  }
+  return { verdict: 'needs_review', confidence: m.belongsInDirectory };
+}
 
 /** Hard evidence handed to Jev alongside the listing text, and echoed back in the reason. */
 export type TriageEvidence = {
   sandboxStatus?: string | null;
   toolCount?: number | null;
+  /** Tool names we already know (live handshake or README), for context. */
+  toolNames?: string[];
   githubStars?: number | null;
   npmDownloads?: number | null;
   lastCommitAt?: Date | null;
   repoForkOf?: string | null;
   staleReasons?: string[];
+  /** Our generated overview of the README (servers.aiOverview). */
   readme?: string | null;
   /** Our own check of the source URL (lib/repoCheck.ts). */
   repoStatus?: RepoStatus | null;
+  websiteUrl?: string | null;
+  installKind?: string | null;
+  installCommand?: string | null;
+  installPackage?: string | null;
+  remoteEndpointUrl?: string | null;
 };
+
+/** Names from a servers.tools JSON column, capped so the request stays small. */
+export function toolNamesFromJson(json: string | null | undefined): string[] {
+  if (!json) return [];
+  try {
+    const parsed = JSON.parse(json);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((t) => (typeof t?.name === 'string' ? t.name : null))
+      .filter((n): n is string => Boolean(n))
+      .slice(0, 30);
+  } catch {
+    return [];
+  }
+}
 
 export type ListingTriage = ListingReview & {
   verdict: TriageVerdict | null;
-  /** Confidence in `verdict`, 0..1, or null when unknown. */
+  /** How firmly the matrix supports `verdict` (see deriveTriageVerdict), or null. */
   verdictConfidence: number | null;
   reason: string | null;
+  matrix: TriageMatrix | null;
 };
 
-/** Below this confidence an approve/reject is downgraded to needs_review. */
-const TRIAGE_CONFIDENCE_FLOOR = 0.7;
+function noulOrNull(a: { noul?: number } | undefined): number | null {
+  return typeof a?.noul === 'number' ? a.noul : null;
+}
 
 /**
  * Full review plus a curator recommendation, in one Jev request. Never throws;
@@ -266,6 +405,7 @@ export async function triageListing(
     verdict: null,
     verdictConfidence: null,
     reason: null,
+    matrix: null,
   };
   if (!listing.name && !listing.description) return empty;
 
@@ -274,10 +414,18 @@ export async function triageListing(
       name: listing.name ?? '',
       description: listing.description ?? '',
       url: listing.url ?? '',
-      readme: (evidence.readme ?? '').slice(0, 3000),
+      website: evidence.websiteUrl ?? null,
+      overview: (evidence.readme ?? '').slice(0, 3000),
       evidence: {
         sandbox_result: evidence.sandboxStatus ?? 'not tested',
         tools_found: evidence.toolCount ?? 0,
+        tool_names: evidence.toolNames ?? [],
+        install: {
+          kind: evidence.installKind ?? null,
+          command: evidence.installCommand ?? null,
+          package: evidence.installPackage ?? null,
+          hosted_endpoint: evidence.remoteEndpointUrl ?? null,
+        },
         github_stars: evidence.githubStars ?? null,
         npm_monthly_downloads: evidence.npmDownloads ?? null,
         last_commit: evidence.lastCommitAt?.toISOString().slice(0, 10) ?? null,
@@ -289,67 +437,88 @@ export async function triageListing(
     {
       is_mcp_server: isMcpServerQuestion,
       listing_quality: listingQualityQuestion,
-      triage: triageQuestion,
+      is_substantive: isSubstantiveQuestion,
+      is_usable: isUsableQuestion,
+      is_legitimate: isLegitimateQuestion,
+      belongs_in_directory: belongsInDirectoryQuestion,
     },
   );
   if (!res) return empty;
 
-  const mcp = res.answers.is_mcp_server;
-  const quality = res.answers.listing_quality;
-  const triage = res.answers.triage;
+  const a = res.answers;
   const review: ListingReview = {
-    isMcpServer: noulVerdict(mcp, MCP_SERVER_NOUL_FLOOR),
-    mcpServerProbability: typeof mcp?.noul === 'number' ? mcp.noul : null,
-    qualityScore: typeof quality?.score === 'number' ? quality.score : null,
+    isMcpServer: noulVerdict(a.is_mcp_server, MCP_SERVER_NOUL_FLOOR),
+    mcpServerProbability: noulOrNull(a.is_mcp_server),
+    qualityScore:
+      typeof a.listing_quality?.score === 'number'
+        ? a.listing_quality.score
+        : null,
     reviewed: true,
   };
-  const raw = nearestScoreLevel(triage, TRIAGE_LEVELS);
-  const confidence =
-    typeof triage?.confidence === 'number' ? triage.confidence : null;
-  const verdict = settleVerdict(raw, confidence, review, evidence);
+  const matrix: TriageMatrix = {
+    isMcpServer: review.mcpServerProbability,
+    isSubstantive: noulOrNull(a.is_substantive),
+    isUsable: noulOrNull(a.is_usable),
+    isLegitimate: noulOrNull(a.is_legitimate),
+    belongsInDirectory: noulOrNull(a.belongs_in_directory),
+  };
+  const derived = deriveTriageVerdict(matrix);
+  const verdict = settleVerdict(derived?.verdict ?? null, evidence);
   return {
     ...review,
     verdict,
-    verdictConfidence: confidence,
-    reason: verdict ? explainTriage(verdict, review, evidence) : null,
+    verdictConfidence: derived?.confidence ?? null,
+    reason: verdict ? explainTriage(verdict, review, evidence, matrix) : null,
+    matrix,
   };
 }
 
 /**
- * Apply hard evidence on top of the model's answer. A completed sandbox
- * handshake is proof, so it can never be auto-rejected; an unsure model never
- * gets to approve or reject on its own.
+ * Apply hard evidence on top of the matrix. A completed sandbox handshake is
+ * proof, so it can never be auto-rejected; a source URL that returns 404 is a
+ * fact, not a judgment, so it rejects unless the server was proven to run.
  */
 export function settleVerdict(
   raw: TriageVerdict | null,
-  confidence: number | null,
-  review: ListingReview,
   evidence: TriageEvidence,
 ): TriageVerdict | null {
   if (raw === null) return null;
   const proven =
     evidence.sandboxStatus === 'ok' ||
     evidence.sandboxStatus === 'needs_credentials';
-  if (raw === 'reject' && proven) return 'needs_review';
-  // A source URL that returns 404 is a fact, not a judgment: reject unless
-  // the server was proven to run anyway (then a human decides).
   if (evidence.repoStatus === 'gone') return proven ? 'needs_review' : 'reject';
-  if (raw !== 'needs_review' && (confidence ?? 0) < TRIAGE_CONFIDENCE_FLOOR)
-    return 'needs_review';
-  // The model said approve but its own is-MCP answer says no: conflicting.
-  if (raw === 'approve' && review.isMcpServer === false) return 'needs_review';
+  if (raw === 'reject' && proven) return 'needs_review';
   return raw;
 }
+
+const MATRIX_LABELS: Record<Exclude<MatrixKey, 'isMcpServer'>, string> = {
+  isSubstantive: 'real project',
+  isUsable: 'usable',
+  isLegitimate: 'legit',
+  belongsInDirectory: 'belongs',
+};
+
+const pct = (p: number) => `${Math.round(p * 100)}%`;
 
 /** Human-readable one-liner for the admin card, built from facts, not model prose. */
 export function explainTriage(
   verdict: TriageVerdict,
   review: ListingReview,
   evidence: TriageEvidence,
+  matrix?: TriageMatrix | null,
 ): string {
   const parts: string[] = [];
   if (review.mcpServerProbability !== null)
-    parts.push(`MCP ${Math.round(review.mcpServerProbability * 100)}%`);
+    parts.push(`MCP ${pct(review.mcpServerProbability)}`);
+  if (matrix) {
+    for (const [k, label] of Object.entries(MATRIX_LABELS) as [
+      keyof typeof MATRIX_LABELS,
+      string,
+    ][]) {
+      const p = matrix[k];
+      if (p !== null) parts.push(`${label} ${pct(p)}`);
+    }
+  }
   if (review.qualityScore !== null) {
     const level =
       LISTING_QUALITY_LEVELS[

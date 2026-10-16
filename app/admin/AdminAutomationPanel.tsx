@@ -13,7 +13,7 @@ type GateView = {
   label: string;
   detail: string;
   mode: Mode;
-  bar: { confidence: number; mcpProbability: number; stars: number };
+  bar: { mcpProbability: number; stars: number };
   stats: {
     total: number;
     approve: number;
@@ -177,9 +177,9 @@ export function AdminAutomationPanel() {
               </div>
 
               <p className="adm-gate-detail">
-                {g.detail} Bar: Jev ≥ {pct(g.bar.confidence)} confident, MCP ≥{' '}
-                {pct(g.bar.mcpProbability)}, and a sandbox run, a published
-                package or ≥ {g.bar.stars} stars.
+                {g.detail} Bar: MCP ≥ {pct(g.bar.mcpProbability)}, no Jev
+                reject, and a sandbox run, a published package or ≥{' '}
+                {g.bar.stars} stars.
               </p>
 
               <div className="adm-gate-stats">

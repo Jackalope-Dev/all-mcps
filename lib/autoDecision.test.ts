@@ -28,9 +28,8 @@ describe('decideSubmission', () => {
   });
 
   it.each([
-    ['an unsure Jev', { triageConfidence: 0.8 }],
+    ['a Jev reject', { triageVerdict: 'reject' }],
     ['a low MCP probability', { mcpProbability: 0.5 }],
-    ['a look-closer verdict', { triageVerdict: 'needs_review' }],
     ['a private repo', { repoStatus: 'site_only' as const }],
     ['an intake flag', { reviewFlagged: true }],
     ['no sign of real use', { stars: 2 }],
@@ -38,6 +37,18 @@ describe('decideSubmission', () => {
     const r = decideSubmission({ ...strong, ...patch });
     expect(r?.decision).toBe('hold');
     expect(r?.reasons.length).toBeGreaterThan(0);
+  });
+
+  it("approves on Jev's look-closer verdict when the other evidence is strong", () => {
+    // Jev's 3-level rubric lands an unsure answer on needs_review at low
+    // confidence, so it is a veto (reject) only.
+    expect(
+      decideSubmission({
+        ...strong,
+        triageVerdict: 'needs_review',
+        triageConfidence: 0.35,
+      })?.decision,
+    ).toBe('approve');
   });
 
   it('accepts a sandbox run or a published package as proof instead of stars', () => {
@@ -71,14 +82,17 @@ describe('decideSubmission', () => {
 });
 
 describe('decideIngestPromote', () => {
-  it('promotes on a slightly lower bar than submissions', () => {
+  it("promotes on Jev's look-closer verdict but holds a low MCP probability", () => {
     expect(
       decideIngestPromote({
         ...strong,
-        triageConfidence: 0.82,
-        mcpProbability: 0.55,
+        triageVerdict: 'needs_review',
+        triageConfidence: 0.4,
       })?.decision,
     ).toBe('approve');
+    expect(
+      decideIngestPromote({ ...strong, mcpProbability: 0.5 })?.decision,
+    ).toBe('hold');
   });
 
   it('never rejects', () => {

@@ -37,12 +37,12 @@ export const GATE_COPY: Record<Gate, { label: string; detail: string }> = {
   submission: {
     label: 'Human submissions',
     detail:
-      'Approves submissions with a confident Jev approve, a live source repo and a sign of real use; rejects only a confirmed-dead source. Emails the submitter either way.',
+      'Approves submissions Jev rates likely MCP and did not reject, with a live source repo and a sign of real use; rejects only a confirmed-dead source. Emails the submitter either way.',
   },
   ingest_promote: {
     label: 'Imported listings fast-track',
     detail:
-      'Publishes imported listings with a confident Jev approve and a live source without the 7-day wait. Never rejects — the stale sweep handles dead ones.',
+      'Publishes imported listings Jev rates likely MCP and did not reject, with a live source, without the 7-day wait. Never rejects — the stale sweep handles dead ones.',
   },
   dedupe_retire: {
     label: 'Duplicate retirement',
@@ -69,15 +69,22 @@ export type GateEvidence = {
 
 export type GateResult = { decision: AutoDecision; reasons: string[] };
 
-/** Thresholds, exported so the admin panel can show the exact bar. */
+/**
+ * Thresholds, exported so the admin panel can show the exact bar.
+ *
+ * Jev's triage verdict is only a veto here, not the approval signal. It almost
+ * never says approve: its 3-level rubric pulls an unsure answer to the middle
+ * (needs_review) at low confidence, so a bar on "approve at ≥ 80% confidence"
+ * held every listing. Jev's MCP probability is what separates the admin's own
+ * calls — in Oct 2026 every reviewed listing at ≥ 0.6 was approved and 69 of 71
+ * at ≤ 0.5 were rejected.
+ */
 export const SUBMISSION_BAR = {
-  confidence: 0.85,
   mcpProbability: 0.6,
   stars: 5,
 } as const;
 export const INGEST_BAR = {
-  confidence: 0.8,
-  mcpProbability: 0.5,
+  mcpProbability: 0.6,
   stars: 5,
 } as const;
 
@@ -109,10 +116,7 @@ export function decideSubmission(e: GateEvidence): GateResult | null {
   if (!evidenceReady(e)) return null;
 
   const missing: string[] = [];
-  if (e.triageVerdict !== 'approve')
-    missing.push(`Jev said ${e.triageVerdict}`);
-  if ((e.triageConfidence ?? 0) < SUBMISSION_BAR.confidence)
-    missing.push(`Jev confidence ${pct(e.triageConfidence)}`);
+  if (e.triageVerdict === 'reject') missing.push('Jev said reject');
   if ((e.mcpProbability ?? 0) < SUBMISSION_BAR.mcpProbability)
     missing.push(`MCP ${pct(e.mcpProbability)}`);
   if (e.repoStatus !== 'ok') missing.push(`source ${e.repoStatus}`);
@@ -124,7 +128,7 @@ export function decideSubmission(e: GateEvidence): GateResult | null {
   return {
     decision: 'approve',
     reasons: [
-      `Jev approve ${pct(e.triageConfidence)}`,
+      `Jev ${e.triageVerdict === 'approve' ? 'approve' : 'no objection'}`,
       `MCP ${pct(e.mcpProbability)}`,
       'source live',
       proof as string,
@@ -140,10 +144,7 @@ export function decideIngestPromote(e: GateEvidence): GateResult | null {
   // Possible duplicate Jev couldn't rule out at import, or a repo unrelated
   // to the name (scripts/ingest-sources.mjs).
   if (e.reviewFlagged) missing.push('flagged at import (possible duplicate)');
-  if (e.triageVerdict !== 'approve')
-    missing.push(`Jev said ${e.triageVerdict}`);
-  if ((e.triageConfidence ?? 0) < INGEST_BAR.confidence)
-    missing.push(`Jev confidence ${pct(e.triageConfidence)}`);
+  if (e.triageVerdict === 'reject') missing.push('Jev said reject');
   if ((e.mcpProbability ?? 0) < INGEST_BAR.mcpProbability)
     missing.push(`MCP ${pct(e.mcpProbability)}`);
   if (e.repoStatus !== 'ok' && e.repoStatus !== 'site_only')
@@ -162,7 +163,7 @@ export function decideIngestPromote(e: GateEvidence): GateResult | null {
   return {
     decision: 'approve',
     reasons: [
-      `Jev approve ${pct(e.triageConfidence)}`,
+      `Jev ${e.triageVerdict === 'approve' ? 'approve' : 'no objection'}`,
       `MCP ${pct(e.mcpProbability)}`,
       e.repoStatus === 'ok' ? 'source live' : 'website live',
       proof as string,

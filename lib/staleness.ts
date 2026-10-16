@@ -31,6 +31,11 @@ export type StaleReason =
   | 'unmodified-fork'
   /** Our own check found the source repo gone (404/410/451) twice, a day apart, and nothing else runs it. */
   | 'repo-gone'
+  /**
+   * A non-GitHub listing's site has failed every health check for
+   * SITE_DOWN_AFTER_MS (see siteDownFromHistory), and nothing else runs it.
+   */
+  | 'site-down'
   /** Jev is confident this is not an MCP server. Flag-only: always needs a human. */
   | 'not-mcp'
   /**
@@ -63,6 +68,7 @@ const AUTO_REMOVABLE_REASONS: ReadonlySet<StaleReason> = new Set([
   'abandoned',
   'unmodified-fork',
   'repo-gone',
+  'site-down',
 ]);
 
 /**
@@ -84,7 +90,37 @@ export const STALE_GRACE_MS = 30 * 24 * 60 * 60 * 1000;
  */
 const GRACE_BY_REASON: Partial<Record<StaleReason, number>> = {
   'repo-gone': 7 * 24 * 60 * 60 * 1000,
+  // Already down for SITE_DOWN_AFTER_MS before it is flagged, so ~4 weeks of
+  // continuous failure in all before removal.
+  'site-down': 14 * 24 * 60 * 60 * 1000,
 };
+
+/**
+ * How long a site must fail every check before it counts as down. Failing
+ * listings are rechecked every 6h (lib/healthTier.ts), so this is dozens of
+ * failed checks, not a couple of unlucky ones.
+ */
+const SITE_DOWN_AFTER_MS = 14 * 24 * 60 * 60 * 1000;
+/** Failed checks needed inside that window, so one stale reading never counts. */
+const SITE_DOWN_MIN_FAILS = 4;
+
+export type HealthHistorySummary = {
+  /** Newest healthy check, or null when the history holds none. */
+  lastHealthyAt: Date | null;
+  /** Oldest failed check after lastHealthyAt. */
+  firstFailAt: Date | null;
+  /** Failed checks after lastHealthyAt. */
+  fails: number;
+};
+
+/** The listing's own site has been down continuously for SITE_DOWN_AFTER_MS. */
+export function siteDownFromHistory(
+  h: HealthHistorySummary | undefined,
+  now: Date,
+): boolean {
+  if (!h?.firstFailAt || h.fails < SITE_DOWN_MIN_FAILS) return false;
+  return now.getTime() - h.firstFailAt.getTime() >= SITE_DOWN_AFTER_MS;
+}
 export const JEV_REJECT_MCP_CEILING = 0.3;
 const ABANDONED_AFTER_MS = 365 * 24 * 60 * 60 * 1000;
 const TRACTION_STARS = 10;
@@ -117,6 +153,8 @@ export type StalenessInput = {
   repoGoneConfirmed?: boolean | null;
   /** The registry answered and the package exists and is not deprecated. */
   packageAlive?: boolean | null;
+  /** siteDownFromHistory for a listing whose url is not a GitHub repo. */
+  siteDown?: boolean | null;
   /** Jev's settled triage verdict (lib/listingReview.ts). */
   triageVerdict?: string | null;
   /** The security profile holds a strong tool-poisoning finding (lib/securityProfile.ts hasStrongPoisoning). */
@@ -192,6 +230,8 @@ export function assessStaleness(s: StalenessInput): StaleReason[] {
   // package has to be gone or absent too.
   if (s.repoGoneConfirmed && !verified && !s.packageAlive)
     reasons.push('repo-gone');
+  // Same bar for a dead website: a live package or endpoint still serves it.
+  if (s.siteDown && !verified && !s.packageAlive) reasons.push('site-down');
   if (typeof s.mcpProbability === 'number' && s.mcpProbability < NOT_MCP_FLOOR)
     reasons.push('not-mcp');
   if (
@@ -235,6 +275,7 @@ export const STALE_REASON_LABEL: Record<StaleReason, string> = {
   abandoned: 'No commits in a year, never verified, no traction',
   'unmodified-fork': 'Fork with no traction of its own',
   'repo-gone': 'Source repo gone (404), nothing else runs it',
+  'site-down': 'Website down for 2+ weeks, nothing else runs it',
   'not-mcp': 'Jev: probably not an MCP server',
   'jev-reject': 'Jev: reject, and probably not an MCP server',
   'tool-poisoning': 'A tool description tries to instruct the AI assistant',

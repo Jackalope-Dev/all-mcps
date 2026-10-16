@@ -6,7 +6,11 @@ import { z } from 'zod';
 import { listingSignals, servers, stdioVerifications } from '@/db/schema';
 import { getAuthorizedAdminEmail } from '@/lib/adminAuth';
 import { getGithubToken } from '@/lib/githubAuth';
-import { reviewColumns, triageListing } from '@/lib/listingReview';
+import {
+  reviewColumns,
+  toolNamesFromJson,
+  triageListing,
+} from '@/lib/listingReview';
 import { checkRepo, type RepoStatus } from '@/lib/repoCheck';
 import { upsertSignals } from '@/lib/signalStore';
 import { parseStaleReasons } from '@/lib/staleness';
@@ -197,6 +201,11 @@ export async function POST(req: Request) {
         url: servers.url,
         websiteUrl: servers.websiteUrl,
         aiOverview: servers.aiOverview,
+        tools: servers.tools,
+        installKind: servers.installKind,
+        installCommand: servers.installCommand,
+        installPackage: servers.installPackage,
+        remoteEndpointUrl: servers.remoteEndpointUrl,
         githubStars: servers.githubStars,
         npmDownloads: servers.npmDownloads,
         lastCommitAt: servers.lastCommitAt,
@@ -241,6 +250,12 @@ export async function POST(req: Request) {
             ? r.sandboxStatus
             : null,
         toolCount: r.toolCount,
+        toolNames: toolNamesFromJson(r.tools),
+        websiteUrl: r.websiteUrl,
+        installKind: r.installKind,
+        installCommand: r.installCommand,
+        installPackage: r.installPackage,
+        remoteEndpointUrl: r.remoteEndpointUrl,
         githubStars: r.githubStars ?? repoStars,
         npmDownloads: r.npmDownloads,
         lastCommitAt: r.lastCommitAt,

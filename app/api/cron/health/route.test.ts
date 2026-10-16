@@ -247,8 +247,14 @@ describe('health cron', () => {
   });
 
   it('skips listings checked within their tier window', async () => {
-    insertServer('fresh', { last_checked_at: nowSec - DAY });
-    insertServer('due', { last_checked_at: nowSec - 8 * DAY });
+    insertServer('fresh', {
+      last_checked_at: nowSec - DAY,
+      health_status: 'healthy',
+    });
+    insertServer('due', {
+      last_checked_at: nowSec - 8 * DAY,
+      health_status: 'healthy',
+    });
     await run();
     const checked = sqlite
       .prepare('SELECT server_id FROM server_health_checks')
@@ -287,17 +293,54 @@ describe('health cron README reads', () => {
 });
 
 describe('health cron tiers', () => {
-  it('rechecks popular listings daily and the long tail weekly', async () => {
-    const twoDaysAgo = nowSec - 2 * DAY;
-    insertServer('popular', { last_checked_at: twoDaysAgo, views: 500 });
-    insertServer('some-use', { last_checked_at: twoDaysAgo, views: 20 });
-    insertServer('quiet', { last_checked_at: twoDaysAgo });
-    insertServer('paid', { last_checked_at: twoDaysAgo, is_premium: 1 });
+  it('rechecks popular listings twice a day and the long tail every four days', async () => {
+    const healthy = { health_status: 'healthy' };
+    const dayAndHalfAgo = nowSec - 1.5 * DAY;
+    insertServer('popular', {
+      ...healthy,
+      last_checked_at: dayAndHalfAgo,
+      views: 500,
+    });
+    insertServer('some-use', {
+      ...healthy,
+      last_checked_at: dayAndHalfAgo,
+      views: 20,
+    });
+    insertServer('quiet', { ...healthy, last_checked_at: dayAndHalfAgo });
+    insertServer('paid', {
+      ...healthy,
+      last_checked_at: dayAndHalfAgo,
+      is_premium: 1,
+    });
     await run();
     const checked = sqlite
       .prepare('SELECT server_id FROM server_health_checks ORDER BY server_id')
       .all();
     expect(checked).toEqual([{ server_id: 'paid' }, { server_id: 'popular' }]);
+  });
+
+  it('rechecks failing and never-checked listings within hours, whatever the tier', async () => {
+    const sevenHoursAgo = nowSec - 7 * 3600;
+    insertServer('down', {
+      health_status: 'offline',
+      last_checked_at: sevenHoursAgo,
+    });
+    insertServer('unchecked', {
+      health_status: 'unknown',
+      last_checked_at: sevenHoursAgo,
+    });
+    insertServer('fine', {
+      health_status: 'healthy',
+      last_checked_at: sevenHoursAgo,
+    });
+    await run();
+    const checked = sqlite
+      .prepare('SELECT server_id FROM server_health_checks ORDER BY server_id')
+      .all();
+    expect(checked).toEqual([
+      { server_id: 'down' },
+      { server_id: 'unchecked' },
+    ]);
   });
 });
 

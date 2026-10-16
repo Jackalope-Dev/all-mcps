@@ -6,6 +6,7 @@ import {
   STALE_GRACE_MS,
   type StalenessInput,
   shouldAutoRemove,
+  siteDownFromHistory,
 } from './staleness';
 
 const now = new Date('2026-10-13T00:00:00Z');
@@ -252,5 +253,48 @@ describe('malicious reports', () => {
     expect(
       assessStaleness({ ...base, ownerUserId: 'u1', maliciousReporters: 9 }),
     ).toEqual([]);
+  });
+});
+
+describe('site-down', () => {
+  const daysAgo = (d: number) => new Date(now.getTime() - d * 86_400_000);
+
+  it('needs two weeks of unbroken failures, not a couple of bad checks', () => {
+    expect(
+      siteDownFromHistory(
+        { lastHealthyAt: daysAgo(20), firstFailAt: daysAgo(15), fails: 40 },
+        now,
+      ),
+    ).toBe(true);
+    // Recent outage: still inside the window.
+    expect(
+      siteDownFromHistory(
+        { lastHealthyAt: daysAgo(4), firstFailAt: daysAgo(3), fails: 12 },
+        now,
+      ),
+    ).toBe(false);
+    // Old but thin evidence: a single stale reading never counts.
+    expect(
+      siteDownFromHistory(
+        { lastHealthyAt: null, firstFailAt: daysAgo(30), fails: 2 },
+        now,
+      ),
+    ).toBe(false);
+    expect(siteDownFromHistory(undefined, now)).toBe(false);
+  });
+
+  it('flags a down site only when nothing else runs it', () => {
+    expect(assessStaleness({ ...base, siteDown: true })).toEqual(['site-down']);
+    expect(
+      assessStaleness({ ...base, siteDown: true, packageAlive: true }),
+    ).toEqual([]);
+    expect(
+      assessStaleness({ ...base, siteDown: true, remoteEndpointHealthy: true }),
+    ).toEqual([]);
+  });
+
+  it('removes after two more weeks of grace', () => {
+    expect(shouldAutoRemove(['site-down'], daysAgo(15), now)).toBe(true);
+    expect(shouldAutoRemove(['site-down'], daysAgo(10), now)).toBe(false);
   });
 });

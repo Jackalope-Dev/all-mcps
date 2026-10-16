@@ -81,6 +81,13 @@ const BATCH_SIZE = 12;
 // Slots reserved each tick for listings still missing a real logo, picked by
 // logoCheckedAt rather than lastCheckedAt (which the health cron rewrites every
 // ~15 min, so it never reliably surfaced logo-less listings).
+//
+// logoCheckedAt is stamped on every listing this cron visits, so it is also
+// the main batch's cursor. This cron must never write lastCheckedAt: that is
+// the health cron's due clock (lib/healthTier.ts), and stamping it here
+// without a health check pushed non-GitHub listings — permanently
+// "unenriched" because they never get GitHub stars — out of the health queue
+// for good, leaving ~1.5k active listings at health 'unknown'.
 const LOGO_BATCH_SIZE = 8;
 // Listings stuck on a github_user avatar are re-tried for a better logo at most
 // this often, instead of re-entering the queue every tick.
@@ -240,14 +247,19 @@ export async function POST(req: Request) {
             isNull(servers.logoUrl),
             isNull(servers.logoSource),
             isNull(servers.installKind),
-            isNull(servers.githubStars),
+            // Only a GitHub repo ever gets stars; without this every
+            // non-GitHub listing would look unenriched forever.
+            and(
+              isNull(servers.githubStars),
+              sql`${servers.url} LIKE '%github.com/%'`,
+            ),
             sql`${servers.description} LIKE '%glama.ai%'`,
             sql`${servers.description} LIKE '[](%'`,
             sql`length(${servers.description}) < 40`,
           ),
         ),
       )
-      .orderBy(asc(servers.lastCheckedAt))
+      .orderBy(asc(servers.logoCheckedAt))
       .limit(BATCH_SIZE * 2);
 
     // Fallback: any active ordered by last check if filter is empty/saturated
@@ -258,7 +270,7 @@ export async function POST(req: Request) {
             .select(cronServerColumns)
             .from(servers)
             .where(eq(servers.status, 'active'))
-            .orderBy(asc(servers.lastCheckedAt))
+            .orderBy(asc(servers.logoCheckedAt))
             .limit(BATCH_SIZE);
     const logoIds = new Set(logoBatch.map((s) => s.id));
     const batch = [
@@ -287,7 +299,6 @@ export async function POST(req: Request) {
     for (const server of batch) {
       const now = new Date();
       const updates: Record<string, unknown> = {
-        lastCheckedAt: now,
         logoCheckedAt: now,
       };
 
@@ -395,7 +406,7 @@ export async function POST(req: Request) {
             await db
               .update(servers)
               .set({
-                lastCheckedAt: now,
+                logoCheckedAt: now,
                 description:
                   (updates.description as string | undefined) ??
                   server.description,

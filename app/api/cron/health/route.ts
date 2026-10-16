@@ -272,14 +272,13 @@ async function checkListing(
         if (readmeText && toolsSource !== 'introspected') {
           toolsCheckedAt = now;
           const parsedTools = parseToolsFromReadme(readmeText);
+          // No tools section is the README's style, not a failure, so it
+          // records no toolsError (that once filled ~12k rows and buried the
+          // real handshake failures). Any earlier tools/source are left alone.
           if (parsedTools.length > 0) {
             toolsJson = JSON.stringify(parsedTools);
             toolsSource = 'readme';
             toolsError = null;
-          } else {
-            // Leave any previously-found tools/source alone — this only means
-            // *this run's* README didn't parse, not that earlier good data is stale.
-            toolsError = 'No tools section found in README.';
           }
         }
       }
@@ -331,6 +330,16 @@ async function checkListing(
           // as healthy; this message just needs to not read as a failure.
           toolsError =
             'Requires authentication (OAuth) — tools not introspected by the automated check.';
+        } else if (
+          !introspection.ok &&
+          (await probeRemoteEndpoint(server.url)).verdict === 'not-mcp'
+        ) {
+          // Most non-GitHub listings link a product or docs page, not an
+          // endpoint: it serves HTML to the handshake (or 404s it) and to an
+          // SSE GET. That is a website with nothing to introspect, not a
+          // broken server, so it records no error. ~7k rows of "HTTP 405" /
+          // "No JSON-RPC response" were exactly this.
+          toolsError = null;
         } else {
           toolsError = (
             introspection.ok
