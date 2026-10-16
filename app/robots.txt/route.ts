@@ -30,6 +30,12 @@ Allow: /api/mcp
 Disallow: /admin
 Disallow: /dashboard
 Disallow: /login
+Disallow: /verify-request
+# Search results aren't content (every listing is in the sitemap), and this
+# group overrides the * group, so it has to repeat these. ClaudeBot enumerated
+# 131 distinct /browse?q= searches in 15 min, each a full catalog search on D1.
+Disallow: /browse?
+Disallow: /api/browse
 
 # GPTBot, Google-Extended, and Bytespider are training-corpus crawlers first —
 # allowing them here would contradict the Content-Signal ai-train=no below.
