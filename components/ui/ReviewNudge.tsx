@@ -4,6 +4,22 @@ import { Star, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 /**
+ * Tell this listing's ReviewNudge the visitor just took the install config
+ * (copy, editor deep link, or agent prompt) — the highest-intent moment to
+ * ask for a rating.
+ */
+export function signalConfigCopied(serverId: string) {
+  try {
+    window.dispatchEvent(
+      new CustomEvent('allmcps:config-copied', { detail: { serverId } }),
+    );
+    localStorage.setItem(`allmcps:copied:${serverId}`, '1');
+  } catch {
+    /* storage / event unavailable — non-critical */
+  }
+}
+
+/**
  * Post-install review solicitation. Stays hidden until this visitor actually
  * copies the install config for this server (CopyBlock dispatches
  * `allmcps:config-copied` and sets a localStorage flag) — the highest-intent
@@ -64,7 +80,10 @@ export function ReviewNudge({
         gap: '0.75rem',
         flexWrap: 'wrap',
         padding: '0.85rem 1rem',
-        margin: '1.25rem 0 0',
+        // Sits between .lst-section blocks, which only carry margin-bottom —
+        // so the gap above comes from the previous section and this card
+        // must supply the gap before the next section's heading.
+        margin: '0 0 clamp(2rem, 4vw, 2.75rem)',
         borderRadius: 12,
         border: '1px solid var(--border-color)',
         background: 'var(--brand-gradient-soft)',

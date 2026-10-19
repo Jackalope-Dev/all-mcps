@@ -24,6 +24,7 @@ import {
 } from '../../lib/installConfig';
 import { isServerInStack, toggleServerInStack } from '../../lib/stackStore';
 import { CopyBlock } from '../ui/CopyBlock';
+import { signalConfigCopied } from '../ui/ReviewNudge';
 import { toast } from '../ui/Toast';
 
 interface InstallPanelServer {
@@ -79,6 +80,7 @@ function bumpCopyMetric(serverId: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ metric: 'copy' }),
   }).catch(() => {});
+  signalConfigCopied(serverId);
 }
 
 /** One-click editor deep links. Only built for a confirmed install (see below). */

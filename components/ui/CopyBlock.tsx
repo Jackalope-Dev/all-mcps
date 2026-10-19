@@ -3,6 +3,7 @@
 import { Check, Copy } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 import { trackCopyConfig } from '../../lib/gtag';
+import { signalConfigCopied } from './ReviewNudge';
 import { toast } from './Toast';
 
 interface CopyBlockProps {
@@ -220,16 +221,7 @@ export function CopyBlock({
           body: JSON.stringify({ metric: 'copy' }),
         }).catch(() => {});
 
-        // Let a listing page's ReviewNudge know this visitor just took the
-        // install config — the highest-intent moment to ask for a rating.
-        try {
-          window.dispatchEvent(
-            new CustomEvent('allmcps:config-copied', { detail: { serverId } }),
-          );
-          localStorage.setItem(`allmcps:copied:${serverId}`, '1');
-        } catch {
-          /* storage / event unavailable — non-critical */
-        }
+        signalConfigCopied(serverId);
       }
     } catch {
       toast.error('Could not copy', {
