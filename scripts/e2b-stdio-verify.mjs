@@ -126,20 +126,36 @@ async function fetchBatch() {
   throw lastErr;
 }
 
+/**
+ * Records one result. Network errors are retried and then logged, never
+ * thrown: one dropped POST must not kill a run that has hours of work left.
+ */
 async function postResult(result) {
-  const res = await fetch(`${BASE_URL}/api/cron/stdio-verify/result`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${SECRET}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(result),
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => '<no body>');
-    console.error(
-      `  ! failed to record result for ${result.serverId}: HTTP ${res.status} - ${body.slice(0, 500)}`,
-    );
+  const RETRIES = 3;
+  for (let attempt = 1; attempt <= RETRIES; attempt++) {
+    try {
+      const res = await fetch(`${BASE_URL}/api/cron/stdio-verify/result`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${SECRET}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(result),
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => '<no body>');
+        console.error(
+          `  ! failed to record result for ${result.serverId}: HTTP ${res.status} - ${body.slice(0, 500)}`,
+        );
+      }
+      return;
+    } catch (e) {
+      console.error(
+        `  ! record attempt ${attempt}/${RETRIES} for ${result.serverId} failed: ${e.cause?.code ?? e.message}`,
+      );
+      if (attempt < RETRIES)
+        await new Promise((r) => setTimeout(r, attempt * 3000));
+    }
   }
 }
 
