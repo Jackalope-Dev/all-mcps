@@ -1,9 +1,17 @@
 'use client';
 
 import { Globe, Sparkles } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { PremiumUpgrade } from '../PremiumUpgrade';
+
+// Owner-only, and never rendered until the client-side ownership check
+// resolves — so load the checkout UI on demand instead of shipping it in every
+// listing page's JS bundle.
+const PremiumUpgrade = dynamic(
+  () => import('../PremiumUpgrade').then((m) => m.PremiumUpgrade),
+  { ssr: false },
+);
 
 type Props = {
   serverId: string;

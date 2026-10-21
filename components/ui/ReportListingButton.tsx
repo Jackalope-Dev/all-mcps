@@ -1,17 +1,16 @@
 'use client';
 
-import { Flag, X } from 'lucide-react';
-import { useCallback, useEffect, useId, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { TurnstileWidget } from './TurnstileWidget';
+import { Flag } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { useCallback, useState } from 'react';
 
-const REASONS: { value: string; label: string }[] = [
-  { value: 'broken_install', label: "Install doesn't work" },
-  { value: 'misleading', label: 'Misleading or inaccurate info' },
-  { value: 'malicious', label: 'Malicious or unsafe behavior' },
-  { value: 'dead_link', label: 'Dead link / repo gone' },
-  { value: 'other', label: 'Something else' },
-];
+// The form + Turnstile widget only matter after a click; load them on demand
+// rather than in every listing page's bundle. Hover/focus warms the chunk.
+const loadDialog = () => import('./ReportListingDialog');
+const ReportListingDialog = dynamic(
+  () => loadDialog().then((m) => m.ReportListingDialog),
+  { ssr: false },
+);
 
 /**
  * Low-friction "something's wrong here" flag — no login required (the visitor
@@ -21,290 +20,15 @@ const REASONS: { value: string; label: string }[] = [
  */
 export function ReportListingButton({ serverId }: { serverId: string }) {
   const [isOpen, setIsOpen] = useState(false);
-  const reasonId = useId();
-  const detailsId = useId();
-  const [reason, setReason] = useState('broken_install');
-  const [details, setDetails] = useState('');
-  const [token, setToken] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  // Shown inside the modal: toasts share its z-index and render underneath the
-  // overlay, so a failed submit used to look like nothing happened at all.
-  const [error, setError] = useState<string | null>(null);
-  const [widgetKey, setWidgetKey] = useState(0);
-
-  const close = useCallback(() => {
-    setIsOpen(false);
-    // Reset after the close animation-free unmount so a re-open starts fresh.
-    setTimeout(() => {
-      setReason('broken_install');
-      setDetails('');
-      setToken(null);
-      setSubmitted(false);
-      setError(null);
-    }, 200);
-  }, []);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [isOpen, close]);
-
-  const handleSubmit = async () => {
-    if (!token) {
-      setError('Please complete the verification challenge.');
-      return;
-    }
-    setError(null);
-    setSubmitting(true);
-    try {
-      const res = await fetch(`/api/mcp/${serverId}/report`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reason,
-          details,
-          'cf-turnstile-response': token,
-        }),
-      });
-      const data = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(data.error || 'Could not submit report');
-      setSubmitted(true);
-    } catch (err: any) {
-      setError(err?.message || 'Could not submit report');
-      // The Turnstile token is single-use, so a retry needs a fresh challenge.
-      setToken(null);
-      setWidgetKey((k) => k + 1);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const modalContent = (
-    <div className="share-modal-overlay">
-      {/* Backdrop: a click outside the dialog content closes it. The content
-          (position: relative) paints above this full-bleed button. */}
-      <button
-        type="button"
-        tabIndex={-1}
-        aria-label="Close report dialog"
-        onClick={close}
-        style={{
-          position: 'absolute',
-          inset: 0,
-          margin: 0,
-          padding: 0,
-          border: 0,
-          background: 'transparent',
-          cursor: 'default',
-        }}
-      />
-      <div className="share-modal-content" style={{ maxWidth: 480 }}>
-        <button
-          type="button"
-          onClick={close}
-          style={{
-            position: 'absolute',
-            top: '1.5rem',
-            right: '1.5rem',
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--text-secondary)',
-            cursor: 'pointer',
-            padding: '0.5rem',
-            display: 'flex',
-            borderRadius: '50%',
-          }}
-        >
-          <X size={20} />
-        </button>
-
-        <div className="share-modal-scroll">
-          {submitted ? (
-            <>
-              <h2
-                style={{
-                  fontSize: '1.35rem',
-                  marginBottom: '0.5rem',
-                  color: 'var(--text-primary)',
-                  paddingRight: '2.5rem',
-                }}
-              >
-                Thanks for the report
-              </h2>
-              <p
-                style={{
-                  color: 'var(--text-secondary)',
-                  fontSize: '0.9rem',
-                  lineHeight: 1.6,
-                }}
-              >
-                Our team will take a look. This doesn&rsquo;t change anything
-                about the listing publicly on its own — it goes into our review
-                queue.
-              </p>
-            </>
-          ) : (
-            <>
-              <h2
-                style={{
-                  fontSize: '1.35rem',
-                  marginBottom: '0.5rem',
-                  color: 'var(--text-primary)',
-                  paddingRight: '2.5rem',
-                }}
-              >
-                Report a problem
-              </h2>
-              <p
-                style={{
-                  color: 'var(--text-secondary)',
-                  marginBottom: '1.25rem',
-                  fontSize: '0.875rem',
-                }}
-              >
-                Let us know if something&rsquo;s broken, wrong, or unsafe about
-                this listing.
-              </p>
-
-              {/* Owners kept emailing us to correct their own endpoint/auth
-                  details, which is the slowest possible path for both sides —
-                  point them at the flow that lets them do it themselves. */}
-              <p
-                style={{
-                  color: 'var(--text-secondary)',
-                  marginBottom: '1.25rem',
-                  fontSize: '0.8rem',
-                  padding: '0.6rem 0.75rem',
-                  borderRadius: 8,
-                  background: 'var(--bg-muted)',
-                  border: '1px solid var(--border-color)',
-                }}
-              >
-                Maintain this server?{' '}
-                <a href={`/mcp/${serverId}/claim`}>Claim the listing</a> to fix
-                the endpoint, auth type, install details, and description
-                yourself — no need to report it.
-              </p>
-
-              <label
-                htmlFor={reasonId}
-                style={{
-                  display: 'block',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  color: 'var(--text-primary)',
-                  marginBottom: '0.4rem',
-                }}
-              >
-                What&rsquo;s wrong?
-              </label>
-              <select
-                id={reasonId}
-                className="form-input"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                style={{ width: '100%', marginBottom: '1rem' }}
-              >
-                {REASONS.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-
-              <label
-                htmlFor={detailsId}
-                style={{
-                  display: 'block',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  color: 'var(--text-primary)',
-                  marginBottom: '0.4rem',
-                }}
-              >
-                Details{' '}
-                <span
-                  style={{ fontWeight: 400, color: 'var(--text-secondary)' }}
-                >
-                  (optional)
-                </span>
-              </label>
-              <textarea
-                id={detailsId}
-                className="form-input"
-                rows={3}
-                maxLength={500}
-                value={details}
-                onChange={(e) => setDetails(e.target.value)}
-                placeholder="Anything that would help us look into it"
-                style={{
-                  width: '100%',
-                  marginBottom: '0.5rem',
-                  resize: 'vertical',
-                }}
-              />
-
-              <TurnstileWidget
-                key={widgetKey}
-                onSuccess={setToken}
-                onExpire={() => setToken(null)}
-                onError={() =>
-                  setError(
-                    'Verification failed to load. Disable content blockers or try another browser.',
-                  )
-                }
-                compact
-              />
-
-              {error && (
-                <p
-                  role="alert"
-                  style={{
-                    color: '#ef4444',
-                    fontSize: '0.85rem',
-                    marginTop: '0.75rem',
-                  }}
-                >
-                  {error}
-                </p>
-              )}
-
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={submitting || !token}
-                style={{
-                  width: '100%',
-                  marginTop: '0.75rem',
-                  padding: '0.75rem 1rem',
-                  borderRadius: 8,
-                  border: 'none',
-                  background: 'var(--accent-color)',
-                  color: 'var(--bg-color)',
-                  fontWeight: 600,
-                  cursor: submitting || !token ? 'not-allowed' : 'pointer',
-                  opacity: submitting || !token ? 0.6 : 1,
-                }}
-              >
-                {submitting ? 'Submitting…' : 'Submit report'}
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  const close = useCallback(() => setIsOpen(false), []);
 
   return (
     <>
       <button
         type="button"
         onClick={() => setIsOpen(true)}
+        onPointerEnter={loadDialog}
+        onFocus={loadDialog}
         className="lst-menu-item"
         title="Report a problem with this listing"
       >
@@ -312,7 +36,7 @@ export function ReportListingButton({ serverId }: { serverId: string }) {
         <span>Report a problem</span>
       </button>
 
-      {isOpen && createPortal(modalContent, document.body)}
+      {isOpen && <ReportListingDialog serverId={serverId} onClose={close} />}
     </>
   );
 }

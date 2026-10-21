@@ -747,7 +747,15 @@ export default async function MCPDetail({
       />
       <AdminProvider serverId={server.id}>
         <main className="container lst-page">
-          <AdminTopBar server={server} />
+          {/* Only the fields the bar reads — passing the whole row serialized
+              every listing column into the RSC payload for every visitor. */}
+          <AdminTopBar
+            server={{
+              id: server.id,
+              status: server.status,
+              featuredUntil: server.featuredUntil,
+            }}
+          />
           <nav aria-label="Breadcrumb" className="animate-fade">
             <ol className="crumbs">
               <li>

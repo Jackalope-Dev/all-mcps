@@ -5,8 +5,8 @@ import { X } from 'lucide-react';
 import { type ReactNode, useEffect, useId } from 'react';
 
 /**
- * Small shared building blocks for the admin console (styles: the `adm-`
- * section of app/styles/account.css).
+ * Small shared building blocks for the admin console (styles:
+ * app/admin/admin.css).
  */
 
 /** Section title + one-line description, with optional actions on the right. */

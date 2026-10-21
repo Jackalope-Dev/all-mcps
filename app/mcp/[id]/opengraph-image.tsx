@@ -11,6 +11,18 @@ export const alt = 'AllMCPs - Tool Directory';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
+// Cache rendered cards (ISR via the R2 incremental cache in open-next.config.ts)
+// instead of re-rendering on every crawler hit: an uncached render (D1 + logo
+// fetch + Satori/resvg) took 4–7s, long enough for SEO auditors and social
+// scrapers to time out ("social preview image does not load"). The empty
+// generateStaticParams opts every id into on-demand ISR — nothing is rendered
+// at build, where D1 isn't reachable. The ?<hash> Next appends to the og:image
+// URL changes whenever this file does, so design edits still bust caches.
+export const revalidate = 86400;
+export async function generateStaticParams() {
+  return [];
+}
+
 const SITE_ORIGIN = 'https://allmcps.com';
 
 type OgServer = {
@@ -39,29 +51,68 @@ function resolveListingLogoSrc(
   if (org) {
     // Strip leading @ from scoped package names so GitHub avatar URLs resolve.
     const ghOrg = org.replace(/^@/, '');
-    if (ghOrg) return `https://github.com/${ghOrg}.png`;
+    // ?size= asks GitHub for a small avatar instead of the full-res original.
+    if (ghOrg) return `https://github.com/${ghOrg}.png?size=224`;
   }
   return null;
 }
 
+// Logos bigger than this are skipped (letter tile instead): they bloat the PNG
+// and the base64 data URI, and a 1200x630 card shows the logo at 112px anyway.
+const MAX_LOGO_BYTES = 512 * 1024;
+
+/** Sniff the image type from magic bytes — Satori decides the same way. */
+function sniffImageType(bytes: Uint8Array): string | null {
+  if (
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  )
+    return 'image/png';
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff)
+    return 'image/jpeg';
+  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46)
+    return 'image/gif';
+  return null;
+}
+
+function toBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
 /**
- * Satori/ImageResponse throws if an <img> src fails to load. Probe first so a
- * missing R2 logo or dead GitHub avatar falls back to the letter tile instead
- * of breaking the entire social card.
+ * Fetch the logo ONCE and hand Satori an inline data URI.
+ *
+ * Satori/ImageResponse throws if an <img> src fails to load, and also on any
+ * format it can't decode (WebP, AVIF) — either one turned the whole social
+ * card into a 500. It used to probe the URL and then let Satori fetch it a
+ * second time (two round trips, plus GitHub's avatar redirect each time),
+ * which pushed uncached cards past 4–7s and made crawlers give up on them.
+ * Anything that isn't a small PNG/JPEG/GIF falls back to the letter tile.
  */
-async function probeImageUrl(url: string): Promise<string | null> {
+async function loadLogoDataUri(url: string): Promise<string | null> {
   try {
     const res = await fetch(url, {
       method: 'GET',
-      headers: { Accept: 'image/*' },
+      headers: { Accept: 'image/png,image/jpeg,image/gif;q=0.9,*/*;q=0.1' },
       // Short budget — OG generation shouldn't stall on a slow logo host.
       signal: AbortSignal.timeout(2500),
     });
     if (!res.ok) return null;
-    const type = res.headers.get('content-type') || '';
-    if (type && !type.startsWith('image/') && !type.includes('octet-stream'))
+    const declared = Number(res.headers.get('content-length') || 0);
+    if (declared > MAX_LOGO_BYTES) return null;
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    if (bytes.byteLength === 0 || bytes.byteLength > MAX_LOGO_BYTES)
       return null;
-    return url;
+    const type = sniffImageType(bytes);
+    if (!type) return null;
+    return `data:${type};base64,${toBase64(bytes)}`;
   } catch {
     return null;
   }
@@ -152,7 +203,7 @@ export default async function Image({
     : 'MCP SERVER';
   const candidateLogo = resolveListingLogoSrc(server ?? null);
   const listingLogoSrc = candidateLogo
-    ? await probeImageUrl(candidateLogo)
+    ? await loadLogoDataUri(candidateLogo)
     : null;
   // First letter tile when no logo resolves (mirrors ServerAvatar gradient fallback).
   const listingInitial = (
@@ -421,11 +472,28 @@ export default async function Image({
             borderTop: '1px solid rgba(255, 255, 255, 0.1)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* Inline package icon instead of the 📦 emoji: Satori resolves
+                emoji by fetching Twemoji SVGs from a CDN on every render. */}
+            <svg
+              aria-hidden="true"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#94A3B8"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+              <path d="m3.3 7 8.7 5 8.7-5" />
+              <path d="M12 22V12" />
+            </svg>
             <span
               style={{ fontSize: '18px', color: '#94A3B8', fontWeight: 600 }}
             >
-              📦 Verified Model Context Protocol Integration
+              Verified Model Context Protocol Integration
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center' }}>
