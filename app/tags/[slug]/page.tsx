@@ -20,7 +20,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const { total, rawTag } = await getServersForTag(slug);
+  const { total, rawTag, indexable } = await getServersForTag(slug);
 
   if (total === 0) {
     return { title: 'Tag Not Found', robots: { index: false } };
@@ -29,14 +29,13 @@ export async function generateMetadata({
   const title = `${rawTag} MCP Servers & Tools`;
   const description = `Browse ${total} Model Context Protocol (MCP) servers tagged with ${rawTag}. Find and install AI tools for ${rawTag}.`;
   const url = `https://allmcps.com/tags/${slug}`;
-  // Guard against thin taxonomy index bloat: only index tag pages with
-  // substantial listings (10+) and not overwhelming (>200).
-  const isIndexable = total >= 10 && total <= 200;
 
+  // Same rule as the core sitemap (lib/tags.ts isTagIndexable), so we never
+  // submit a tag page that noindexes itself.
   return {
     title,
     description,
-    ...(!isIndexable ? { robots: { index: false, follow: true } } : {}),
+    ...(!indexable ? { robots: { index: false, follow: true } } : {}),
     alternates: { canonical: url },
     openGraph: {
       type: 'website',

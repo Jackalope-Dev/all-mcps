@@ -134,7 +134,7 @@ export const STATIC_PAGE_LASTMOD: Record<string, string> = {
   '/stack': '2026-10-14',
   '/compare': '2026-09-23',
   '/tags': '2026-10-14',
-  '/best/seo': '2026-08-10',
+  '/best/seo': '2026-10-21',
   '/mcp-for-seo': '2026-08-23',
   '/lucky': '2026-10-14',
   '/advertise': '2026-10-14',
@@ -174,8 +174,6 @@ export type SitemapServer = {
   /** Content-change timestamps — see listingLastMod. */
   aiDocAt?: unknown;
   aiFaqAt?: unknown;
-  aiEnrichedAt?: unknown;
-  installExtractedAt?: unknown;
   lastCommitAt?: unknown;
   stars?: number | null;
   githubStars?: number | null;
@@ -202,8 +200,6 @@ const SITEMAP_SERVER_COLUMNS = {
   createdAt: serversTable.createdAt,
   aiDocAt: serversTable.aiDocAt,
   aiFaqAt: serversTable.aiFaqAt,
-  aiEnrichedAt: serversTable.aiEnrichedAt,
-  installExtractedAt: serversTable.installExtractedAt,
   lastCommitAt: serversTable.lastCommitAt,
   githubStars: serversTable.githubStars,
   npmDownloads: serversTable.npmDownloads,
@@ -420,24 +416,22 @@ export function categoryLastMod(
 }
 
 /**
- * Newest genuine *content* change to a listing page: the writeup, FAQ,
- * enrichment pass, or install re-validation we generated, plus the upstream
- * repo's last commit. Returns 0 when none are known.
+ * Newest genuine *content* change to a listing page: the writeup or FAQ we
+ * generated, plus the upstream repo's last commit. Returns 0 when none are
+ * known.
  *
  * Deliberately excludes `lastCheckedAt` — the health cron rewrites that every
  * ~15 min on a non-content event, and letting it drive lastmod made every
  * listing look freshly updated on every crawl, which teaches crawlers to stop
  * trusting the signal (same reasoning as the STATIC_PAGE_LASTMOD rule).
+ * `aiEnrichedAt` and `installExtractedAt` are excluded for the same reason:
+ * the ai-content queue stamps them when it claims a row, including passes
+ * that skip it or rewrite nothing, so in Oct 2026 they put ~87% of the
+ * listings sitemap at an October lastmod.
  */
 function listingContentMs(server: SitemapServer): number {
   let maxMs = 0;
-  for (const v of [
-    server.aiDocAt,
-    server.aiFaqAt,
-    server.aiEnrichedAt,
-    server.installExtractedAt,
-    server.lastCommitAt,
-  ]) {
+  for (const v of [server.aiDocAt, server.aiFaqAt, server.lastCommitAt]) {
     if (v === null || v === undefined) continue;
     const t = new Date(safeDateISO(v)).getTime();
     if (!Number.isNaN(t) && t > maxMs) maxMs = t;

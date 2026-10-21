@@ -37,6 +37,7 @@ import {
   isUnverifiedInstall,
   resolveInstallConfig,
 } from './installConfig';
+import { indexableListingSql } from './listingIndexability';
 import {
   buildAiSearchText,
   buildSearchPrefilter,
@@ -490,13 +491,20 @@ type LightPageRow = {
   description: string | null;
   tags: unknown;
   aiUseCases: unknown;
+  indexable: number;
 };
+
+/**
+ * A light row from iterateActiveServersLight. `indexable` is the listing's
+ * isListingIndexable verdict, read from D1; undefined for snapshot rows.
+ */
+export type LightServer = Server & { indexable?: boolean };
 
 export async function* iterateActiveServersLight(
   pageSize = LIGHT_PAGE_SIZE,
   /** false: yield nothing when D1 is unavailable (callers that cache the result). */
   { snapshotFallback = true }: { snapshotFallback?: boolean } = {},
-): AsyncGenerator<Server[]> {
+): AsyncGenerator<LightServer[]> {
   const searchDb = await getSearchDb();
   let yielded = false;
   if (searchDb) {
@@ -511,6 +519,8 @@ export async function* iterateActiveServersLight(
             // engagementScore inputs: the tag index ranks each tag's listings.
             githubStars: serversTable.githubStars,
             npmDownloads: serversTable.npmDownloads,
+            // Tag pages index only on listings we index (lib/tags.ts).
+            indexable: sql<number>`${indexableListingSql()}`,
           })
           .from(serversTable)
           .where(
@@ -522,7 +532,10 @@ export async function* iterateActiveServersLight(
           .limit(pageSize);
         if (rows.length === 0) break;
         yielded = true;
-        yield rows.map(({ rowid: _rowid, ...r }) => toLightServer(r));
+        yield rows.map(({ rowid: _rowid, indexable, ...r }) => ({
+          ...toLightServer(r),
+          indexable: Boolean(indexable),
+        }));
         if (rows.length < pageSize) break;
         afterRowid = rows[rows.length - 1].rowid;
       }
@@ -644,7 +657,11 @@ export async function getNewestActiveServers(limit: number): Promise<Server[]> {
 /**
  * Homepage showcase: the strongest active listings (logo, alive, adopted,
  * well-documented) rather than the newest imports. Pulls a popularity-ordered
- * candidate pool from D1, then re-ranks it with rankShowcaseServers. The pool
+ * candidate pool of indexable listings (our writeup, traction, proof it runs;
+ * lib/listingIndexability.ts) from D1, then re-ranks it with
+ * rankShowcaseServers. The pool is ordered by adoption, not the official flag
+ * first: that put the protocol's reference servers and tiny self-declared
+ * "official" repos ahead of the vendor servers people come looking for. The pool
  * uses the slim scoring columns (no aiDoc/aiFaq, tools trimmed in SQLite):
  * 300 full rows with tool schemas blew the Worker memory limit on `/`.
  */
@@ -653,7 +670,7 @@ export async function getShowcaseActiveServers(
 ): Promise<Server[]> {
   const poolSize = Math.max(limit * 6, 300);
   const rows = await swrEdgeCache(
-    `catalog/showcase-pool/v1/${poolSize}`,
+    `catalog/showcase-pool/v2/${poolSize}`,
     CATALOG_POOL_CACHE,
     () => queryShowcasePool(poolSize),
   );
@@ -683,11 +700,17 @@ async function queryShowcasePool(poolSize: number) {
             servableFilter(),
             sql`coalesce(${serversTable.logoUrl}, '') <> ''`,
             sql`coalesce(${serversTable.healthStatus}, '') not in ('archived', 'offline')`,
+            indexableListingSql(),
+            // Reference servers (lib/showcase.ts isReferenceServer) would fill
+            // the top of a stars-ordered pool with monorepo stars. instr, not
+            // LIKE: D1 rejects LIKE patterns this long as "too complex".
+            sql`instr(lower(${serversTable.url}), 'github.com/modelcontextprotocol/servers/') = 0`,
+            sql`instr(lower(${serversTable.url}), 'github.com/modelcontextprotocol/servers-archived/') = 0`,
           ),
         )
         .orderBy(
-          desc(serversTable.isOfficial),
           desc(serversTable.githubStars),
+          desc(serversTable.npmDownloads),
           desc(serversTable.upvotes),
           desc(serversTable.copies),
           desc(serversTable.views),
@@ -2094,7 +2117,17 @@ export async function getServerSignalsById(
   return {};
 }
 
+/**
+ * One listing by id: D1 first, the build-time snapshot when D1 isn't bound
+ * (local dev, tests) or the read fails. When the read fails and the snapshot
+ * doesn't have the id either, this throws rather than returning undefined:
+ * the listing may well exist (it was added after the snapshot), and callers
+ * treat undefined as "no such listing". /mcp/[id] turned that into notFound(),
+ * and ISR cached the "Not Found" page with a 200 for real, active listings
+ * (Oct 2026). A thrown error keeps the stale page instead.
+ */
 export async function getServerById(id: string): Promise<Server | undefined> {
+  let dbError: unknown = null;
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
@@ -2109,11 +2142,17 @@ export async function getServerById(id: string): Promise<Server | undefined> {
         return normalizeServer(dbServers[0] as unknown as Server);
       }
     }
-  } catch (_e) {
-    // Fall back to static JSON
+  } catch (e) {
+    dbError = e;
   }
   const found = snapshotServers().find((s) => s.id === id);
-  return found ? normalizeServer(found) : undefined;
+  if (found) return normalizeServer(found);
+  if (dbError) {
+    throw new Error(`getServerById(${id}): D1 read failed`, {
+      cause: dbError,
+    });
+  }
+  return undefined;
 }
 
 export type StdioVerificationResult = {

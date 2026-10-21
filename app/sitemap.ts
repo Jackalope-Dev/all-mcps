@@ -177,18 +177,13 @@ async function buildCoreSitemap(
     });
   }
 
-  // Curated tag hubs — indexable /tags/[slug] pages with enough servers to carry
-  // real value. Without these they were only reachable via the /tags hub and sat
-  // in "Discovered - currently not indexed". A floor keeps near-empty tag dumps
-  // out; the ceiling must stay <= the noindex threshold in app/tags/[slug]/page.tsx
-  // (currently >200 → noindex) so we never submit a noindexed URL.
+  // Tag hubs that rank enough indexable listings (lib/tags.ts isTagIndexable,
+  // the same rule as the page's robots meta, so we never submit a noindexed URL).
   try {
-    const TAG_MIN_COUNT = 15;
-    const TAG_MAX_COUNT = 200;
     const tagLastMod = safeDateISO(STATIC_PAGE_LASTMOD['/tags']);
     const tags = await getAllTagsWithCounts();
     for (const t of tags) {
-      if (t.count < TAG_MIN_COUNT || t.count > TAG_MAX_COUNT) continue;
+      if (!t.indexable) continue;
       entries.push({
         url: `${BASE}/tags/${t.slug}`,
         lastModified: tagLastMod,

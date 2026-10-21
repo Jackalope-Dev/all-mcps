@@ -132,11 +132,36 @@ beforeAll(() => {
 describe('getAllTagsWithCounts', () => {
   it('counts every servable listing per tag, most-used first then by label', async () => {
     expect(await getAllTagsWithCounts()).toEqual([
-      { slug: 'communication', label: 'Communication', count: BULK },
-      { slug: 'weather', label: 'Weather', count: BULK },
-      { slug: 'developer-tools', label: 'Developer Tools', count: 3 },
-      { slug: 'postgres', label: 'PostgreSQL', count: 3 },
-      { slug: 'slack-bot', label: 'Slack Bot', count: 1 },
+      {
+        slug: 'communication',
+        label: 'Communication',
+        count: BULK,
+        indexable: false,
+      },
+      {
+        slug: 'weather',
+        label: 'Weather',
+        count: BULK,
+        indexable: false,
+      },
+      {
+        slug: 'developer-tools',
+        label: 'Developer Tools',
+        count: 3,
+        indexable: false,
+      },
+      {
+        slug: 'postgres',
+        label: 'PostgreSQL',
+        count: 3,
+        indexable: false,
+      },
+      {
+        slug: 'slack-bot',
+        label: 'Slack Bot',
+        count: 1,
+        indexable: false,
+      },
     ]);
   });
 });

@@ -29,10 +29,11 @@ Ship dates live in [`lib/sitemapHelpers.ts`](./lib/sitemapHelpers.ts) as `STATIC
 - CSS-only / layout-only tweaks that do not change content.
 - Blog posts — lastmod comes from the `YYYY-MM-DD` filename prefix automatically.
 - MCP listing pages — lastmod comes from the newest genuine content change
-  (`aiDocAt` / `aiFaqAt` / `aiEnrichedAt` / `installExtractedAt` / `lastCommitAt`),
-  falling back to `createdAt`. Deliberately **not** `lastCheckedAt` — the health
-  cron rewrites that every ~15 min, which would make every listing look freshly
-  updated on every crawl. See `listingLastMod` in `lib/sitemapHelpers.ts`; the
+  (`aiDocAt` / `aiFaqAt` / `lastCommitAt`), falling back to `createdAt`.
+  Deliberately **not** `lastCheckedAt` — the health cron rewrites that every
+  ~15 min, which would make every listing look freshly updated on every crawl —
+  nor `aiEnrichedAt` / `installExtractedAt`, which the ai-content queue stamps on
+  claim even when nothing on the page changes. See `listingLastMod` in `lib/sitemapHelpers.ts`; the
   same value drives the visible "Last updated" row and JSON-LD `dateModified` on
   `/mcp/[id]`.
 

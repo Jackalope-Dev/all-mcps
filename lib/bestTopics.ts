@@ -1061,6 +1061,12 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     match: ['seo', 'serp', 'backlink', 'search console'],
     title: 'SEO',
     lead: 'The best MCP servers for SEO — connect AI agents to Google Search Console, SERP trackers, technical site audits, backlink data, and keyword research so they can investigate rankings and ship fixes, not just report on them.',
+    guidance: [
+      'SEO MCP servers fall into a few groups. Google Search Console servers query clicks, impressions, and position, inspect how a URL is indexed, and check sitemaps; they are read-heavy and backed by the official API, which makes them the safest place to start. Technical audit servers crawl a URL or a whole site and return issues by category: broken links, missing meta tags, malformed schema markup, robots.txt and sitemap problems. Backlink and competitor servers find which domains link to competitors but not to you, and SERP and keyword servers check where a page actually ranks and pull keyword data alongside it.',
+      'A newer group targets AI answers rather than blue links: it checks llms.txt, AI-crawler access in robots.txt, and the structured data and canonical tags answer engines parse, and some score how likely a page is to be cited by ChatGPT, Perplexity, or Google AI Overviews. Another closes the loop on publishing, drafting content, filling metadata for WordPress SEO plugins such as Yoast and Rank Math, and cross-posting with canonical URLs set.',
+      'Choose by access first. Search Console and crawl servers are read-only and safe to hand an agent broadly; anything that publishes posts, edits CMS metadata, or changes live pages is a write operation, so give it a narrow, revocable token and keep a human approving changes until you trust the workflow. Then choose by the data you already have: a Search Console server does nothing without a verified property, while a local crawler needs no account at all and is the cheapest way to try the category.',
+      'Prefer a narrow server you can reason about over a toolkit with forty tools unless you want broad coverage from one install. Search Console servers use OAuth and walk you through authorization on first use; SERP and backlink providers take an API key as an environment variable in the same config block. Restart your client after adding a server and it shows up as a tool.',
+    ],
     faq: [
       {
         q: 'What is the best MCP server for SEO?',

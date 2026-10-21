@@ -11,4 +11,8 @@ export const BLOG_REDIRECTS: Record<string, string> = {
   '/blog/remote-vs-local-mcp-servers': '/deploy-mcp-server#short-answer',
   '/blog/mcp-gateway-proxy-architecture':
     '/blog/architecting-production-mcp-servers',
+  // Split "seo mcp server" searches with /best/seo (Search Console, Oct 2026:
+  // ~1,000 impressions at position ~60 vs ~370 at ~82, neither clicked); its
+  // breakdown now lives in that page's guidance.
+  '/blog/mcp-servers-for-seo-automation': '/best/seo',
 };
