@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { parseServerName } from '../../../../lib/displayName';
+import { publicViewCount } from '../../../../lib/format';
 import { listingRedirectTarget } from '../../../../lib/listingRedirect';
 import { getServerById } from '../../../../lib/servers';
 
@@ -270,7 +271,7 @@ export async function GET(
     serverName = server.name || id;
     isOfficial = server.isOfficial || false;
     upvotes = server.upvotes || 0;
-    views = server.views || 0;
+    views = publicViewCount(server);
     copies = server.copies || 0;
   }
 

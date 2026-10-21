@@ -394,7 +394,7 @@ async function querySiteStats(): Promise<SiteStats | null> {
       db
         .select({
           totalServers: count(),
-          totalViews: sum(servers.views),
+          totalViews: sum(servers.totalViews),
           totalCopies: sum(servers.copies),
           totalUpvotes: sum(servers.upvotes),
           categories: countDistinct(servers.category),

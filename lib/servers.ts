@@ -32,6 +32,7 @@ import { categoryFromSlug } from './categories';
 import { cleanListingDescription } from './description';
 import { readEdgeCache, swrEdgeCache, writeEdgeCache } from './edgeCache';
 import { isFeaturedListing } from './featuredStatus';
+import { publicViewCount } from './format';
 import {
   installConfidenceNote,
   isUnverifiedInstall,
@@ -202,6 +203,7 @@ export const PUBLIC_SERVER_COLUMNS = {
   installNeedsConfig: serversTable.installNeedsConfig,
   staleFlaggedAt: serversTable.staleFlaggedAt,
   views: serversTable.views,
+  totalViews: serversTable.totalViews,
   copies: serversTable.copies,
   upvotes: serversTable.upvotes,
   createdAt: serversTable.createdAt,
@@ -333,7 +335,10 @@ export type Server = {
   toolsChangedAt?: string | Date | null;
   /** Comma-separated StaleReason list while the stale sweep has this listing flagged (listing_signals). */
   staleReasons?: string | null;
+  /** Windowed ranking count — internal; display totalViews via publicViewCount. */
   views?: number;
+  /** Public view count (every listing page load). Absent on snapshot rows. */
+  totalViews?: number;
   copies?: number;
   upvotes?: number;
   createdAt: string | Date;
@@ -372,6 +377,7 @@ const DISCOVERY_COLUMNS = {
   isPremium: serversTable.isPremium,
   featuredUntil: serversTable.featuredUntil,
   views: serversTable.views,
+  totalViews: serversTable.totalViews,
   copies: serversTable.copies,
   upvotes: serversTable.upvotes,
   tags: serversTable.tags,
@@ -409,6 +415,7 @@ function snapshotLightServers(limit?: number): Server[] {
     isPremium: !!s.isPremium,
     featuredUntil: s.featuredUntil ?? null,
     views: s.views ?? 0,
+    totalViews: s.totalViews ?? 0,
     copies: s.copies ?? 0,
     upvotes: s.upvotes ?? 0,
     githubStars: s.githubStars ?? null,
@@ -738,6 +745,7 @@ const RANKING_COLUMNS = {
   logoUrl: serversTable.logoUrl,
   createdAt: serversTable.createdAt,
   views: serversTable.views,
+  totalViews: serversTable.totalViews,
   copies: serversTable.copies,
   upvotes: serversTable.upvotes,
   githubStars: serversTable.githubStars,
@@ -2847,7 +2855,7 @@ export function formatServerAsMarkdown(
     md += `**GitHub Stars:** ${server.githubStars}  \n`;
   if (typeof server.npmDownloads === 'number')
     md += `**npm Downloads (last month):** ${server.npmDownloads}  \n`;
-  md += `**Views:** ${server.views || 0}  \n`;
+  md += `**Views:** ${publicViewCount(server)}  \n`;
   md += `**Installs:** ${server.copies || 0}  \n`;
   md += `**Upvotes:** ${server.upvotes || 0}  \n`;
   md += `**Directory Page:** https://allmcps.com/mcp/${server.id}\n\n`;
@@ -3050,6 +3058,7 @@ const RELATED_RANKING_COLUMNS = {
   healthStatus: serversTable.healthStatus,
   reciprocalBadgeOk: serversTable.reciprocalBadgeOk,
   views: serversTable.views,
+  totalViews: serversTable.totalViews,
   copies: serversTable.copies,
   upvotes: serversTable.upvotes,
   githubStars: serversTable.githubStars,

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { categoryHueClass, getCategoryMeta } from '../lib/categories';
 import { parseServerName } from '../lib/displayName';
 import { isFeaturedListing } from '../lib/featuredStatus';
+import { publicViewCount } from '../lib/format';
 import { ImpressionBeacon } from './ImpressionTracker';
 import { ServerAvatar } from './ui/ServerAvatar';
 
@@ -16,6 +17,7 @@ type HomeServer = {
   isPremium?: boolean | null;
   featuredUntil?: Date | string | number | null;
   views?: number | null;
+  totalViews?: number | null;
   upvotes?: number | null;
 };
 
@@ -40,7 +42,7 @@ function ServerCard({ server }: { server: HomeServer }) {
   const { displayName, org } = parseServerName(server.name);
   const cat = getCategoryMeta(server.category);
   const featured = isFeaturedListing(server);
-  const views = server.views ?? 0;
+  const views = publicViewCount(server);
   const upvotes = server.upvotes ?? 0;
 
   return (

@@ -60,6 +60,7 @@ import type { AnalyticsSummary, ServerAnalytics } from '@/lib/analytics';
 import { categoryHueClass, DIRECTORY_CATEGORIES } from '@/lib/categories';
 import { MCP_CLIENTS } from '@/lib/clients';
 import { isFeaturedListing } from '@/lib/featuredStatus';
+import { publicViewCount } from '@/lib/format';
 import { type ImpressionSurface, SURFACE_LABELS } from '@/lib/impressionLog';
 import { parsePendingRevision } from '@/lib/pendingRevision';
 import { computeQualityScore, tierColor } from '@/lib/qualityScore';
@@ -106,6 +107,7 @@ type Server = {
   readmeBadgeOk?: boolean;
   websiteBacklinkOk?: boolean;
   views?: number;
+  totalViews?: number;
   copies?: number;
   upvotes?: number;
   healthStatus?: string | null;
@@ -222,7 +224,7 @@ export default function DashboardClient({
 
   // Compute aggregate stats across all claimed servers
   const totalViews = useMemo(
-    () => servers.reduce((acc, s) => acc + (s.views || 0), 0),
+    () => servers.reduce((acc, s) => acc + publicViewCount(s), 0),
     [servers],
   );
   const totalInstalls = useMemo(
@@ -749,7 +751,7 @@ export default function DashboardClient({
                     <p className="dashboard-listing-id">
                       <code>{server.id}</code>
                       <span className="dashboard-listing-quick-stats">
-                        {(server.views || 0).toLocaleString()} views ·{' '}
+                        {publicViewCount(server).toLocaleString()} views ·{' '}
                         {(server.copies || 0).toLocaleString()} installs ·{' '}
                         {(server.upvotes || 0).toLocaleString()} upvotes
                         {server.githubStars != null &&
@@ -926,7 +928,7 @@ export default function DashboardClient({
                       icon={<Eye size={13} />}
                       label="Views"
                       hue={METRIC_HUE.views}
-                      value={server.views || 0}
+                      value={publicViewCount(server)}
                     />
                     <StatPill
                       icon={<Download size={13} />}

@@ -103,6 +103,7 @@ import {
   formatCommitAge,
   formatCompactNumber,
   formatFullDate,
+  publicViewCount,
 } from '../../../lib/format';
 import {
   isUnverifiedInstall,
@@ -475,11 +476,11 @@ export default async function MCPDetail({
   // Map real engagement counters to schema.org InteractionCounter — never a
   // fabricated aggregateRating, which we don't collect and which risks penalties.
   const interactionStatistic = [
-    server.views
+    publicViewCount(server)
       ? {
           '@type': 'InteractionCounter',
           interactionType: 'https://schema.org/ViewAction',
-          userInteractionCount: server.views,
+          userInteractionCount: publicViewCount(server),
         }
       : null,
     server.copies
@@ -1666,7 +1667,7 @@ export default async function MCPDetail({
                   availabilityPct={combinedAvailabilityPct}
                   installCheck={verification?.status ?? null}
                   toolCount={server.tools?.length ?? null}
-                  views={server.views}
+                  views={publicViewCount(server)}
                   copies={server.copies}
                   upvotes={server.upvotes}
                 />
@@ -1764,7 +1765,8 @@ export default async function MCPDetail({
                                 {getCategoryMeta(rel.category).label}
                               </span>
                               <span className="tabular">
-                                {formatCompactNumber(rel.views || 0)} views
+                                {formatCompactNumber(publicViewCount(rel))}{' '}
+                                views
                               </span>
                             </span>
                           </Link>
@@ -1965,7 +1967,7 @@ export default async function MCPDetail({
                 <div className="detail-stats-grid">
                   <ViewTracker
                     serverId={server.id}
-                    initialCount={server.views || 0}
+                    initialCount={publicViewCount(server)}
                   />
                   <InstallsStat count={server.copies || 0} />
                   {typeof server.githubStars === 'number' && (

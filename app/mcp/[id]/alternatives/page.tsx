@@ -27,6 +27,7 @@ import {
   isFeaturedListing,
   isVerifiedListing,
 } from '../../../../lib/featuredStatus';
+import { publicViewCount } from '../../../../lib/format';
 import {
   isUnverifiedInstall,
   resolveInstallConfig,
@@ -147,7 +148,7 @@ function StatRow({ s }: { s: Server }) {
       <span
         style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
       >
-        <Eye size={13} /> {(s.views || 0).toLocaleString()}
+        <Eye size={13} /> {publicViewCount(s).toLocaleString()}
       </span>
       <span
         style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}

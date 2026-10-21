@@ -13,7 +13,7 @@ import { ServerAvatar } from '../../../components/ui/ServerAvatar';
 import { MCP_CLIENTS, mcpClientBySlug } from '../../../lib/clients';
 import { parseServerName } from '../../../lib/displayName';
 import { isVerifiedListing } from '../../../lib/featuredStatus';
-import { formatCompactNumber } from '../../../lib/format';
+import { formatCompactNumber, publicViewCount } from '../../../lib/format';
 import { getPopularServers } from '../../../lib/servers';
 
 const SITE = 'https://allmcps.com';
@@ -272,10 +272,10 @@ export default async function ClientPage({
                       <div className="cl-server-foot">
                         <span className="cl-server-stats tabular">
                           <span
-                            title={`${(server.views || 0).toLocaleString()} views`}
+                            title={`${publicViewCount(server).toLocaleString()} views`}
                           >
                             <Eye size={12} aria-hidden="true" />{' '}
-                            {formatCompactNumber(server.views || 0)}
+                            {formatCompactNumber(publicViewCount(server))}
                           </span>
                           <span
                             title={`${(server.copies || 0).toLocaleString()} installs`}

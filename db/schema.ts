@@ -252,7 +252,10 @@ export const servers = sqliteTable(
     installPackage: text('install_package'),
     /** high | medium | low — how trustworthy the cached install hint is. */
     installConfidence: text('install_confidence'),
+    /** Ranking signal: one view per hashed IP per listing per VIEW_RECOUNT_WINDOW (app/api/mcp/[id]/metric). Internal only — ranking, sorts and indexes read this. */
     views: integer('views').notNull().default(0),
+    /** Public view count: every non-bot listing page load. Shown on listings, cards, badges and the owner dashboard; never used for ranking (easy to inflate). */
+    totalViews: integer('total_views').notNull().default(0),
     copies: integer('copies').notNull().default(0),
     upvotes: integer('upvotes').notNull().default(0),
     /** Last time this listing was *queued* for X/Twitter (highlight cron, new-listing announce, or admin manual queue) — stamped at enqueue, before Buffer/X ever confirms the post. Drives least-recently-queued rotation so the same listing isn't re-queued before we even know the prior post went out. Not proof a tweet was actually published — see lastFeaturedAt for that. */
@@ -382,7 +385,7 @@ export const upvoteRecords = sqliteTable(
   }),
 );
 
-/** One unique view per (server, hashed IP) — same gate model as upvote_records. */
+/** Last time each (server, hashed IP) bumped servers.views; gates the windowed ranking count. */
 export const viewRecords = sqliteTable(
   'view_records',
   {
@@ -391,6 +394,8 @@ export const viewRecords = sqliteTable(
     createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
       .$defaultFn(() => new Date()),
+    /** Null only on rows from before the window existed (backfilled from created_at). */
+    lastCountedAt: integer('last_counted_at', { mode: 'timestamp' }),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.serverId, table.ipHash] }),

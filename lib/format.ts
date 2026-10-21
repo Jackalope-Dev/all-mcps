@@ -24,6 +24,18 @@ export function formatFullDate(dateVal?: string | Date | null): string | null {
 }
 
 /**
+ * The view count shown to visitors: every listing page load (totalViews).
+ * `views` is the windowed ranking signal and is never displayed; it is only the
+ * fallback for snapshot rows that predate totalViews.
+ */
+export function publicViewCount(s: {
+  totalViews?: number | null;
+  views?: number | null;
+}): number {
+  return s.totalViews ?? s.views ?? 0;
+}
+
+/**
  * Formats large numeric counts compactly for directory cards (e.g. 1.2k, 15k, 145k, 1.2M)
  * while full precision is preserved in tooltips and accessible labels.
  */

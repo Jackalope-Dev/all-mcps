@@ -19,6 +19,7 @@ import {
   isFeaturedListing,
   isVerifiedListing,
 } from '../../../../../lib/featuredStatus';
+import { publicViewCount } from '../../../../../lib/format';
 import {
   isUnverifiedInstall,
   resolveInstallConfig,
@@ -288,7 +289,7 @@ export default async function ComparePage({
     {
       question:
         'Which MCP server has higher directory engagement and quality ratings?',
-      answer: `On AllMCPs, ${nameL} has a quality signal of ${qL.score}/100 (${qL.tier}) with ${(left.views || 0).toLocaleString()} views, ${(left.copies || 0).toLocaleString()} installs and ${(left.githubStars || 0).toLocaleString()} GitHub stars. ${nameR} has ${qR.score}/100 (${qR.tier}) with ${(right.views || 0).toLocaleString()} views, ${(right.copies || 0).toLocaleString()} installs and ${(right.githubStars || 0).toLocaleString()} GitHub stars.`,
+      answer: `On AllMCPs, ${nameL} has a quality signal of ${qL.score}/100 (${qL.tier}) with ${publicViewCount(left).toLocaleString()} views, ${(left.copies || 0).toLocaleString()} installs and ${(left.githubStars || 0).toLocaleString()} GitHub stars. ${nameR} has ${qR.score}/100 (${qR.tier}) with ${publicViewCount(right).toLocaleString()} views, ${(right.copies || 0).toLocaleString()} installs and ${(right.githubStars || 0).toLocaleString()} GitHub stars.`,
     },
   ];
 
@@ -530,7 +531,7 @@ export default async function ComparePage({
         <span key={x.s.id} className="vs-activity">
           <span>
             <Eye size={13} aria-hidden="true" />{' '}
-            {(x.s.views || 0).toLocaleString()} views
+            {publicViewCount(x.s).toLocaleString()} views
           </span>
           <span>
             <Download size={13} aria-hidden="true" />{' '}
@@ -543,8 +544,8 @@ export default async function ComparePage({
         </span>
       )) as [ReactNode, ReactNode],
       keys: [
-        `${left.views}/${left.copies}/${left.upvotes}`,
-        `${right.views}/${right.copies}/${right.upvotes}`,
+        `${publicViewCount(left)}/${left.copies}/${left.upvotes}`,
+        `${publicViewCount(right)}/${right.copies}/${right.upvotes}`,
       ],
     },
     {

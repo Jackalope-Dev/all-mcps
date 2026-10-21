@@ -20,7 +20,11 @@ import {
 import type { ComparePickServer } from '@/lib/comparePick';
 import { parseServerName } from '@/lib/displayName';
 import { isVerifiedListing } from '@/lib/featuredStatus';
-import { formatCommitAge, formatCompactNumber } from '@/lib/format';
+import {
+  formatCommitAge,
+  formatCompactNumber,
+  publicViewCount,
+} from '@/lib/format';
 import {
   isUnverifiedInstall,
   resolveInstallConfig,
@@ -284,7 +288,7 @@ export function MultiServerCompareView({
           {
             label: 'Views',
             best: 'max',
-            cells: enriched.map((e) => num(e.server.views ?? 0)),
+            cells: enriched.map((e) => num(publicViewCount(e.server))),
           },
         ],
       },

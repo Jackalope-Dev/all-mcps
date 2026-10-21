@@ -4,11 +4,10 @@ import { Download, Eye } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { IconTooltip } from './IconTooltip';
 
-const viewKey = (serverId: string) => `view_${serverId}`;
-
 /**
- * Records a unique listing view (IP-hash + localStorage, same model as upvotes)
- * and displays the live view count next to the listing header.
+ * Records a listing view on every page load (the server also bumps the
+ * windowed ranking count when due) and displays the public view count next to
+ * the listing header.
  */
 export function ViewTracker({
   serverId,
@@ -17,7 +16,9 @@ export function ViewTracker({
   serverId: string;
   initialCount?: number;
 }) {
-  const tracked = useRef(false);
+  // Listing already tracked by this mount, so Strict Mode's double effect
+  // doesn't count twice while client-side navigation to another listing does.
+  const tracked = useRef<string | null>(null);
   const [views, setViews] = useState(initialCount || 0);
 
   // Re-sync the displayed count when the listing or its server-rendered count
@@ -32,19 +33,8 @@ export function ViewTracker({
   }
 
   useEffect(() => {
-    if (tracked.current) return;
-    tracked.current = true;
-
-    if (typeof window === 'undefined') return;
-
-    // Client convenience gate (mirrors upvote localStorage). Server still enforces uniqueness.
-    try {
-      if (window.localStorage.getItem(viewKey(serverId))) {
-        return;
-      }
-    } catch {
-      // private mode / blocked storage — still try the network path
-    }
+    if (tracked.current === serverId) return;
+    tracked.current = serverId;
 
     let cancelled = false;
 
@@ -55,30 +45,7 @@ export function ViewTracker({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ metric: 'view' }),
         });
-
-        if (cancelled) return;
-
-        if (res.ok) {
-          setViews((prev) => prev + 1);
-          try {
-            window.localStorage.setItem(viewKey(serverId), 'true');
-          } catch {
-            /* ignore */
-          }
-          return;
-        }
-
-        if (res.status === 409) {
-          // Already counted for this IP (or racing Strict Mode double-fire)
-          try {
-            window.localStorage.setItem(viewKey(serverId), 'true');
-          } catch {
-            /* ignore */
-          }
-          return;
-        }
-
-        // Other errors: leave localStorage clear so a later visit can retry
+        if (!cancelled && res.ok) setViews((prev) => prev + 1);
       } catch (e) {
         console.error('Failed to track view:', e);
       }
@@ -91,13 +58,13 @@ export function ViewTracker({
 
   return (
     <IconTooltip
-      label={`${views.toLocaleString()} unique views`}
+      label={`${views.toLocaleString()} views`}
       asSpan
       trigger={
         <fieldset
           className="detail-stat-item fieldset-plain"
           style={{ cursor: 'pointer' }}
-          aria-label={`${views.toLocaleString()} unique ${views === 1 ? 'view' : 'views'}`}
+          aria-label={`${views.toLocaleString()} ${views === 1 ? 'view' : 'views'}`}
         >
           <span className="detail-stat-item-label">
             <Eye size={12} aria-hidden="true" /> Views
@@ -109,7 +76,7 @@ export function ViewTracker({
       }
     >
       <span className="mcp-icon-tooltip-title">
-        <Eye size={14} style={{ color: 'var(--accent-color)' }} /> Unique Views
+        <Eye size={14} style={{ color: 'var(--accent-color)' }} /> Views
       </span>
       <span className="mcp-icon-tooltip-body">
         Total visits recorded for this listing page on AllMCPs.

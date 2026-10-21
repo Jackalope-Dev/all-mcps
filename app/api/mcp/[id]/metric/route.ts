@@ -1,5 +1,5 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, lt, or, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -10,6 +10,9 @@ import {
   hashVisitorForServer,
 } from '../../../../../lib/upvoteHash';
 import { formatZodError } from '../../../../../lib/zodError';
+
+/** How long before the same visitor's next view counts toward ranking again. */
+const VIEW_RECOUNT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 const metricSchema = z.object({
   metric: z.enum(['view', 'copy', 'upvote', 'unupvote']),
@@ -133,7 +136,9 @@ export async function POST(
       return NextResponse.json({ success: true });
     }
 
-    // --- View: one unique view per (server, hashed IP), same gate as upvotes ---
+    // --- View: every load bumps the public totalViews; the ranking `views`
+    // count bumps at most once per (server, hashed IP) per VIEW_RECOUNT_WINDOW_MS,
+    // so return visits count as interest but a refresh loop does not.
     if (metric === 'view') {
       const ip = getClientIp(req);
       const ipHash = await hashVisitorForServer(ip, id);
@@ -144,27 +149,32 @@ export async function POST(
         );
       }
 
-      const inserted = await db
+      const now = new Date();
+      const cutoff = new Date(now.getTime() - VIEW_RECOUNT_WINDOW_MS);
+      // Upsert whose update only applies once the window has passed; a row
+      // comes back only when this visit should count.
+      const counted = await db
         .insert(viewRecords)
-        .values({ serverId: id, ipHash })
-        .onConflictDoNothing({
+        .values({ serverId: id, ipHash, createdAt: now, lastCountedAt: now })
+        .onConflictDoUpdate({
           target: [viewRecords.serverId, viewRecords.ipHash],
+          set: { lastCountedAt: now },
+          setWhere: or(
+            isNull(viewRecords.lastCountedAt),
+            lt(viewRecords.lastCountedAt, cutoff),
+          ),
         })
         .returning({ serverId: viewRecords.serverId });
 
-      if (inserted.length === 0) {
-        return NextResponse.json(
-          { success: false, alreadyViewed: true },
-          { status: 409 },
-        );
-      }
-
       await db
         .update(servers)
-        .set({ views: sql`${servers.views} + 1` })
+        .set({
+          totalViews: sql`${servers.totalViews} + 1`,
+          ...(counted.length > 0 ? { views: sql`${servers.views} + 1` } : {}),
+        })
         .where(eq(servers.id, id));
 
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true, counted: counted.length > 0 });
     }
 
     // --- Copy: still a raw counter (install intent can fire more than once) ---

@@ -60,6 +60,7 @@ type OwnedServer = {
   readmeBadgeOk: boolean;
   websiteBacklinkOk: boolean;
   views: number;
+  totalViews: number;
   copies: number;
   upvotes: number;
   healthStatus?: string | null;
@@ -110,6 +111,7 @@ async function getOwnedServers(userId: string): Promise<{
           readmeBadgeOk: servers.readmeBadgeOk,
           websiteBacklinkOk: servers.websiteBacklinkOk,
           views: servers.views,
+          totalViews: servers.totalViews,
           copies: servers.copies,
           upvotes: servers.upvotes,
           healthStatus: servers.healthStatus,
