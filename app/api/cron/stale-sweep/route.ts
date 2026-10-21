@@ -44,6 +44,7 @@ import {
   reviewColumns,
   toolNamesFromJson,
   triageListing,
+  triageReadme,
 } from '../../../../lib/listingReview';
 import {
   bareName,
@@ -730,7 +731,7 @@ export async function POST(req: Request) {
             lastCommitAt: r.lastCommitAt,
             repoForkOf: r.repoForkOf,
             staleReasons: parseStaleReasons(r.staleReasons),
-            readme: r.aiOverview,
+            readme: await triageReadme(r.url, r.aiOverview, githubToken),
             repoStatus: r.repoStatus as RepoStatus | null,
           },
         ),

@@ -16,7 +16,9 @@
  * would let an outage silently stop the promotion pipeline.
  */
 
+import { fetchGithubReadme } from './listingEnrich';
 import type { RepoStatus } from './repoCheck';
+import { githubRepoSlug } from './repoUrl';
 import {
   askJev,
   type JevNoulQuestion,
@@ -49,10 +51,11 @@ const LISTING_QUALITY_LEVELS = [
 const isMcpServerQuestion: JevNoulQuestion = {
   type: 'noul',
   instructions:
-    'This project is genuinely an MCP (Model Context Protocol) server that exposes tools, resources, or prompts to an AI client. It is not merely an MCP client, an editor plugin, a curated list of servers, or an unrelated tool.',
+    'This project provides an MCP (Model Context Protocol) server that exposes tools, resources, or prompts to an AI client. The MCP server may be the whole project or one part of a larger product: a hosted MCP endpoint from a SaaS or API vendor, the official MCP integration of an app, a package or CLI that can also run as an MCP server, or a monorepo that contains one all count. It does not count when the project is only an MCP client, a curated list of servers, documentation or a registry manifest with no server code and no endpoint, or unrelated software.',
   criteria: {
-    true: 'It implements an MCP server',
-    false: 'It is a client, a list, documentation, or unrelated software',
+    true: 'It provides an MCP server, on its own or as part of a larger product',
+    false:
+      'It is only a client, a list, docs or a manifest with no server, or unrelated software',
   },
 };
 
@@ -239,7 +242,7 @@ const isSubstantiveQuestion: JevNoulQuestion = {
 const isUsableQuestion: JevNoulQuestion = {
   type: 'noul',
   instructions:
-    'A developer could install or connect to this server today from the information given: a published package, an install command, a hosted endpoint, or clear setup instructions.',
+    'A developer could install or connect to this server today from the information given: a published package, an install command, a documented hosted endpoint, or clear setup instructions. A hosted endpoint that needs an account, OAuth, an API key, or a paid plan still counts as usable.',
   criteria: {
     true: 'There is a clear way to install or connect to it',
     false: 'No usable install or connection path is given',
@@ -259,7 +262,7 @@ const isLegitimateQuestion: JevNoulQuestion = {
 const belongsInDirectoryQuestion: JevNoulQuestion = {
   type: 'noul',
   instructions:
-    'Taking all the evidence together, a careful curator of a public directory of MCP (Model Context Protocol) servers would list this: it is a genuine, usable MCP server that developers could find useful.',
+    'Taking all the evidence together, a careful curator of a public directory of MCP (Model Context Protocol) servers would list this: it offers a genuine, usable MCP server (on its own or as part of a larger product) that developers could find useful. The directory does not exclude servers for being paid, requiring an account or OAuth, or serving a narrow audience; it excludes duplicates, spam, and fake or non-MCP listings.',
   criteria: {
     true: 'It belongs in the directory',
     false: 'It does not belong in the directory',
@@ -286,6 +289,11 @@ export type TriageMatrix = {
  *   0.5 even where is-MCP was high, so the first cut (0.6 everywhere)
  *   approved none. These bars approve ~20% of that set, in line with the
  *   admin's historical approval rate; the gates stay in shadow to confirm.
+ *   On 2026-10-21 the is-MCP, usable and belongs wording changed to count a
+ *   product that ships an MCP server (not only a standalone one) and paid or
+ *   OAuth endpoints, and pending listings started getting their README. Both
+ *   shift how Jev answers, so re-check these bars against the shadow gates'
+ *   agreement with admin decisions.
  *   Usability is a softer bar because a thin README often hides a real
  *   install path.
  * - `rejectBelow`: one hard question confidently answered no. Same floor as
@@ -395,6 +403,34 @@ export type ListingTriage = ListingReview & {
 
 function noulOrNull(a: { noul?: number } | undefined): number | null {
   return typeof a?.noul === 'number' ? a.noul : null;
+}
+
+/** README text handed to Jev for triage, capped like the rest of the request. */
+const TRIAGE_README_CHARS = 3000;
+
+/**
+ * The README Jev should read for a triage. Pending listings have no
+ * aiOverview yet (that is written on enrichment, after approval), so without
+ * this Jev judged them from a one-line description and scored real servers
+ * as "usable 5%". Falls back to the repo's README for GitHub listings. Never
+ * throws; null when there is nothing to read.
+ */
+export async function triageReadme(
+  url: string | null | undefined,
+  aiOverview: string | null | undefined,
+  token?: string | null,
+  fetchReadme: typeof fetchGithubReadme = fetchGithubReadme,
+): Promise<string | null> {
+  if (aiOverview?.trim()) return aiOverview;
+  const slug = githubRepoSlug(url);
+  if (!slug) return null;
+  const [owner, repo] = slug.split('/');
+  try {
+    const readme = await fetchReadme(owner, repo, token);
+    return readme ? readme.slice(0, TRIAGE_README_CHARS) : null;
+  } catch {
+    return null;
+  }
 }
 
 /**

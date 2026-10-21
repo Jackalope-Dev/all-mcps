@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   deriveTriageVerdict,
   explainTriage,
@@ -6,6 +6,7 @@ import {
   settleVerdict,
   type TriageMatrix,
   toolNamesFromJson,
+  triageReadme,
 } from './listingReview';
 
 const review: ListingReview = {
@@ -111,5 +112,47 @@ describe('toolNamesFromJson', () => {
     ]);
     expect(toolNamesFromJson('not json')).toEqual([]);
     expect(toolNamesFromJson(null)).toEqual([]);
+  });
+});
+
+describe('triageReadme', () => {
+  it('keeps the stored overview and never fetches', async () => {
+    const fetchReadme = vi.fn();
+    expect(
+      await triageReadme(
+        'https://github.com/a/b',
+        'Overview text',
+        null,
+        fetchReadme,
+      ),
+    ).toBe('Overview text');
+    expect(fetchReadme).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the GitHub README, capped at 3000 chars', async () => {
+    const fetchReadme = vi.fn().mockResolvedValue('x'.repeat(5000));
+    const readme = await triageReadme(
+      'https://github.com/Ahtasham00/tactab',
+      null,
+      'tok',
+      fetchReadme,
+    );
+    expect(fetchReadme).toHaveBeenCalledWith('ahtasham00', 'tactab', 'tok');
+    expect(readme).toHaveLength(3000);
+  });
+
+  it('returns null for non-GitHub listings without fetching', async () => {
+    const fetchReadme = vi.fn();
+    expect(
+      await triageReadme('https://example.com/mcp', '  ', null, fetchReadme),
+    ).toBeNull();
+    expect(fetchReadme).not.toHaveBeenCalled();
+  });
+
+  it('never throws when the fetch fails', async () => {
+    const fetchReadme = vi.fn().mockRejectedValue(new Error('network'));
+    expect(
+      await triageReadme('https://github.com/a/b', null, null, fetchReadme),
+    ).toBeNull();
   });
 });

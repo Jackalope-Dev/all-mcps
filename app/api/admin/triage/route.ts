@@ -10,6 +10,7 @@ import {
   reviewColumns,
   toolNamesFromJson,
   triageListing,
+  triageReadme,
 } from '@/lib/listingReview';
 import { checkRepo, type RepoStatus } from '@/lib/repoCheck';
 import { upsertSignals } from '@/lib/signalStore';
@@ -261,7 +262,7 @@ export async function POST(req: Request) {
         lastCommitAt: r.lastCommitAt,
         repoForkOf: r.repoForkOf,
         staleReasons: parseStaleReasons(r.staleReasons),
-        readme: r.aiOverview,
+        readme: await triageReadme(r.url, r.aiOverview, getGithubToken(env)),
         repoStatus:
           repoStatus !== 'unknown'
             ? repoStatus
