@@ -120,6 +120,8 @@ jobs:
               r_failed=$((r_failed + $(echo "$resp" | jq -r '.failed // 0')))
               r_recategorized=$((r_recategorized + $(echo "$resp" | jq -r '.recategorized // 0')))
               remaining=$(echo "$resp" | jq -r '.remaining // "?"')
+              # tag-classify: Jev's per-tag probabilities for a few listings, for tuning.
+              echo "$resp" | jq -c '.samples[]? | {id, tags, probabilities}'
               [ "$(echo "$resp" | jq -r '.budgetStopped // false')" = "true" ] && stopped="true"
             done
             rm -rf "$tmpdir"

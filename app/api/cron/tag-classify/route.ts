@@ -5,7 +5,10 @@ import { NextResponse } from 'next/server';
 import { jobCursors, servers } from '../../../../db/schema';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
 import { indexableListingSql } from '../../../../lib/listingIndexability';
-import { classifyTags } from '../../../../lib/tagClassifier';
+import {
+  classifyTagsDetailed,
+  TAG_CLASSIFIER_VERSION,
+} from '../../../../lib/tagClassifier';
 
 /**
  * Re-tags the catalog from the fixed vocabulary (lib/tagVocabulary.ts) with
@@ -28,7 +31,11 @@ const CONCURRENCY = 8;
 
 const PHASES = ['indexable', 'all'] as const;
 type Phase = (typeof PHASES)[number];
-const cursorName = (phase: Phase) => `tag-classify:${phase}`;
+// Versioned: changing how tags are picked restarts the walk from the top.
+const cursorName = (phase: Phase) =>
+  `tag-classify:${TAG_CLASSIFIER_VERSION}:${phase}`;
+/** Rows per call whose Jev probabilities are echoed for tuning. */
+const SAMPLE_ROWS = 20;
 
 type Row = {
   rowid: number;
@@ -122,19 +129,34 @@ export async function POST(req: Request) {
     let changed = 0;
     let budgetStopped = false;
     let cursor = after;
+    const samples: {
+      id: string;
+      tags: string[];
+      probabilities: Record<string, number>;
+    }[] = [];
 
     // Waves in rowid order; the cursor only moves past rows actually done, so
     // a Jev outage mid-batch resumes from the first row it couldn't tag.
     for (let i = 0; i < rows.length && !budgetStopped; i += CONCURRENCY) {
       const wave = rows.slice(i, i + CONCURRENCY);
-      const results = await Promise.all(wave.map((row) => classifyTags(row)));
+      const results = await Promise.all(
+        wave.map((row) => classifyTagsDetailed(row)),
+      );
       for (let k = 0; k < wave.length; k++) {
-        const tags = results[k];
-        if (tags === null) {
+        const result = results[k];
+        if (result === null) {
           budgetStopped = true;
           break;
         }
+        const { tags } = result;
         const row = wave[k];
+        if (samples.length < SAMPLE_ROWS) {
+          samples.push({
+            id: row.id,
+            tags,
+            probabilities: result.probabilities,
+          });
+        }
         const next = JSON.stringify(tags);
         if (next !== (row.tags ?? '')) {
           await db
@@ -174,6 +196,7 @@ export async function POST(req: Request) {
       remaining,
       budgetStopped,
       drained: remaining === 0,
+      samples,
     });
   } catch (e: any) {
     console.error('[tag-classify] failed:', e);

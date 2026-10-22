@@ -16,10 +16,16 @@ import { toolNamesFromJson } from './listingReview';
 import { TAG_VOCABULARY, type TagDefinition } from './tagVocabulary';
 import { askJev, type JevQuestion, noulVerdict } from './typesafe';
 
+/**
+ * Bump when the vocabulary, candidate selection or floor changes: the
+ * tag-classify backfill keys its cursor on this, so the catalog is re-walked.
+ */
+export const TAG_CLASSIFIER_VERSION = 'v2';
+
 /** Jev's probability that the tag applies; at or above this it's applied. */
 const TAG_CONFIDENCE_FLOOR = 0.75;
 /** Most candidate tags sent to Jev for one listing. */
-const MAX_CANDIDATES = 14;
+const MAX_CANDIDATES = 20;
 /** Most non-runtime tags kept per listing (most probable first). */
 const MAX_TAGS = 5;
 
@@ -49,26 +55,32 @@ export function runtimeTags(listing: ListingForTagging): string[] {
   return out;
 }
 
-/** Vocabulary tags worth asking Jev about, by hint match, capped. */
+/**
+ * Vocabulary tags worth asking Jev about, by hint match, capped. Tags matched
+ * in the listing's own words (name, description, summary, overview) come
+ * first; tags matched only in tool names fill what's left. A server with dozens
+ * of tools otherwise used up the cap on tool-name noise (Grafana's 81 tools
+ * crowded out "Grafana & Prometheus").
+ */
 export function candidateTags(listing: ListingForTagging): TagDefinition[] {
   // Tool names are snake/kebab case; split them so \b-anchored hints match.
   const toolText = toolNamesFromJson(listing.tools)
     .map((n) => n.replace(/[_-]+/g, ' '))
     .join(' ');
-  const text = [
+  const ownText = [
     listing.name,
     listing.description,
     listing.aiSummary,
     (listing.aiOverview ?? '').slice(0, 1200),
-    toolText,
   ]
     .filter(Boolean)
     .join(' ');
-  if (!text.trim()) return [];
-  return TAG_VOCABULARY.filter((t) => t.hint?.test(text)).slice(
-    0,
-    MAX_CANDIDATES,
+  if (!ownText.trim() && !toolText.trim()) return [];
+  const primary = TAG_VOCABULARY.filter((t) => t.hint?.test(ownText));
+  const toolOnly = TAG_VOCABULARY.filter(
+    (t) => !primary.includes(t) && t.hint?.test(toolText),
   );
+  return [...primary, ...toolOnly].slice(0, MAX_CANDIDATES);
 }
 
 function tagQuestion(tag: TagDefinition): JevQuestion {
@@ -78,16 +90,24 @@ function tagQuestion(tag: TagDefinition): JevQuestion {
   };
 }
 
+export type TagClassification = {
+  /** Vocabulary slugs: non-runtime (most probable first), then runtime. */
+  tags: string[];
+  /** Jev's probability per candidate tag asked about. */
+  probabilities: Record<string, number>;
+};
+
 /**
- * The listing's tags as vocabulary slugs (non-runtime first, most probable
- * first, then runtime), or null when Jev could not answer.
+ * The listing's tags plus Jev's probability for every candidate, or null when
+ * Jev could not answer. The probabilities are what the backfill reports so the
+ * confidence floor can be tuned against real answers.
  */
-export async function classifyTags(
+export async function classifyTagsDetailed(
   listing: ListingForTagging,
-): Promise<string[] | null> {
+): Promise<TagClassification | null> {
   const runtime = runtimeTags(listing);
   const candidates = candidateTags(listing);
-  if (candidates.length === 0) return runtime;
+  if (candidates.length === 0) return { tags: runtime, probabilities: {} };
 
   const questions: Record<string, JevQuestion> = {};
   for (const tag of candidates) questions[tag.slug] = tagQuestion(tag);
@@ -106,6 +126,12 @@ export async function classifyTags(
   );
   if (!res) return null;
 
+  const probabilities: Record<string, number> = {};
+  for (const tag of candidates) {
+    const p = res.answers[tag.slug]?.noul;
+    if (typeof p === 'number')
+      probabilities[tag.slug] = Math.round(p * 100) / 100;
+  }
   const picked = candidates
     .map((tag) => ({ tag, answer: res.answers[tag.slug] }))
     .filter(({ answer }) => noulVerdict(answer, TAG_CONFIDENCE_FLOOR))
@@ -113,5 +139,12 @@ export async function classifyTags(
     .slice(0, MAX_TAGS)
     .map(({ tag }) => tag.slug);
 
-  return [...picked, ...runtime];
+  return { tags: [...picked, ...runtime], probabilities };
+}
+
+/** classifyTagsDetailed's tags only; null when Jev could not answer. */
+export async function classifyTags(
+  listing: ListingForTagging,
+): Promise<string[] | null> {
+  return (await classifyTagsDetailed(listing))?.tags ?? null;
 }

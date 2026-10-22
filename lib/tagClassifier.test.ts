@@ -63,6 +63,20 @@ describe('candidateTags', () => {
     expect(slugs).toContain('browser-automation');
   });
 
+  it('puts tags from the listing own words ahead of tool-name matches', () => {
+    const slugs = candidateTags({
+      name: 'mcp-grafana',
+      description: 'Query Grafana dashboards.',
+      tools: JSON.stringify(
+        ['slack_notify', 'github_search', 'postgres_query', 'aws_list'].map(
+          (name) => ({ name }),
+        ),
+      ),
+    }).map((t) => t.slug);
+    expect(slugs.indexOf('grafana')).toBeLessThan(slugs.indexOf('slack'));
+    expect(slugs.indexOf('grafana')).toBeLessThan(slugs.indexOf('github'));
+  });
+
   it('asks about nothing when there is no text', () => {
     expect(candidateTags({})).toEqual([]);
   });
