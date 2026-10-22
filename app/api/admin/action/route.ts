@@ -41,6 +41,7 @@ import {
 import { parseServerTools } from '../../../../lib/servers';
 import { upsertSignals } from '../../../../lib/signalStore';
 import { getAppUrl } from '../../../../lib/stripe';
+import { classifyTags } from '../../../../lib/tagClassifier';
 import { isSafeSubmissionUrl } from '../../../../lib/urlSafety';
 
 const actionSchema = z.object({
@@ -498,8 +499,6 @@ export async function POST(req: Request) {
       if (content.pricingModel) updates.pricingModel = content.pricingModel;
       if (content.authType) updates.authType = content.authType;
       if (content.license) updates.license = content.license;
-      if (content.tags && content.tags.length > 0)
-        updates.tags = JSON.stringify(content.tags);
       if (content.compatibleClients && content.compatibleClients.length > 0) {
         updates.compatibleClients = JSON.stringify(content.compatibleClients);
       }
@@ -527,6 +526,21 @@ export async function POST(req: Request) {
         updates.installConfidence = null;
       }
 
+      // Fixed-vocabulary tags, confirmed by Jev (lib/tagClassifier.ts);
+      // null means Jev was unavailable, so existing tags stay.
+      const tags = await classifyTags({
+        name: server.name,
+        description: server.description,
+        url: server.url,
+        aiSummary: content.summary,
+        aiOverview: content.overview,
+        tools: server.tools,
+        installKind: updates.installKind,
+        installCommand: updates.installCommand,
+        remoteEndpointUrl: server.remoteEndpointUrl,
+      });
+      if (tags) updates.tags = JSON.stringify(tags);
+
       await db.update(servers).set(updates).where(eq(servers.id, id));
 
       refreshListingPageInBackground(id);
@@ -535,7 +549,7 @@ export async function POST(req: Request) {
         message: `AI content enriched: "${content.summary.slice(0, 75)}..."`,
         aiSummary: content.summary,
         aiOverview: content.overview,
-        tags: content.tags,
+        tags,
       });
     } else if (action === 'approve_edit' || action === 'reject_edit') {
       const rows = await db

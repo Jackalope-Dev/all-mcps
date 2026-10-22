@@ -47,6 +47,7 @@ import {
 } from '../../../../lib/listingSignals';
 import { parseServerTools } from '../../../../lib/servers';
 import { upsertSignals } from '../../../../lib/signalStore';
+import { classifyTags } from '../../../../lib/tagClassifier';
 
 /**
  * AI content pass — writes the unique per-listing content layer (summary, overview,
@@ -485,8 +486,6 @@ export async function POST(req: Request) {
           else if (o.content.authType)
             updatePayload.authType = o.content.authType;
           if (o.content.license) updatePayload.license = o.content.license;
-          if (o.content.tags && o.content.tags.length > 0)
-            updatePayload.tags = JSON.stringify(o.content.tags);
           if (
             o.content.compatibleClients &&
             o.content.compatibleClients.length > 0
@@ -521,6 +520,21 @@ export async function POST(req: Request) {
             updatePayload.installPackage = null;
             updatePayload.installConfidence = null;
           }
+
+          // Tags from the fixed vocabulary, confirmed by Jev against the new
+          // writeup and install data (lib/tagClassifier.ts). null = Jev
+          // unavailable: keep whatever tags the listing already has.
+          const tags = await classifyTags({
+            name: r.server.name,
+            description: r.server.description,
+            url: r.server.url,
+            aiSummary: o.content.summary,
+            aiOverview: o.content.overview,
+            tools: r.server.tools,
+            installKind: updatePayload.installKind as string | null,
+            installCommand: updatePayload.installCommand as string | null,
+          });
+          if (tags) updatePayload.tags = JSON.stringify(tags);
 
           await db
             .update(servers)

@@ -60,20 +60,35 @@ const { getAllTagsWithCounts, getServersForTag } = await import('./tags');
 const DEV = '💻 Developer Tools';
 const COMMS = '💬 Communication';
 
-const ROWS = [
+const ROWS: {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  status?: string;
+  tags?: string[];
+}[] = [
   {
     id: 'a-gdrive',
     name: 'GDrive MCP',
     description: 'Google Drive access.',
     category: DEV,
+    tags: ['google-workspace'],
   },
   {
     id: 'b-gmail',
     name: 'Gmail Agent',
     description: 'Read Google mail.',
     category: COMMS,
+    tags: ['gmail', 'google-workspace'],
   },
-  { id: 'c-git', name: 'Git Tools', description: 'Local git.', category: DEV },
+  {
+    id: 'c-git',
+    name: 'Git Tools',
+    description: 'Local git.',
+    category: DEV,
+    tags: ['git'],
+  },
   {
     id: 'd-googleplex',
     name: 'Googleplex Toys',
@@ -86,8 +101,15 @@ const ROWS = [
     description: 'Retired.',
     category: DEV,
     status: 'removed',
+    tags: ['google-workspace'],
   },
-  { id: 'f-slack', name: 'Slack', description: 'Chat.', category: COMMS },
+  {
+    id: 'f-slack',
+    name: 'Slack',
+    description: 'Chat.',
+    category: COMMS,
+    tags: ['slack'],
+  },
 ];
 
 beforeAll(() => {
@@ -96,8 +118,8 @@ beforeAll(() => {
   );
   sqlite.exec(`CREATE TABLE servers (${cols.join(', ')})`);
   const insert = sqlite.prepare(
-    `INSERT INTO servers (id, name, url, description, category, status, tools, ai_overview, ai_doc, github_stars, views, copies, upvotes, is_official)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0)`,
+    `INSERT INTO servers (id, name, url, description, category, status, tools, ai_overview, ai_doc, github_stars, tags, views, copies, upvotes, is_official)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0)`,
   );
   for (const r of ROWS) {
     insert.run(
@@ -115,6 +137,7 @@ beforeAll(() => {
       // listings search engines may index.
       'Our writeup.',
       1500,
+      JSON.stringify(r.tags ?? []),
     );
   }
 });
@@ -213,13 +236,13 @@ describe('tag scans', () => {
   it('counts tags across every page of the catalog', async () => {
     const tags = await getAllTagsWithCounts();
     const count = (slug: string) => tags.find((t) => t.slug === slug)?.count;
-    expect(count('developer-tools')).toBe(3);
-    expect(count('communication')).toBe(2);
+    expect(count('google-workspace')).toBe(2);
+    expect(count('slack')).toBe(1);
   });
 
   it('keeps only the matches for one tag', async () => {
-    const { servers } = await getServersForTag('communication');
-    expect(ids(servers)).toEqual(['b-gmail', 'f-slack']);
+    const { servers } = await getServersForTag('google-workspace');
+    expect(ids(servers)).toEqual(['a-gdrive', 'b-gmail']);
   });
 });
 

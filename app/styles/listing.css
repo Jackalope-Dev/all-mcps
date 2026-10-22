@@ -1409,6 +1409,16 @@ details[open] > summary .lst-chevron {
   color: var(--text-secondary);
 }
 
+.lst-tag a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.lst-tag:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
 .lst-lead {
   font-size: 1rem;
   line-height: 1.75;

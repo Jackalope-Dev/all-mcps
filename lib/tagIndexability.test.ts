@@ -48,14 +48,18 @@ const { getAllTagsWithCounts, getServersForTag } = await import('./tags');
 
 const DEV = '💻 Developer Tools';
 
-/** [id prefix, description, rows, indexable] */
-const GROUPS: [string, string, number, boolean][] = [
-  // 16 of 96 indexable listings: above the floor, under the 20% share cap.
-  ['w', 'Weather forecast service.', 16, true],
-  // 80 of 96: near-universal, says nothing about its listings.
-  ['c', 'Calendar scheduling.', 80, true],
-  // Big, but none of its listings are indexable.
-  ['s', 'Slack messages.', 30, false],
+/** [id prefix, stored tags, rows, indexable] */
+const GROUPS: [string, string[], number, boolean][] = [
+  // 16 of 106 indexable listings: above the floor, under the 20% share cap.
+  ['w', ['weather'], 16, true],
+  // 80 of 106: near-universal, says nothing about its listings — except a
+  // runtime tag, where "Python MCP servers" is still a real search.
+  ['c', ['calendar', 'python'], 80, true],
+  // Big, but none of its listings are indexable. 'slack-bot' is not in the
+  // vocabulary, so it is ignored entirely.
+  ['s', ['slack', 'slack-bot'], 30, false],
+  // Enough listings, but the page would duplicate /categories/browser-automation.
+  ['b', ['browser-automation'], 10, true],
 ];
 
 beforeAll(() => {
@@ -65,17 +69,18 @@ beforeAll(() => {
   sqlite.exec(`CREATE TABLE servers (${cols.join(', ')})`);
   const insert = sqlite.prepare(
     `INSERT INTO servers (id, name, url, description, category, status, tools, tags, views, copies, upvotes, github_stars, ai_doc, is_official)
-     VALUES (?, ?, ?, ?, ?, 'active', '[]', '[]', 0, 0, 0, ?, ?, 0)`,
+     VALUES (?, ?, ?, ?, ?, 'active', '[]', ?, 0, 0, 0, ?, ?, 0)`,
   );
-  for (const [prefix, description, rows, indexable] of GROUPS) {
+  for (const [prefix, tags, rows, indexable] of GROUPS) {
     for (let n = 0; n < rows; n++) {
       const id = `${prefix}-${n}`;
       insert.run(
         id,
         `Server ${id}`,
         `https://example.com/${id}`,
-        description,
+        `Server ${id}.`,
         DEV,
+        JSON.stringify(tags),
         indexable ? 1500 : 0,
         indexable ? 'Our writeup.' : null,
       );
@@ -84,13 +89,14 @@ beforeAll(() => {
 });
 
 describe('tag indexability', () => {
-  it('indexes a tag only on enough indexable listings, never a near-universal or category tag', async () => {
+  it('indexes a tag only on enough indexable listings, never a near-universal (non-runtime) or category tag', async () => {
     const indexable = Object.fromEntries(
       (await getAllTagsWithCounts()).map((t) => [t.slug, t.indexable]),
     );
     expect(indexable).toEqual({
-      'developer-tools': false,
+      'browser-automation': false,
       calendar: false,
+      python: true,
       slack: false,
       weather: true,
     });
