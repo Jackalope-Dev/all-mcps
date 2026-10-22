@@ -34,12 +34,19 @@ export const metadata: Metadata = {
   },
 };
 
+/** Most-used tags listed alongside the indexable hubs. */
+const POPULAR_TAG_LIMIT = 60;
+
 export default async function TagsIndexPage() {
   const allTags = await getAllTagsWithCounts();
-  // Only link tag hubs we let search engines index. The full list (~24k tags,
-  // nearly all one- or two-listing stubs that noindex themselves) turned this
-  // page into a crawl sink pointing Googlebot at thin pages it then had to drop.
-  const sortedTags = allTags.filter((t) => t.indexable);
+  // Bounded list: every tag hub we let search engines index, plus the most-used
+  // tags for browsing. The full list (~24k tags, nearly all one- or two-listing
+  // stubs that noindex themselves) turned this page into a crawl sink pointing
+  // Googlebot at thin pages it then had to drop.
+  const popular = new Set(
+    allTags.slice(0, POPULAR_TAG_LIMIT).map((t) => t.slug),
+  );
+  const sortedTags = allTags.filter((t) => t.indexable || popular.has(t.slug));
 
   // Compute metrics
   const totalTagsCount = sortedTags.length;
@@ -109,9 +116,9 @@ export default async function TagsIndexPage() {
       <header className="dir-page-head animate-in">
         <h1 className="text-page-title">MCP server tags</h1>
         <p className="text-lead">
-          {totalTagsCount} topics and integrations with enough maintained
-          servers to compare. Tags cut across categories — use them to find
-          every server that touches a technology.
+          The {totalTagsCount} most-used topics and integrations. Tags cut
+          across categories — use them to find every server that touches a
+          technology.
         </p>
       </header>
 
