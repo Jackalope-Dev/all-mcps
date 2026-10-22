@@ -20,10 +20,14 @@ import { askJev, type JevQuestion, noulVerdict } from './typesafe';
  * Bump when the vocabulary, candidate selection or floor changes: the
  * tag-classify backfill keys its cursor on this, so the catalog is re-walked.
  */
-export const TAG_CLASSIFIER_VERSION = 'v2';
+export const TAG_CLASSIFIER_VERSION = 'v3';
 
-/** Jev's probability that the tag applies; at or above this it's applied. */
-const TAG_CONFIDENCE_FLOOR = 0.75;
+/**
+ * Jev's probability that the tag applies; at or above this it's applied.
+ * From 40 real answers (Oct 22): clear matches land at 0.8-0.99, unclear ones
+ * spread 0.3-0.7.
+ */
+const TAG_CONFIDENCE_FLOOR = 0.7;
 /** Most candidate tags sent to Jev for one listing. */
 const MAX_CANDIDATES = 20;
 /** Most non-runtime tags kept per listing (most probable first). */

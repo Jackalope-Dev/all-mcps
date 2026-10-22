@@ -36,7 +36,13 @@ const service = (
   label,
   group: 'service',
   hint,
-  definition: `The server connects to ${what ?? label} and its tools act on ${label} data or accounts.`,
+  // Jev reads a list of products as "all of these", so a Google Drive server
+  // scored 0.21 against "Drive, Docs, Sheets, Calendar" — say any one counts.
+  definition: `Its tools work with ${what ?? label} (its API, an account in it, or its data).${
+    what && /,| or /.test(what)
+      ? ' Supporting any one of the products named is enough.'
+      : ''
+  }`,
 });
 
 export const TAG_VOCABULARY: TagDefinition[] = [
@@ -45,7 +51,7 @@ export const TAG_VOCABULARY: TagDefinition[] = [
     'github',
     'GitHub',
     /\bgithub\b/i,
-    'the GitHub API (repositories, issues, pull requests, Actions) — not merely hosted on GitHub',
+    'the GitHub API (repositories, issues, pull requests or Actions) — not merely code hosted on GitHub',
   ),
   service('gitlab', 'GitLab', /\bgitlab\b/i),
   service('jira', 'Jira', /\bjira\b|\batlassian\b/i),
@@ -159,8 +165,7 @@ export const TAG_VOCABULARY: TagDefinition[] = [
     label: 'Web scraping',
     group: 'capability',
     hint: /\bscrap|\bcrawl|\bextract\b|\bfetch\b|\bweb pages?\b|\burls?\b/i,
-    definition:
-      'Fetches web pages and extracts their content or structured data.',
+    definition: 'Fetches web pages and returns or extracts their content.',
   },
   {
     slug: 'web-search',
@@ -176,7 +181,7 @@ export const TAG_VOCABULARY: TagDefinition[] = [
     group: 'capability',
     hint: /\bmemor|\bknowledge graph\b|\bremember\b|\bpersistent\b|\bcontext\b/i,
     definition:
-      'Stores and recalls information for an agent across sessions (long-term memory or a knowledge graph).',
+      'Its main purpose is storing and recalling information for an agent across sessions (long-term memory or a knowledge graph).',
   },
   {
     slug: 'rag',
@@ -192,7 +197,7 @@ export const TAG_VOCABULARY: TagDefinition[] = [
     group: 'capability',
     hint: /\bfile ?system\b|\bfiles?\b|\bdirector(y|ies)\b|\bfolders?\b/i,
     definition:
-      'Reads, writes or manages files and directories on the local machine.',
+      'Its tools read, write or manage files and folders the user points it at on their own machine. Saving its own output to disk, or reading a config file, does not count.',
   },
   {
     slug: 'code-execution',
@@ -200,7 +205,7 @@ export const TAG_VOCABULARY: TagDefinition[] = [
     group: 'capability',
     hint: /\bexecut|\brun (code|python|scripts?)\b|\bsandbox|\bjupyter\b|\bnotebook|\brepl\b|\binterpreter\b/i,
     definition:
-      'Runs code the agent writes, in a sandbox, notebook, REPL or interpreter.',
+      'Runs code the agent writes (in a sandbox, notebook, REPL or interpreter) as a main purpose of the server.',
   },
   {
     slug: 'terminal',
@@ -240,7 +245,7 @@ export const TAG_VOCABULARY: TagDefinition[] = [
     group: 'capability',
     hint: /\bdocs\b|\bdocumentation\b|\breference\b|\bapi docs\b/i,
     definition:
-      'Looks up up-to-date library, framework or API documentation for the agent.',
+      'Looks up library, framework or API documentation for the agent to read.',
   },
   {
     slug: 'api-integration',
@@ -262,7 +267,8 @@ export const TAG_VOCABULARY: TagDefinition[] = [
     label: 'Video',
     group: 'capability',
     hint: /\bvideos?\b|\bffmpeg\b|\bclips?\b/i,
-    definition: 'Generates, edits, transcribes or analyses video.',
+    definition:
+      'Works with video in any form: generating, editing, downloading, transcribing or analysing it.',
   },
   {
     slug: 'audio',
@@ -270,7 +276,7 @@ export const TAG_VOCABULARY: TagDefinition[] = [
     group: 'capability',
     hint: /\baudio\b|\bspeech\b|\btts\b|\bvoice\b|\btranscri|\bwhisper\b|\bmusic\b/i,
     definition:
-      'Works with audio: text-to-speech, transcription, voice or music.',
+      'Works with audio in any form: text-to-speech, speech-to-text, voice conversations or music.',
   },
   {
     slug: 'documents',
@@ -278,7 +284,7 @@ export const TAG_VOCABULARY: TagDefinition[] = [
     group: 'capability',
     hint: /\bpdf\b|\bdocx\b|\bword\b|\bpowerpoint\b|\bpptx\b|\bexcel\b|\bxlsx\b|\bspreadsheets?\b|\bdocuments?\b/i,
     definition:
-      'Reads, creates or converts document files such as PDF, Word, Excel or PowerPoint.',
+      'Reads, creates or converts document files. Any one format counts: PDF, Word, Excel/spreadsheet files or PowerPoint.',
   },
   {
     slug: 'maps',
@@ -316,7 +322,7 @@ export const TAG_VOCABULARY: TagDefinition[] = [
     group: 'capability',
     hint: /\bterraform\b|\bpulumi\b|\bopentofu\b|\binfrastructure\b|\bansible\b|\bcloudformation\b/i,
     definition:
-      'Plans, applies or inspects infrastructure as code (Terraform, Pulumi, Ansible).',
+      'Works with infrastructure-as-code tooling. Any one counts: Terraform, OpenTofu, Pulumi, Ansible or CloudFormation — planning, applying, or looking up providers and modules.',
   },
   {
     slug: 'security',
@@ -340,7 +346,7 @@ export const TAG_VOCABULARY: TagDefinition[] = [
     group: 'capability',
     hint: /\bgateway\b|\bproxy\b|\baggregat|\brouter\b|\bhub\b|\bmulti-server\b/i,
     definition:
-      'Combines, proxies or routes many MCP servers or APIs behind one connection.',
+      'Combines, proxies or manages many MCP servers or APIs behind one connection or interface.',
   },
   {
     slug: 'automation',
@@ -517,7 +523,7 @@ export const TAG_VOCABULARY: TagDefinition[] = [
     group: 'domain',
     hint: /\bios\b|\bandroid\b|\bxcode\b|\bsimulator\b|\bemulator\b|\breact native\b|\bflutter\b|\bmobile\b/i,
     definition:
-      'Builds, runs or tests iOS or Android apps (simulators, Xcode, Android tooling).',
+      'Builds, runs, automates or tests iOS or Android apps, simulators or devices.',
   },
   {
     slug: 'smart-home',
