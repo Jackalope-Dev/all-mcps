@@ -137,8 +137,29 @@ describe('triageReadme', () => {
       'tok',
       fetchReadme,
     );
-    expect(fetchReadme).toHaveBeenCalledWith('ahtasham00', 'tactab', 'tok');
+    expect(fetchReadme).toHaveBeenCalledWith(
+      'Ahtasham00',
+      'tactab',
+      'tok',
+      expect.objectContaining({ owner: 'Ahtasham00', repo: 'tactab' }),
+    );
     expect(readme).toHaveLength(3000);
+  });
+
+  it('reads a monorepo listing from its own folder', async () => {
+    const fetchReadme = vi.fn().mockResolvedValue('folder readme');
+    await triageReadme(
+      'https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem',
+      null,
+      null,
+      fetchReadme,
+    );
+    expect(fetchReadme).toHaveBeenCalledWith(
+      'modelcontextprotocol',
+      'servers',
+      null,
+      expect.objectContaining({ ref: 'main', path: 'src/filesystem' }),
+    );
   });
 
   it('returns null for non-GitHub listings without fetching', async () => {

@@ -23,8 +23,10 @@ import {
   toCachedInstallFields,
 } from '../../../../lib/installConfig';
 import {
+  fetchListingReadme,
   isCatalogReadme,
   isListingTrulyDead,
+  parseGithubUrl,
 } from '../../../../lib/listingEnrich';
 import {
   listingRenderChanged,
@@ -259,7 +261,11 @@ async function checkListing(
           toolsCheckedAt == null ||
           (!server.installExtractedAt && !server.installKind);
         if (needsReadme && snapshot.readmePath) {
-          readmeText = await fetchReadmeText(repoSlug, snapshot.readmePath);
+          // A monorepo deep link reads its own folder's README; the snapshot's
+          // README is the repo root's, which describes every package in it.
+          readmeText = parseGithubUrl(server.url)?.path
+            ? await fetchListingReadme(server.url)
+            : await fetchReadmeText(repoSlug, snapshot.readmePath);
         }
         if (readmeText) {
           readmeBadgeOk = websiteHasReciprocalBadge(readmeText, server.id);

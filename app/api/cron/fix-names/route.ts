@@ -80,7 +80,7 @@ export async function POST(req: Request) {
 
       if (gh) {
         try {
-          readme = await fetchGithubReadme(gh.owner, gh.repo, githubToken);
+          readme = await fetchGithubReadme(gh.owner, gh.repo, githubToken, gh);
         } catch {
           ghErrors++;
         }

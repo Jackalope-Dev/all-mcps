@@ -1,4 +1,4 @@
-import { isRepositoryUrl } from './repoUrl';
+import { githubFolderPrefix, isRepositoryUrl, parseGithubUrl } from './repoUrl';
 import { isSafeSubmissionUrl } from './urlSafety';
 import { getClaimVerificationToken } from './verificationTokens';
 
@@ -279,11 +279,11 @@ export async function verifyGithubReadme(
   if (repo.endsWith('.git')) repo = repo.slice(0, -4);
 
   // HEAD resolves to the repo's default branch, whatever it is named.
-  const branches = ['HEAD'];
+  const branches = [parseGithubUrl(repoUrl)?.ref ?? 'HEAD'];
   for (const branch of branches) {
     try {
       const res = await fetch(
-        `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/README.md`,
+        `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${githubFolderPrefix(repoUrl)}README.md`,
         {
           signal: AbortSignal.timeout(10000),
         },

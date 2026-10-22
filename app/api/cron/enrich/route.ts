@@ -457,6 +457,7 @@ export async function POST(req: Request) {
             gh.owner,
             gh.repo,
             githubToken,
+            gh,
           );
 
           if (readme) {

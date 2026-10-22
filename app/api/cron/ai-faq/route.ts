@@ -130,7 +130,7 @@ export async function POST(req: Request) {
         chunk.map(async (server) => {
           const gh = parseGithubUrl(server.url);
           const readme = gh
-            ? await fetchGithubReadme(gh.owner, gh.repo, githubToken)
+            ? await fetchGithubReadme(gh.owner, gh.repo, githubToken, gh)
             : null;
           const cleanedDesc = cleanListingDescription(server.description) || '';
 

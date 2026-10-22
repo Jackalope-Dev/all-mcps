@@ -107,3 +107,39 @@ export function isPackageRepoMismatch(
   const [listOwner, listName] = listingRepo.split('/');
   return pkgOwner !== listOwner && pkgName !== listName;
 }
+
+/**
+ * Owner and repo of a GitHub URL, plus the branch and folder when it deep-links
+ * into a monorepo (github.com/o/r/tree/main/src/filesystem → ref "main", path
+ * "src/filesystem"). A blob link to a file resolves to the file's folder.
+ */
+export function parseGithubUrl(
+  url: string,
+): { owner: string; repo: string; ref?: string; path?: string } | null {
+  const m = (url || '').match(/github\.com\/([^/]+)\/([^/#?]+)/i);
+  if (!m) return null;
+  let repo = m[2];
+  if (repo.endsWith('.git')) repo = repo.slice(0, -4);
+  const deep = (url || '').match(
+    /github\.com\/[^/]+\/[^/#?]+\/(tree|blob)\/([^/#?]+)\/([^#?]+)/i,
+  );
+  if (!deep) return { owner: m[1], repo };
+  let path = deep[3].replace(/\/+$/, '');
+  // blob/<ref>/dir/README.md → the folder holding that file.
+  if (deep[1].toLowerCase() === 'blob' && /\.[a-z0-9]+$/i.test(path)) {
+    path = path.split('/').slice(0, -1).join('/');
+  }
+  if (!path || !/^[\w.\-/]+$/.test(path) || path.includes('..')) {
+    return { owner: m[1], repo };
+  }
+  return { owner: m[1], repo, ref: deep[2], path };
+}
+
+/**
+ * Prefix for files inside a listing's own folder: "src/filesystem/" for a
+ * monorepo deep link, "" for a whole-repo URL.
+ */
+export function githubFolderPrefix(url: string | null | undefined): string {
+  const path = url ? parseGithubUrl(url)?.path : undefined;
+  return path ? `${path}/` : '';
+}

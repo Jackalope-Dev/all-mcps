@@ -10,6 +10,7 @@ import {
   resolveInstallFromText,
   toCachedInstallFields,
 } from './installConfig';
+import { parseGithubUrl } from './repoUrl';
 import { isSafeSubmissionUrl } from './urlSafety';
 
 export { pickBestWebsiteAndLogo } from './listingSignals';
@@ -26,15 +27,7 @@ export type GhRepo = {
   topics?: string[];
 };
 
-export function parseGithubUrl(
-  url: string,
-): { owner: string; repo: string } | null {
-  const m = (url || '').match(/github\.com\/([^/]+)\/([^/#?]+)/i);
-  if (!m) return null;
-  let repo = m[2];
-  if (repo.endsWith('.git')) repo = repo.slice(0, -4);
-  return { owner: m[1], repo };
-}
+export { parseGithubUrl } from './repoUrl';
 
 /** True when the stored description still looks like a scraped Glama/README header. */
 export function descriptionNeedsClean(
@@ -196,20 +189,38 @@ export function isCatalogReadme(
   return false;
 }
 
-/** Fetch a repo's README, or null when it has none or it is a catalog of other projects (see isCatalogReadme). */
+/**
+ * Fetch a repo's README, or null when it has none or it is a catalog of other
+ * projects (see isCatalogReadme). With `path` (a monorepo folder, from
+ * parseGithubUrl) only that folder's README counts: the repo root describes
+ * the whole monorepo, and reading it made every modelcontextprotocol/servers
+ * listing (Filesystem, Time, Fetch…) pick up the Memory server's install
+ * command and tools.
+ */
 export async function fetchGithubReadme(
   owner: string,
   repo: string,
   token?: string | null,
+  location?: { ref?: string; path?: string },
 ): Promise<string | null> {
-  const readme = await fetchRawGithubReadme(owner, repo, token);
+  const readme = await fetchRawGithubReadme(owner, repo, token, location);
   return readme && !isCatalogReadme(readme, owner, repo) ? readme : null;
+}
+
+/** The README for a listing URL: its monorepo folder's when it deep-links into one. */
+export async function fetchListingReadme(
+  url: string,
+  token?: string | null,
+): Promise<string | null> {
+  const gh = parseGithubUrl(url);
+  return gh ? fetchGithubReadme(gh.owner, gh.repo, token, gh) : null;
 }
 
 async function fetchRawGithubReadme(
   owner: string,
   repo: string,
   token?: string | null,
+  location?: { ref?: string; path?: string },
 ): Promise<string | null> {
   const safeOwner = owner.trim();
   const safeRepo = repo.trim();
@@ -221,12 +232,21 @@ async function fetchRawGithubReadme(
   }
   const encOwner = encodeURIComponent(safeOwner);
   const encRepo = encodeURIComponent(safeRepo);
+  const dir = location?.path?.replace(/^\/+|\/+$/g, '');
+  if (dir && (!/^[\w.\-/]+$/.test(dir) || dir.includes('..'))) return null;
+  const ref =
+    location?.ref && /^[\w.-]+$/.test(location.ref) ? location.ref : 'HEAD';
+  const encDir = dir
+    ? `${dir.split('/').map(encodeURIComponent).join('/')}/`
+    : '';
 
   // HEAD resolves to the repo's default branch, whatever it is named.
-  for (const branch of ['HEAD']) {
+  for (const name of dir
+    ? ['README.md', 'readme.md', 'Readme.md']
+    : ['README.md']) {
     try {
       const res = await fetch(
-        `https://raw.githubusercontent.com/${encOwner}/${encRepo}/${branch}/README.md`,
+        `https://raw.githubusercontent.com/${encOwner}/${encRepo}/${encodeURIComponent(ref)}/${encDir}${name}`,
         {
           headers: { 'User-Agent': 'AllMCPs-Enricher' },
           signal: AbortSignal.timeout(10000),
@@ -238,10 +258,11 @@ async function fetchRawGithubReadme(
     }
   }
 
-  // API fallback (uses token quota when raw is blocked)
+  // API fallback (uses token quota when raw is blocked). For a folder this is
+  // GET /repos/o/r/readme/{dir}, which never falls back to the root README.
   try {
     const res = await fetch(
-      `https://api.github.com/repos/${encOwner}/${encRepo}/readme`,
+      `https://api.github.com/repos/${encOwner}/${encRepo}/readme${dir ? `/${encDir.slice(0, -1)}` : ''}${ref !== 'HEAD' ? `?ref=${encodeURIComponent(ref)}` : ''}`,
       {
         headers: githubApiHeaders(
           token,

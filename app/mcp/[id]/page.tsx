@@ -118,6 +118,7 @@ import {
   supportLinkRel,
   websiteLinkRel,
 } from '../../../lib/linkRel';
+import { parseGithubUrl } from '../../../lib/listingEnrich';
 import { redirectIfListingMoved } from '../../../lib/listingRedirect';
 import { statusHueClass } from '../../../lib/palette';
 import {
@@ -232,42 +233,30 @@ const README_FETCH_TIMEOUT_MS = 5000;
 
 async function fetchReadme(url: string) {
   try {
-    const match = url.match(/github\.com\/([^/]+)\/([^/]+)/);
-    if (!match) return null;
+    // Monorepo deep links (…/tree/main/src/filesystem) read that folder's
+    // README, not the repo root's, which describes the whole monorepo.
+    const gh = parseGithubUrl(url);
+    if (!gh) return null;
+    const dir = gh.path ? `${gh.path}/` : '';
+    const branches = gh.ref ? [gh.ref] : ['main', 'master'];
 
-    const owner = match[1];
-    let repo = match[2];
-
-    if (repo.endsWith('.git')) {
-      repo = repo.slice(0, -4);
-    }
-
-    // Attempt to fetch from 'main' branch first. Bounded: this runs inside the
-    // page's ISR re-render, and a slow GitHub response could hold that render
-    // past the memory queue's revalidation timeout (open-next.config.ts).
-    let res = await fetch(
-      `https://raw.githubusercontent.com/${owner}/${repo}/main/README.md`,
-      {
-        next: { revalidate: 3600 },
-        signal: AbortSignal.timeout(README_FETCH_TIMEOUT_MS),
-      },
-    );
-    if (!res.ok) {
-      // Fallback to 'master' branch
-      res = await fetch(
-        `https://raw.githubusercontent.com/${owner}/${repo}/master/README.md`,
+    // Bounded: this runs inside the page's ISR re-render, and a slow GitHub
+    // response could hold that render past the memory queue's revalidation
+    // timeout (open-next.config.ts).
+    for (const branch of branches) {
+      const res = await fetch(
+        `https://raw.githubusercontent.com/${gh.owner}/${gh.repo}/${branch}/${dir}README.md`,
         {
           next: { revalidate: 3600 },
           signal: AbortSignal.timeout(README_FETCH_TIMEOUT_MS),
         },
       );
-    }
-
-    if (res.ok) {
-      const text = await res.text();
-      return text.length > 250000
-        ? `${text.slice(0, 250000)}\n\n*(README truncated for size)*`
-        : text;
+      if (res.ok) {
+        const text = await res.text();
+        return text.length > 250000
+          ? `${text.slice(0, 250000)}\n\n*(README truncated for size)*`
+          : text;
+      }
     }
     return null;
   } catch (_e) {

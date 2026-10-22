@@ -41,6 +41,7 @@ import {
   resolveInstallConfig,
 } from './installConfig';
 import { indexableListingSql } from './listingIndexability';
+import { githubFolderPrefix, parseGithubUrl } from './repoUrl';
 import {
   buildAiSearchText,
   buildSearchPrefilter,
@@ -2382,19 +2383,14 @@ export function computeCombinedAvailabilityPct(
 
 export async function fetchServerReadme(url: string): Promise<string | null> {
   try {
-    const match = url.match(/github\.com\/([^/]+)\/([^/]+)/);
-    if (!match) return null;
-
-    const owner = match[1];
-    let repo = match[2];
-
-    if (repo.endsWith('.git')) {
-      repo = repo.slice(0, -4);
-    }
-
-    // HEAD resolves to the repo's default branch (main, master, trunk, dev…).
+    const gh = parseGithubUrl(url);
+    if (!gh) return null;
+    // A monorepo deep link reads its own folder's README on its branch;
+    // otherwise HEAD resolves to the default branch (main, master, trunk…).
+    const ref = gh.ref ?? 'HEAD';
+    const dir = gh.path ? `${gh.path}/` : '';
     const res = await fetch(
-      `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/README.md`,
+      `https://raw.githubusercontent.com/${gh.owner}/${gh.repo}/${ref}/${dir}README.md`,
       {
         next: { revalidate: 3600 },
       },
@@ -2750,10 +2746,14 @@ export function absolutizeReadmeMarkdown(md: string, repoUrl?: string): string {
   const repo = m[2].endsWith('.git') ? m[2].slice(0, -4) : m[2];
 
   const SKIP = /^(https?:|\/\/|#|mailto:|tel:|data:|\?)/i;
+  // Relative links in a monorepo folder's README resolve against that folder.
+  const folder = githubFolderPrefix(repoUrl);
   const toAbs = (target: string, isImage: boolean): string => {
     const t = target.trim();
     if (!t || SKIP.test(t)) return target;
-    const clean = t.replace(/^\.\//, '').replace(/^\//, '');
+    const clean = t.startsWith('/')
+      ? t.replace(/^\//, '')
+      : `${folder}${t.replace(/^\.\//, '')}`;
     return isImage
       ? `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${clean}`
       : `https://github.com/${owner}/${repo}/blob/HEAD/${clean}`;

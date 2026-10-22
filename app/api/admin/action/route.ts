@@ -454,6 +454,7 @@ export async function POST(req: Request) {
           parsedUrl.owner,
           parsedUrl.repo,
           token,
+          parsedUrl,
         );
       }
       if (!readme && server.description) {

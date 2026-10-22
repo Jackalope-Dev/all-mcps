@@ -16,7 +16,7 @@
  * would let an outage silently stop the promotion pipeline.
  */
 
-import { fetchGithubReadme } from './listingEnrich';
+import { fetchGithubReadme, parseGithubUrl } from './listingEnrich';
 import type { RepoStatus } from './repoCheck';
 import { githubRepoSlug } from './repoUrl';
 import {
@@ -422,11 +422,11 @@ export async function triageReadme(
   fetchReadme: typeof fetchGithubReadme = fetchGithubReadme,
 ): Promise<string | null> {
   if (aiOverview?.trim()) return aiOverview;
-  const slug = githubRepoSlug(url);
-  if (!slug) return null;
-  const [owner, repo] = slug.split('/');
+  const gh = url ? parseGithubUrl(url) : null;
+  if (!gh || !githubRepoSlug(url)) return null;
   try {
-    const readme = await fetchReadme(owner, repo, token);
+    // Monorepo deep links read their own folder's README (lib/listingEnrich.ts).
+    const readme = await fetchReadme(gh.owner, gh.repo, token, gh);
     return readme ? readme.slice(0, TRIAGE_README_CHARS) : null;
   } catch {
     return null;

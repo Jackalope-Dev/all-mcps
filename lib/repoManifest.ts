@@ -10,6 +10,7 @@
  */
 
 import { packageOwnedByListing } from './packageRegistry';
+import { githubFolderPrefix } from './repoUrl';
 import type { InstallHint } from './tools/parseInstallHint';
 
 /** Several entry points are possible per package; Jev chooses among at most this many. */
@@ -118,7 +119,7 @@ export function pypiCandidates(pyproject: string): InstallHint[] {
 }
 
 /**
- * Candidates from the listing repo's root manifests whose package the
+ * Candidates from the listing's manifests (its monorepo folder's, if any) whose package the
  * registry confirms is published from this repo (packageOwnedByListing) —
  * a manifest name alone could collide with a stranger's package.
  */
@@ -127,9 +128,12 @@ export async function manifestInstallCandidates(
 ): Promise<InstallHint[]> {
   const repo = githubRepo(listingUrl);
   if (!repo) return [];
+  // A monorepo deep link's manifests are in its own folder; the root ones
+  // describe the monorepo (often a private workspace), not this server.
+  const folder = githubFolderPrefix(listingUrl);
   const [packageJson, pyproject] = await Promise.all([
-    fetchRepoFile(repo, 'package.json'),
-    fetchRepoFile(repo, 'pyproject.toml'),
+    fetchRepoFile(repo, `${folder}package.json`),
+    fetchRepoFile(repo, `${folder}pyproject.toml`),
   ]);
   const candidates: InstallHint[] = [];
   if (packageJson) {

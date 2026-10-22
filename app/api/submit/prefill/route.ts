@@ -6,6 +6,7 @@ import {
   DIRECTORY_CATEGORIES,
 } from '../../../../lib/categories';
 import { chatJson } from '../../../../lib/openai';
+import { githubFolderPrefix, parseGithubUrl } from '../../../../lib/repoUrl';
 import {
   AUTH_TYPES,
   isAuthType,
@@ -219,7 +220,9 @@ export async function POST(req: Request) {
         source: 'github' as const,
         name: gh.name || repo,
         description: gh.description || '',
-        url: gh.html_url || url,
+        // Keep a monorepo deep link (…/tree/main/src/x): the repo's own URL
+        // would point the listing at the whole monorepo.
+        url: githubFolderPrefix(url) ? url : gh.html_url || url,
         websiteUrl:
           gh.homepage && isSafeSubmissionUrl(gh.homepage) ? gh.homepage : '',
       };
@@ -228,7 +231,7 @@ export async function POST(req: Request) {
       let readmeSnippet = '';
       try {
         const readmeRes = await fetch(
-          `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/README.md`,
+          `https://raw.githubusercontent.com/${owner}/${repo}/${parseGithubUrl(url)?.ref ?? 'HEAD'}/${githubFolderPrefix(url)}README.md`,
           {
             headers: { 'User-Agent': 'AllMCPs-Directory' },
             signal: AbortSignal.timeout(6000),
