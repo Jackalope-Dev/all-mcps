@@ -99,6 +99,19 @@ describe('classifyTags', () => {
     expect(await classifyTags(slackServer)).toEqual(['slack', 'nodejs']);
   });
 
+  it('accepts a lower probability when the tag is in the listing name', async () => {
+    askJev.mockResolvedValue({
+      model: 'm',
+      answers: { cloudflare: noul(0.67), observability: noul(0.67) },
+    });
+    expect(
+      await classifyTags({
+        name: 'cloudflare/mcp-server-cloudflare',
+        description: 'Manage Workers and monitor logs.',
+      }),
+    ).toEqual(['cloudflare']);
+  });
+
   it('returns null when Jev is unavailable, so callers keep existing tags', async () => {
     askJev.mockResolvedValue(null);
     expect(await classifyTags(slackServer)).toBeNull();

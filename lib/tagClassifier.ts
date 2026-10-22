@@ -20,7 +20,7 @@ import { askJev, type JevQuestion, noulVerdict } from './typesafe';
  * Bump when the vocabulary, candidate selection or floor changes: the
  * tag-classify backfill keys its cursor on this, so the catalog is re-walked.
  */
-export const TAG_CLASSIFIER_VERSION = 'v3';
+export const TAG_CLASSIFIER_VERSION = 'v4';
 
 /**
  * Jev's probability that the tag applies; at or above this it's applied.
@@ -28,6 +28,13 @@ export const TAG_CLASSIFIER_VERSION = 'v3';
  * spread 0.3-0.7.
  */
 const TAG_CONFIDENCE_FLOOR = 0.7;
+/**
+ * Lower floor when the tag's keyword is in the listing's own name: a server
+ * named after the thing is very likely about it, and Jev was underconfident
+ * there (official Cloudflare server 0.67 for Cloudflare, "mcp-server-browser"
+ * 0.43 for browser automation). Jev still has to not contradict it.
+ */
+const NAMED_TAG_CONFIDENCE_FLOOR = 0.4;
 /** Most candidate tags sent to Jev for one listing. */
 const MAX_CANDIDATES = 20;
 /** Most non-runtime tags kept per listing (most probable first). */
@@ -87,6 +94,16 @@ export function candidateTags(listing: ListingForTagging): TagDefinition[] {
   return [...primary, ...toolOnly].slice(0, MAX_CANDIDATES);
 }
 
+/** Last path segment of a repo URL ("mcp-grafana"), or ''. */
+function repoSlug(url: string | null | undefined): string {
+  if (!url) return '';
+  try {
+    return new URL(url).pathname.split('/').filter(Boolean).pop() ?? '';
+  } catch {
+    return '';
+  }
+}
+
 function tagQuestion(tag: TagDefinition): JevQuestion {
   return {
     type: 'noul',
@@ -136,9 +153,20 @@ export async function classifyTagsDetailed(
     if (typeof p === 'number')
       probabilities[tag.slug] = Math.round(p * 100) / 100;
   }
+  const nameText = [listing.name, repoSlug(listing.url)]
+    .filter(Boolean)
+    .join(' ')
+    .replace(/[_-]+/g, ' ');
   const picked = candidates
     .map((tag) => ({ tag, answer: res.answers[tag.slug] }))
-    .filter(({ answer }) => noulVerdict(answer, TAG_CONFIDENCE_FLOOR))
+    .filter(({ tag, answer }) =>
+      noulVerdict(
+        answer,
+        tag.hint?.test(nameText)
+          ? NAMED_TAG_CONFIDENCE_FLOOR
+          : TAG_CONFIDENCE_FLOOR,
+      ),
+    )
     .sort((a, b) => (b.answer?.noul ?? 0) - (a.answer?.noul ?? 0))
     .slice(0, MAX_TAGS)
     .map(({ tag }) => tag.slug);
