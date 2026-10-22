@@ -20,7 +20,6 @@ import {
   isAuthType,
   isPricingModel,
   normalizeCompatibleClients,
-  normalizeTags,
   type PricingModel,
 } from './serverEnums';
 
@@ -59,8 +58,6 @@ type AiListingContent = {
   authType?: AuthType | null;
   /** Short license name (e.g. 'MIT', 'Apache-2.0') or null. */
   license?: string | null;
-  /** 2-5 relevant keyword tags. */
-  tags?: string[];
   /** Compatible MCP client slugs (e.g. ['claude-desktop', 'cursor']). */
   compatibleClients?: string[];
   /**
@@ -518,7 +515,6 @@ function buildSystemPrompt(
     `"faq" (3-5 objects with "q" and "a" keys. The FIRST item MUST be q: "What is the ${name} MCP server?" with a self-contained 40-60 word answer that opens "${name} is an MCP server that..." and names what it connects to and its main tools — answer engines quote this verbatim, so it must make sense with no surrounding context. Frame the remaining questions exactly how a developer would type them into Google to solve a problem with this tool, e.g. "How do I install the ${name} MCP server?" or "Does ${name} work with Cursor?". Every answer must lead with the direct answer in its first sentence, then add detail. Answers must be grounded strictly in the provided material.), ` +
     '"envVars" (0-8 UPPER_SNAKE_CASE environment variable names required to run this server), ' +
     '"license" (short license name like "MIT", "Apache-2.0", or null), ' +
-    '"tags" (2-5 short lowercase keyword slugs like ["github", "developer-tools", "issues"]), ' +
     `"compatibleClients" (array of slugs from ${JSON.stringify(COMPATIBLE_CLIENT_SLUGS)}: include every client the README names, plus — for a standard stdio or streamable-HTTP server with no client-specific requirements — the general-purpose clients that support any MCP server)`;
 
   if (!omitStructured) {
@@ -605,7 +601,6 @@ export async function generateListingContent(
     pricingModel?: unknown;
     authType?: unknown;
     license?: unknown;
-    tags?: unknown;
     compatibleClients?: unknown;
     install?: unknown;
     category?: unknown;
@@ -663,7 +658,6 @@ export async function generateListingContent(
       : null;
   const license =
     rawLicense && /^[\w.-]+$/.test(rawLicense) ? rawLicense : null;
-  const tags = normalizeTags(result.data.tags);
   const compatibleClients = normalizeCompatibleClients(
     result.data.compatibleClients,
   );
@@ -694,7 +688,6 @@ export async function generateListingContent(
       pricingModel,
       authType,
       license,
-      tags,
       compatibleClients,
       install,
       category,

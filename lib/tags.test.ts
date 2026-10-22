@@ -72,6 +72,7 @@ const ROWS: Row[] = [
     description: 'Query postgres.',
     category: DEV,
     githubStars: 1000,
+    tags: ['postgres'],
   },
   {
     id: 'q-pg',
@@ -79,13 +80,15 @@ const ROWS: Row[] = [
     description: 'Embedded postgresql.',
     category: DEV,
     upvotes: 3,
-    tags: ['Slack Bot'],
+    // 'Slack Bot' is not in the vocabulary: ignored, not a tag of its own.
+    tags: ['postgres', 'Slack Bot'],
   },
   {
     id: 'r-pg',
     name: 'Pg Tools',
     description: 'More postgres.',
     category: DEV,
+    tags: ['postgres'],
   },
   {
     id: 's-removed',
@@ -94,6 +97,7 @@ const ROWS: Row[] = [
     category: DEV,
     status: 'removed',
     upvotes: 1000,
+    tags: ['postgres', 'weather'],
   },
   // Pairs share a score (upvotes = n/2), so ties must keep catalog order.
   ...Array.from({ length: BULK }, (_, n) => ({
@@ -102,6 +106,7 @@ const ROWS: Row[] = [
     description: 'Weather forecast service.',
     category: COMMS,
     upvotes: Math.floor(n / 2),
+    tags: ['weather'],
   })),
 ];
 
@@ -130,14 +135,8 @@ beforeAll(() => {
 });
 
 describe('getAllTagsWithCounts', () => {
-  it('counts every servable listing per tag, most-used first then by label', async () => {
+  it('counts every servable listing per vocabulary tag, most-used first then by label', async () => {
     expect(await getAllTagsWithCounts()).toEqual([
-      {
-        slug: 'communication',
-        label: 'Communication',
-        count: BULK,
-        indexable: false,
-      },
       {
         slug: 'weather',
         label: 'Weather',
@@ -145,21 +144,9 @@ describe('getAllTagsWithCounts', () => {
         indexable: false,
       },
       {
-        slug: 'developer-tools',
-        label: 'Developer Tools',
-        count: 3,
-        indexable: false,
-      },
-      {
         slug: 'postgres',
         label: 'PostgreSQL',
         count: 3,
-        indexable: false,
-      },
-      {
-        slug: 'slack-bot',
-        label: 'Slack Bot',
-        count: 1,
         indexable: false,
       },
     ]);

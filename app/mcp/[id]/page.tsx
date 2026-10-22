@@ -48,6 +48,7 @@ import {
   PRICING_MODEL_LABELS,
   type PricingModel,
 } from '@/lib/serverEnums';
+import { vocabularyTags } from '@/lib/tagVocabulary';
 import { SponsorAdUnit } from '../../../components/ads/SponsorAdUnit';
 import { CollapsibleText } from '../../../components/CollapsibleText';
 import { ImpressionBeacon } from '../../../components/ImpressionTracker';
@@ -716,6 +717,8 @@ export default async function MCPDetail({
       (server.aiFeatures?.length ?? 0) > 0,
   );
   const hasRelated = Boolean(relatedServers && relatedServers.length > 0);
+  // Only fixed-vocabulary tags (lib/tagVocabulary.ts); each links to its hub.
+  const listingTags = vocabularyTags(server.tags);
   const sections: ListingSection[] = [
     { id: 'install', label: 'Install' },
     { id: 'overview', label: 'Overview' },
@@ -1440,11 +1443,11 @@ export default async function MCPDetail({
                   </h2>
                 </header>
 
-                {server.tags && server.tags.length > 0 && (
+                {listingTags.length > 0 && (
                   <ul className="lst-tags" aria-label="Tags">
-                    {server.tags.map((tag) => (
-                      <li key={tag} className="lst-tag">
-                        {tag}
+                    {listingTags.map((tag) => (
+                      <li key={tag.slug} className="lst-tag">
+                        <Link href={`/tags/${tag.slug}`}>{tag.label}</Link>
                       </li>
                     ))}
                   </ul>

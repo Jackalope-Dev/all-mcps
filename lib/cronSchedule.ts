@@ -88,6 +88,10 @@ export const FAST_JOBS: CronJob[] = [
   // — only npm/PyPI lookups, local rules and Jev — so it is cheap to run often.
   // Bounded per tick (see the route): ~27k listings reassessed about every 17h.
   { path: '/api/cron/stale-sweep', secretVar: 'CRON_SECRET' },
+  // Re-tags the existing catalog from the fixed tag vocabulary with Jev
+  // (lib/tagClassifier.ts), indexable listings first. Jev only, no OpenAI,
+  // so it rides the fast tick; no-ops once the catalog is tagged.
+  { path: '/api/cron/tag-classify', secretVar: 'CRON_SECRET' },
   // Catalog ingest (app/api/cron/ingest): new servers from public sources,
   // staged as pending. On the :30 fast ticks rather than the 4h list so its
   // bounded few minutes never sit in front of blog-pipeline's long budget.

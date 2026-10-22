@@ -8,6 +8,7 @@ import {
   type LightServer,
   type Server,
 } from './servers';
+import { tagBySlug, vocabularyTags } from './tagVocabulary';
 
 function slugifyTag(str: string): string {
   return str
@@ -16,138 +17,21 @@ function slugifyTag(str: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-/** Known technology and topic keywords to extract from server metadata */
-const TECH_KEYWORDS: { slug: string; label: string; pattern: RegExp }[] = [
-  { slug: 'github', label: 'GitHub', pattern: /\b(github|git)\b/i },
-  {
-    slug: 'postgres',
-    label: 'PostgreSQL',
-    pattern: /\b(postgres|postgresql|pg)\b/i,
-  },
-  { slug: 'sqlite', label: 'SQLite', pattern: /\b(sqlite|sqlite3)\b/i },
-  { slug: 'mysql', label: 'MySQL', pattern: /\b(mysql|mariadb)\b/i },
-  { slug: 'redis', label: 'Redis', pattern: /\b(redis|valkey)\b/i },
-  { slug: 'mongodb', label: 'MongoDB', pattern: /\b(mongodb|mongo)\b/i },
-  { slug: 'supabase', label: 'Supabase', pattern: /\b(supabase)\b/i },
-  { slug: 'slack', label: 'Slack', pattern: /\b(slack)\b/i },
-  { slug: 'discord', label: 'Discord', pattern: /\b(discord)\b/i },
-  { slug: 'notion', label: 'Notion', pattern: /\b(notion)\b/i },
-  { slug: 'figma', label: 'Figma', pattern: /\b(figma)\b/i },
-  { slug: 'linear', label: 'Linear', pattern: /\b(linear)\b/i },
-  { slug: 'jira', label: 'Jira', pattern: /\b(jira|atlassian)\b/i },
-  {
-    slug: 'docker',
-    label: 'Docker',
-    pattern: /\b(docker|container|containers)\b/i,
-  },
-  { slug: 'kubernetes', label: 'Kubernetes', pattern: /\b(k8s|kubernetes)\b/i },
-  { slug: 'python', label: 'Python', pattern: /\b(python|pip|pipx|pytest)\b/i },
-  {
-    slug: 'typescript',
-    label: 'TypeScript',
-    pattern: /\b(typescript|ts|node|npm|npx)\b/i,
-  },
-  {
-    slug: 'browser-automation',
-    label: 'Browser Automation',
-    pattern: /\b(browser|puppeteer|playwright|selenium)\b/i,
-  },
-  {
-    slug: 'vector-db',
-    label: 'Vector DB',
-    pattern: /\b(vector|pinecone|chroma|qdrant|weaviate|milvus)\b/i,
-  },
-  { slug: 'seo', label: 'SEO', pattern: /\b(seo|sitemap|robots\.txt)\b/i },
-  {
-    slug: 'email',
-    label: 'Email',
-    pattern: /\b(email|gmail|sendgrid|resend|imap|smtp)\b/i,
-  },
-  {
-    slug: 'audio-speech',
-    label: 'Audio & Speech',
-    pattern: /\b(audio|speech|tts|whisper|voice)\b/i,
-  },
-  { slug: 'video', label: 'Video', pattern: /\b(video|ffmpeg|youtube)\b/i },
-  {
-    slug: 'image-processing',
-    label: 'Image Processing',
-    pattern: /\b(image|images|screenshot|canvas)\b/i,
-  },
-  {
-    slug: 'filesystem-storage',
-    label: 'Filesystem & Storage',
-    pattern: /\b(filesystem|files|storage|s3|drive)\b/i,
-  },
-  {
-    slug: 'weather',
-    label: 'Weather',
-    pattern: /\b(weather|forecast|meteo)\b/i,
-  },
-  {
-    slug: 'crypto-web3',
-    label: 'Crypto & Web3',
-    pattern: /\b(crypto|blockchain|ethereum|solana|bitcoin|web3)\b/i,
-  },
-  {
-    slug: 'calendar',
-    label: 'Calendar',
-    pattern: /\b(calendar|gcal|scheduling)\b/i,
-  },
-  { slug: 'obsidian', label: 'Obsidian', pattern: /\b(obsidian)\b/i },
-  {
-    slug: 'auth',
-    label: 'Auth & OAuth',
-    pattern: /\b(auth|oauth|jwt|authentication)\b/i,
-  },
-];
-
-/** Extract all matching tag objects ({ slug, label }) for a server */
+/**
+ * A listing's tags: the vocabulary slugs in its stored `tags` column
+ * (lib/tagVocabulary.ts, written by lib/tagClassifier.ts). Anything else in
+ * the column — free-form model tags and submitter tags from before the fixed
+ * vocabulary — is ignored. Tags used to also come from AI use cases, the
+ * listing category and a loose keyword regex, which produced ~24k distinct
+ * one-listing tags; see lib/tagVocabulary.ts.
+ */
 function extractTagsForServer(
   server: Server,
 ): { slug: string; label: string }[] {
-  const map = new Map<string, string>();
-
-  // 1. Explicit server tags
-  const tags = Array.isArray(server.tags) ? server.tags : [];
-  for (const raw of tags) {
-    if (typeof raw !== 'string' || !raw.trim()) continue;
-    const label = raw.trim();
-    const slug = slugifyTag(label);
-    if (slug && !map.has(slug)) {
-      map.set(slug, label);
-    }
-  }
-
-  // 2. Category tag
-  if (server.category) {
-    const cleanCat = parseCategoryLabel(server.category).label;
-    const catSlug = slugifyTag(cleanCat);
-    if (catSlug && !map.has(catSlug)) {
-      map.set(catSlug, cleanCat);
-    }
-  }
-
-  // 3. AI Use Cases tags
-  const useCases = Array.isArray(server.aiUseCases) ? server.aiUseCases : [];
-  for (const uc of useCases) {
-    if (typeof uc !== 'string' || !uc.trim()) continue;
-    const label = uc.trim();
-    const slug = slugifyTag(label);
-    if (slug && slug.length >= 3 && slug.length <= 30 && !map.has(slug)) {
-      map.set(slug, label);
-    }
-  }
-
-  // 4. Technology & Keyword extraction from Name / Description
-  const textToScan = `${server.name || ''} ${server.description || ''} ${server.url || ''}`;
-  for (const kw of TECH_KEYWORDS) {
-    if (!map.has(kw.slug) && kw.pattern.test(textToScan)) {
-      map.set(kw.slug, kw.label);
-    }
-  }
-
-  return Array.from(map.entries()).map(([slug, label]) => ({ slug, label }));
+  return vocabularyTags(server.tags).map((t) => ({
+    slug: t.slug,
+    label: t.label,
+  }));
 }
 
 export type TagWithCount = {
@@ -181,15 +65,16 @@ type TagIndex = {
  * Tag pages are indexable only on listings we index ourselves
  * (lib/listingIndexability.ts), like category and /best hubs
  * (lib/hubIndexability.ts). Counting every servable listing let ~895 tag
- * pages into the sitemap (Oct 2026), most of them ranking listings we noindex:
- * regex- and AI-use-case-extracted taxonomy with a templated title and one
- * sentence of copy, and none earned a Search Console impression. The bar is
- * higher than for hubs because tags are machine-extracted, not curated.
+ * pages into the sitemap (Oct 2026), most of them ranking listings we noindex,
+ * and none earned a Search Console impression. Tags now come from a fixed
+ * vocabulary and each one is confirmed per listing by Jev
+ * (lib/tagClassifier.ts), so the bar sits a little above the hubs' 5.
  */
-const MIN_INDEXABLE_LISTINGS_PER_TAG = 15;
+const MIN_INDEXABLE_LISTINGS_PER_TAG = 8;
 /**
- * Near-universal tags ("github" matches every repo URL, "mcp" most names)
- * say nothing about their listings.
+ * Near-universal tags say nothing about their listings. Runtime tags
+ * (Python, Node.js…) are exempt: "Python MCP servers" is a real search even
+ * when a large share of listings qualify.
  */
 const MAX_TAG_SHARE_OF_INDEXABLE = 0.2;
 /** Tags taken from a listing's category duplicate /categories/[slug]. */
@@ -209,7 +94,8 @@ function isTagIndexable(
   }
   return (
     tag.indexable >= MIN_INDEXABLE_LISTINGS_PER_TAG &&
-    tag.indexable <= indexableListings * MAX_TAG_SHARE_OF_INDEXABLE
+    (tagBySlug(slug)?.group === 'runtime' ||
+      tag.indexable <= indexableListings * MAX_TAG_SHARE_OF_INDEXABLE)
   );
 }
 
@@ -227,7 +113,7 @@ const TAG_INDEX_IDS_CAP = 60;
  * those walks and D1 was reset for exceeding its CPU limit. One walk now
  * builds this index, kept stale-while-revalidate per colo and in R2.
  */
-const TAG_INDEX_CACHE_KEY = 'tag-index/v2';
+const TAG_INDEX_CACHE_KEY = 'tag-index/v3';
 const TAG_INDEX_CACHE = {
   freshMs: 60 * 60 * 1000,
   maxAgeSeconds: 24 * 60 * 60,

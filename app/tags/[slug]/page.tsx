@@ -7,6 +7,7 @@ import { ImpressionBeacon } from '@/components/ImpressionTracker';
 import { PageShell } from '@/components/PageShell';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { getServersForTag } from '@/lib/tags';
+import { tagBySlug } from '@/lib/tagVocabulary';
 
 // getServersForTag reads the shared tag index (lib/tags.ts: one catalog walk,
 // cached per colo and in R2) and loads only the rows shown. ISR + the R2-backed
@@ -27,7 +28,10 @@ export async function generateMetadata({
   }
 
   const title = `${rawTag} MCP Servers & Tools`;
-  const description = `Browse ${total} Model Context Protocol (MCP) servers tagged with ${rawTag}. Find and install AI tools for ${rawTag}.`;
+  const definition = tagBySlug(slug)?.definition;
+  const description = definition
+    ? `${total} MCP servers tagged ${rawTag}. ${definition} Compare and install them in Claude, Cursor and more.`
+    : `Browse ${total} Model Context Protocol (MCP) servers tagged with ${rawTag}. Find and install AI tools for ${rawTag}.`;
   const url = `https://allmcps.com/tags/${slug}`;
 
   // Same rule as the core sitemap (lib/tags.ts isTagIndexable), so we never
@@ -62,6 +66,7 @@ export default async function TagDetailPage({
   const { slug } = await params;
   // `shown` is already the top rows by engagementScore, best first.
   const { servers: shown, total, rawTag } = await getServersForTag(slug);
+  const definition = tagBySlug(slug)?.definition;
 
   if (total === 0) {
     notFound();
@@ -148,6 +153,12 @@ export default async function TagDetailPage({
             &ldquo;{rawTag}&rdquo;, ranked by usage. Connect any of them to
             Claude Desktop, Cursor or Windsurf in one step.
           </p>
+          {definition && (
+            <p className="dir-hero-lead">
+              <strong>What qualifies:</strong> {definition} Each server was
+              checked against this, not tagged by keyword.
+            </p>
+          )}
           <div className="dir-hero-actions">
             <Link
               href={`/browse?q=${encodeURIComponent(rawTag)}`}

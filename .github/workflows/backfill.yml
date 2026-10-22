@@ -31,8 +31,9 @@ on:
           - enrich
           - ai-content
           - ai-faq
+          - tag-classify
       max_calls:
-        description: 'Safety cap on endpoint calls. Blank uses the per-job default (health 200, enrich 600, ai-content 400, ai-faq 400).'
+        description: 'Safety cap on endpoint calls. Blank uses the per-job default (health 200, enrich 600, ai-content 400, ai-faq 400, tag-classify 400).'
         required: false
         default: ''
       parallel_calls:
@@ -66,6 +67,7 @@ jobs:
             enrich)     default_max=600 ;;
             ai-content) default_max=400 ;;
             ai-faq)     default_max=400 ;;
+            tag-classify) default_max=400 ;;
             *) echo "::error::Unknown job '$JOB'."; exit 1 ;;
           esac
 
