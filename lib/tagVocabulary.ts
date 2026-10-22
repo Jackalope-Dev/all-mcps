@@ -138,6 +138,12 @@ export const TAG_VOCABULARY: TagDefinition[] = [
     'Grafana, Prometheus or Loki',
   ),
   service(
+    'search-engine',
+    'Search engines',
+    /\belastic(search)?\b|\bopensearch\b|\bmeilisearch\b|\btypesense\b|\balgolia\b|\bsolr\b|\bkibana\b/i,
+    'a search engine you run or host such as Elasticsearch, OpenSearch, Meilisearch, Typesense, Algolia or Solr',
+  ),
+  service(
     'openai',
     'OpenAI',
     /\bopenai\b|\bgpt\b|\bchatgpt\b|\bdall-?e\b/i,
@@ -357,6 +363,14 @@ export const TAG_VOCABULARY: TagDefinition[] = [
       'Triggers or builds automations in a workflow tool such as n8n, Zapier or Make.',
   },
   {
+    slug: 'data-pipelines',
+    label: 'Data pipelines',
+    group: 'capability',
+    hint: /\bairflow\b|\bdbt\b|\bdagster\b|\bprefect\b|\bairbyte\b|\bfivetran\b|\betl\b|\belt\b|\bpipelines?\b|\bkafka\b|\bspark\b/i,
+    definition:
+      'Builds, runs or inspects data pipelines or transformations. Any one tool counts: Airflow, dbt, Dagster, Prefect, Airbyte, Kafka or Spark.',
+  },
+  {
     slug: 'translation',
     label: 'Translation',
     group: 'capability',
@@ -432,6 +446,14 @@ export const TAG_VOCABULARY: TagDefinition[] = [
     hint: /\banalytics\b|\bga4\b|\bposthog\b|\bmixpanel\b|\bamplitude\b|\bplausible\b|\bmatomo\b/i,
     definition:
       'Queries website or product analytics (Google Analytics, PostHog, Mixpanel).',
+  },
+  {
+    slug: 'bi-dashboards',
+    label: 'BI & dashboards',
+    group: 'domain',
+    hint: /\bmetabase\b|\bsuperset\b|\blooker\b|\btableau\b|\bpower ?bi\b|\bredash\b|\bdashboards?\b|\bbusiness intelligence\b|\bcharts?\b/i,
+    definition:
+      'Works with business-intelligence tools or builds data dashboards and charts. Any one counts: Metabase, Superset, Looker, Tableau, Power BI or Redash.',
   },
   {
     slug: 'seo',

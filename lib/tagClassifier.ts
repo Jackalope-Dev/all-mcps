@@ -20,7 +20,7 @@ import { askJev, type JevQuestion, noulVerdict } from './typesafe';
  * Bump when the vocabulary, candidate selection or floor changes: the
  * tag-classify backfill keys its cursor on this, so the catalog is re-walked.
  */
-export const TAG_CLASSIFIER_VERSION = 'v4';
+export const TAG_CLASSIFIER_VERSION = 'v5';
 
 /**
  * Jev's probability that the tag applies; at or above this it's applied.
