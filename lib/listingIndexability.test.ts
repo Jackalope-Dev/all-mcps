@@ -10,49 +10,49 @@ const base = {
 describe('isListingIndexable', () => {
   it('requires our own writeup', () => {
     expect(
-      isListingIndexable({ ...base, hasAiDoc: false, githubStars: 5000 }),
+      isListingIndexable({ ...base, hasAiDoc: false, githubStars: 20000 }),
     ).toBe(false);
   });
 
   it('needs traction AND proof it runs, not either alone', () => {
     expect(isListingIndexable(base)).toBe(false);
-    expect(isListingIndexable({ ...base, githubStars: 25 })).toBe(false);
-    expect(isListingIndexable({ ...base, npmDownloads: 100 })).toBe(false);
+    expect(isListingIndexable({ ...base, githubStars: 100 })).toBe(false);
+    expect(isListingIndexable({ ...base, npmDownloads: 1000 })).toBe(false);
     expect(isListingIndexable({ ...base, toolsSource: 'introspected' })).toBe(
       false,
     );
     expect(
       isListingIndexable({
         ...base,
-        githubStars: 25,
+        githubStars: 100,
         toolsSource: 'introspected',
       }),
     ).toBe(true);
     expect(
       isListingIndexable({
         ...base,
-        npmDownloads: 100,
+        npmDownloads: 1000,
         installNeedsConfig: new Date(),
       }),
     ).toBe(true);
     expect(
       isListingIndexable({
         ...base,
-        githubStars: 25,
+        githubStars: 100,
         remoteEndpointHealthy: 1,
       }),
     ).toBe(true);
   });
 
   it('indexes clearly popular servers without a verified run', () => {
-    expect(isListingIndexable({ ...base, githubStars: 249 })).toBe(false);
-    expect(isListingIndexable({ ...base, githubStars: 250 })).toBe(true);
-    expect(isListingIndexable({ ...base, npmDownloads: 5000 })).toBe(true);
+    expect(isListingIndexable({ ...base, githubStars: 999 })).toBe(false);
+    expect(isListingIndexable({ ...base, githubStars: 1000 })).toBe(true);
+    expect(isListingIndexable({ ...base, npmDownloads: 20000 })).toBe(true);
   });
 
   it('counts proof the server runs, not a README tool list', () => {
     expect(
-      isListingIndexable({ ...base, githubStars: 25, toolsSource: 'readme' }),
+      isListingIndexable({ ...base, githubStars: 100, toolsSource: 'readme' }),
     ).toBe(false);
   });
 
@@ -60,7 +60,7 @@ describe('isListingIndexable', () => {
     expect(
       isListingIndexable({
         ...base,
-        githubStars: 5000,
+        githubStars: 20000,
         status: 'pending',
       }),
     ).toBe(false);
@@ -68,7 +68,7 @@ describe('isListingIndexable', () => {
 
   it('noindexes listings the stale sweep has flagged', () => {
     expect(
-      isListingIndexable({ ...base, githubStars: 5000, staleFlagged: true }),
+      isListingIndexable({ ...base, githubStars: 20000, staleFlagged: true }),
     ).toBe(false);
   });
 });

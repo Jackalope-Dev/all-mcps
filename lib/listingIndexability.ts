@@ -17,6 +17,14 @@ import { servers } from '../db/schema';
  * its traction alone is strong enough that people clearly search for it
  * (~1.7k listings).
  *
+ * Oct 22 2026: Search Console showed the whole domain still demoted after the
+ * Aug + Sept 2026 spam updates — only 12 of ~330 hand-written core pages and
+ * ~620 listings indexed. With ~2.6k listings still offered, the site kept the
+ * shape of a scaled catalog, so the bar was raised again (25→100 stars /
+ * 100→1k downloads with a verified run; 250→1k stars / 5k→20k downloads on
+ * traction alone), leaving ~770 listings (estimated from a 10% sample of the
+ * listings sitemap). Lower it again once indexing recovers.
+ *
  * "Proof it runs" means we saw it work: a live tools/list (toolsSource
  * 'introspected'), a sandbox run that started and asked for keys
  * (installNeedsConfig), or a healthy remote endpoint. A tool list parsed from
@@ -27,11 +35,11 @@ import { servers } from '../db/schema';
  * crosses the traction bar, it becomes indexable and enters the sitemap with
  * no manual step.
  */
-const INDEXABLE_MIN_GITHUB_STARS = 25;
-const INDEXABLE_MIN_NPM_DOWNLOADS = 100;
+const INDEXABLE_MIN_GITHUB_STARS = 100;
+const INDEXABLE_MIN_NPM_DOWNLOADS = 1000;
 /** Traction high enough to index without a verified run. */
-const INDEXABLE_STRONG_GITHUB_STARS = 250;
-const INDEXABLE_STRONG_NPM_DOWNLOADS = 5000;
+const INDEXABLE_STRONG_GITHUB_STARS = 1000;
+const INDEXABLE_STRONG_NPM_DOWNLOADS = 20000;
 
 export type IndexabilityInput = {
   status?: string | null;

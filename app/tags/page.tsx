@@ -35,7 +35,11 @@ export const metadata: Metadata = {
 };
 
 export default async function TagsIndexPage() {
-  const sortedTags = await getAllTagsWithCounts();
+  const allTags = await getAllTagsWithCounts();
+  // Only link tag hubs we let search engines index. The full list (~24k tags,
+  // nearly all one- or two-listing stubs that noindex themselves) turned this
+  // page into a crawl sink pointing Googlebot at thin pages it then had to drop.
+  const sortedTags = allTags.filter((t) => t.indexable);
 
   // Compute metrics
   const totalTagsCount = sortedTags.length;
@@ -105,8 +109,9 @@ export default async function TagsIndexPage() {
       <header className="dir-page-head animate-in">
         <h1 className="text-page-title">MCP server tags</h1>
         <p className="text-lead">
-          {totalTagsCount} topics and integrations. Tags cut across categories —
-          use them to find every server that touches a technology.
+          {totalTagsCount} topics and integrations with enough maintained
+          servers to compare. Tags cut across categories — use them to find
+          every server that touches a technology.
         </p>
       </header>
 

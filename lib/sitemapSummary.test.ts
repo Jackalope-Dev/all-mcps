@@ -76,7 +76,7 @@ beforeAll(() => {
     'doc',
     1790000000,
     1700000000,
-    300,
+    1500,
     null,
   );
   // Writeup + traction + proof it runs: indexable, the other side of that pair.
@@ -87,7 +87,7 @@ beforeAll(() => {
     'doc',
     1780000000,
     1700000000,
-    30,
+    150,
     'introspected',
   );
   // No writeup: not indexable, but still dates its category hub.
@@ -130,7 +130,7 @@ describe('createSitemapSummarizer', () => {
       id: 'x',
       category: DEV,
       hasAiDoc: 1,
-      githubStars: 300,
+      githubStars: 1500,
       aiDocAt: '2026-09-01T00:00:00Z',
     };
     s.add([row]);

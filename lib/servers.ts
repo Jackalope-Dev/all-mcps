@@ -3091,6 +3091,10 @@ async function getRelatedRankingCandidates(
       .where(
         and(
           servableFilter(),
+          // Related links only point at listings we let search engines index,
+          // so crawl budget and link equity go to pages that can rank instead
+          // of the ~20k noindexed stubs.
+          indexableListingSql(),
           sameCategory
             ? eq(serversTable.category, current.category)
             : ne(serversTable.category, current.category),

@@ -76,7 +76,7 @@ beforeAll(() => {
         `https://example.com/${id}`,
         description,
         DEV,
-        indexable ? 300 : 0,
+        indexable ? 1500 : 0,
         indexable ? 'Our writeup.' : null,
       );
     }

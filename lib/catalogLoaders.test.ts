@@ -96,8 +96,8 @@ beforeAll(() => {
   );
   sqlite.exec(`CREATE TABLE servers (${cols.join(', ')})`);
   const insert = sqlite.prepare(
-    `INSERT INTO servers (id, name, url, description, category, status, tools, ai_overview, views, copies, upvotes, is_official)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0)`,
+    `INSERT INTO servers (id, name, url, description, category, status, tools, ai_overview, ai_doc, github_stars, views, copies, upvotes, is_official)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0)`,
   );
   for (const r of ROWS) {
     insert.run(
@@ -111,6 +111,10 @@ beforeAll(() => {
         { name: 'do_thing', description: 'Does it', inputSchema: { big: 1 } },
       ]),
       'A long generated overview.',
+      // Indexable (writeup + strong traction): related links only point at
+      // listings search engines may index.
+      'Our writeup.',
+      1500,
     );
   }
 });
