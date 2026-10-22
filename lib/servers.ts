@@ -26,6 +26,8 @@ import {
   parseFaqArray,
   parseStringArray,
   stripDocFiller,
+  stripFaqSourceReferences,
+  stripSourceReferences,
 } from './aiContent';
 import type { BestTopic } from './bestTopics';
 import { categoryFromSlug } from './categories';
@@ -122,6 +124,7 @@ function normalizeServer<
     aiEnvVars?: unknown;
     aiFaq?: unknown;
     aiDoc?: string | null;
+    aiOverview?: string | null;
     tags?: unknown;
     compatibleClients?: unknown;
     suggestedInstallArgs?: unknown;
@@ -134,8 +137,13 @@ function normalizeServer<
     aiUseCases: parseStringArray(s.aiUseCases),
     aiFeatures: parseStringArray(s.aiFeatures),
     aiEnvVars: parseStringArray(s.aiEnvVars),
-    aiFaq: parseFaqArray(s.aiFaq),
-    ...(s.aiDoc !== undefined ? { aiDoc: stripDocFiller(s.aiDoc) } : {}),
+    aiFaq: stripFaqSourceReferences(parseFaqArray(s.aiFaq)),
+    ...(s.aiDoc !== undefined
+      ? { aiDoc: stripSourceReferences(stripDocFiller(s.aiDoc)) }
+      : {}),
+    ...(s.aiOverview !== undefined
+      ? { aiOverview: stripSourceReferences(s.aiOverview) }
+      : {}),
     // Submitter-controlled JSON-array columns → typed arrays.
     tags: parseStringArray(s.tags),
     compatibleClients: parseStringArray(s.compatibleClients),

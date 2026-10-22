@@ -354,6 +354,82 @@ export function stripDocFiller<T extends string | null | undefined>(doc: T): T {
 }
 
 /**
+ * Sentences where the writer talks about its own source material instead of the
+ * server ("the supplied material does not specify…", "the README states…", "the
+ * quick-start excerpt does not provide…"). The prompt told the model to stay
+ * within "the provided material", and it echoed that framing into thousands of
+ * stored writeups — an unmistakable unedited-AI tell, which is exactly what the
+ * Aug/Sept 2026 spam updates demoted. Such sentences carry no information for a
+ * reader, so they're dropped on read (stored rows) and on write (new rows).
+ */
+const SOURCE_REFERENCE_RE = new RegExp(
+  [
+    String.raw`\b(?:supplied|provided)\s+(?:material|materials|information|documentation|docs|excerpt|text|content|context|readme|tool\s+(?:list|descriptions?)|description|details|listing)\b`,
+    String.raw`\b(?:available|source)\s+(?:material|materials|excerpt)\b`,
+    String.raw`\b(?:quick-?start|readme|setup|install(?:ation)?)\s+excerpt\b`,
+    String.raw`\bthe\s+excerpt\b`,
+    String.raw`\b(?:the|its|this)\s+readme\s+(?:also\s+)?(?:states?|says|notes|mentions|indicates|specifies|describes|documents|lists|shows|explains|claims|suggests|does\s+not|doesn't|did\s+not|is\s+silent|makes\s+no)\b`,
+    String.raw`\bnot\s+(?:documented|described|specified|stated|mentioned|covered|detailed|provided)\s+(?:in|by)\s+the\s+(?:readme|material|documentation|docs|excerpt|source)\b`,
+    String.raw`\b(?:based\s+on|according\s+to|per)\s+the\s+(?:readme|material|provided|supplied|available|excerpt)\b`,
+  ].join('|'),
+  'i',
+);
+
+function splitSentences(line: string): string[] {
+  return line.split(/(?<=[.!?])\s+(?=[A-Z0-9"'`(*])/);
+}
+
+function stripFromLine(line: string): string {
+  const listMatch = line.match(/^(\s*(?:[-*+]|\d+\.)\s+)(.*)$/);
+  const prefix = listMatch ? listMatch[1] : '';
+  const body = listMatch ? listMatch[2] : line;
+  const kept = splitSentences(body).filter((s) => !SOURCE_REFERENCE_RE.test(s));
+  if (kept.length === 0) return '';
+  return `${prefix}${kept.join(' ')}`;
+}
+
+/** Drop sentences that talk about the source material rather than the server. */
+export function stripSourceReferences<T extends string | null | undefined>(
+  text: T,
+): T {
+  if (typeof text !== 'string' || !SOURCE_REFERENCE_RE.test(text)) return text;
+  let inFence = false;
+  const lines = text.split('\n').map((line) => {
+    if (/^\s*```/.test(line)) {
+      inFence = !inFence;
+      return line;
+    }
+    if (inFence || /^#{1,6}\s/.test(line) || !line.trim()) return line;
+    const out = stripFromLine(line);
+    return out === '' ? null : out;
+  });
+  const cleaned = lines.filter((l): l is string => l !== null);
+  // Drop headings whose section is now empty (next non-blank line is another
+  // heading, or end of doc).
+  const result: string[] = [];
+  for (let i = 0; i < cleaned.length; i++) {
+    const line = cleaned[i];
+    if (/^#{1,6}\s/.test(line)) {
+      let j = i + 1;
+      while (j < cleaned.length && !cleaned[j].trim()) j++;
+      if (j >= cleaned.length || /^#{1,6}\s/.test(cleaned[j])) continue;
+    }
+    result.push(line);
+  }
+  return result
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim() as T;
+}
+
+/** stripSourceReferences over FAQ answers; drops pairs left with no answer. */
+export function stripFaqSourceReferences(faq: AiFaqItem[]): AiFaqItem[] {
+  return faq
+    .map((item) => ({ q: item.q, a: stripSourceReferences(item.a) }))
+    .filter((item) => item.a.trim().length > 0);
+}
+
+/**
  * Validates the model's restructured writeup. Returns '' (caller treats as
  * "none" and falls back to the short overview) on anything that isn't a
  * genuinely original, structured doc: too short, too few of our headings, or a
@@ -423,12 +499,12 @@ function buildSystemPrompt(
     '(3) Write for a developer deciding whether this server fits their use case. ' +
     '(4) Do NOT open "summary" or "overview" with a generic subject phrase like "This MCP server...", "This server...", "This integration...", "This project...", or "A Model Context Protocol server that...". Lead with the concrete capability or the product/system it works with (e.g. "Queries and mutates a Postgres database over MCP..." or "Exposes the Linear API as agent tools..."). Vary sentence structure across the overview. ' +
     '(5) "doc" must be an ORIGINAL, RESTRUCTURED writeup in your own words — never reuse sentences verbatim from the README. ' +
-    `\n\nFocus keyphrase: "${focusKeyphrase}".\n` +
-    `(6) You MUST use this exact focus keyphrase naturally in the first sentence of the "overview".\n` +
-    `(7) You MUST use the focus keyphrase 3-5 times across the "doc" writeup, and you MUST include the focus keyphrase in at least one of the level-2 headings in the "doc".\n`;
+    '(6) Write as a reviewer describing the server itself. NEVER mention or allude to your inputs: no "the README", "the supplied/provided material", "the excerpt", "the documentation provided", "is not documented", "does not specify". If something is unknown, leave it out silently — do not tell the reader it is missing. ' +
+    '(7) Each writeup must read differently from other listings: skip sections that would be generic, vary paragraph length and sentence openings, and put the most distinctive detail about this server first. ' +
+    `\n\nName this server "${focusKeyphrase}" (or just "${name}") naturally in the first sentence of the "overview". Use the name where a human writer would, not to hit a count; do not force it into headings.\n`;
 
   if (isCategoryConfirmed && category) {
-    prompt += `(8) This listing has been confirmed to belong to the "${category}" category. You MUST use this exact category name naturally in the "doc" writeup to build semantic relevance.\n`;
+    prompt += `(8) This listing has been confirmed to belong to the "${category}" category; mention the category only if it helps the reader.\n`;
   }
 
   prompt +=
@@ -554,12 +630,25 @@ export async function generateListingContent(
       : { status: 'skip', reason: result.reason };
   }
 
-  const summary = stripBannedOpener(clampSentence(result.data.summary, 150));
-  const overview = stripBannedOpener(clampSentence(result.data.overview, 900));
-  const doc = clampDoc(result.data.doc, input.readme);
-  const useCases = clampList(result.data.useCases, 5, 120);
-  const features = clampList(result.data.features, 6, 100);
-  const faq = clampFaq(result.data.faq, 5, 150, 400);
+  const summary = stripSourceReferences(
+    stripBannedOpener(clampSentence(result.data.summary, 150)),
+  );
+  const overview = stripSourceReferences(
+    stripBannedOpener(clampSentence(result.data.overview, 900)),
+  );
+  const doc = clampDoc(
+    stripSourceReferences(
+      typeof result.data.doc === 'string' ? result.data.doc : '',
+    ),
+    input.readme,
+  );
+  const useCases = clampList(result.data.useCases, 5, 120).filter(
+    (u) => !SOURCE_REFERENCE_RE.test(u),
+  );
+  const features = clampList(result.data.features, 6, 100).filter(
+    (f) => !SOURCE_REFERENCE_RE.test(f),
+  );
+  const faq = stripFaqSourceReferences(clampFaq(result.data.faq, 5, 150, 400));
   const envVars = clampEnvVars(result.data.envVars, 8);
 
   const pricingModel = isPricingModel(result.data.pricingModel)
@@ -627,7 +716,7 @@ export async function generateListingFaq(
     messages: [
       {
         role: 'system',
-        content: `Write FAQ pairs for an MCP server listing. Return ONLY JSON: {"faq":[{"q":"...","a":"..."}]} with 3-5 grounded Q&A pairs. The first pair MUST be q: "What is the ${input.name} MCP server?" with a self-contained 40-60 word answer opening "${input.name} is an MCP server that...". Other questions should match how a developer would search. Every answer leads with the direct answer in its first sentence. Do not invent facts.`,
+        content: `Write FAQ pairs for an MCP server listing. Return ONLY JSON: {"faq":[{"q":"...","a":"..."}]} with 3-5 grounded Q&A pairs. The first pair MUST be q: "What is the ${input.name} MCP server?" with a self-contained 40-60 word answer opening "${input.name} is an MCP server that...". Other questions should match how a developer would search. Every answer leads with the direct answer in its first sentence. Do not invent facts. Never mention your inputs ("the README", "the provided material", "not documented") — if something is unknown, skip that question.`,
       },
       {
         role: 'user',
@@ -648,7 +737,7 @@ export async function generateListingFaq(
       ? { status: 'budget', reason: result.reason }
       : { status: 'skip', reason: result.reason };
   }
-  const faq = clampFaq(result.data.faq, 5, 150, 400);
+  const faq = stripFaqSourceReferences(clampFaq(result.data.faq, 5, 150, 400));
   if (faq.length === 0) return { status: 'skip', reason: 'empty' };
   return {
     status: 'ok',
