@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { serializeJsonLd } from '@/lib/jsonLd';
+import { SITE_AUTHOR } from '@/lib/siteAuthor';
 import { SponsorAdUnit } from '../../../components/ads/SponsorAdUnit';
 import { ArticleLayout } from '../../../components/content/ArticleLayout';
 import { blogTagClass } from '../../../components/content/blogTags';
@@ -59,7 +60,7 @@ export async function generateMetadata({
       type: 'article',
       publishedTime: `${post.date}T12:00:00.000Z`,
       modifiedTime: `${post.date}T12:00:00.000Z`,
-      authors: ['AllMCPs'],
+      authors: [SITE_AUTHOR.name],
       tags: post.tags,
     },
     twitter: {
@@ -111,9 +112,10 @@ export default async function BlogPostPage({
         timeRequired: `PT${post.readingTime}M`,
         isAccessibleForFree: true,
         author: {
-          '@type': 'Organization',
-          name: 'AllMCPs',
-          url: 'https://allmcps.com',
+          '@type': 'Person',
+          name: SITE_AUTHOR.name,
+          jobTitle: SITE_AUTHOR.jobTitle,
+          url: SITE_AUTHOR.url,
         },
         publisher: {
           '@type': 'Organization',

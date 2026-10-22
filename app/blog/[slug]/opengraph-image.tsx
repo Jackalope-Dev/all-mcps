@@ -1,10 +1,18 @@
 import { ImageResponse } from 'next/og';
-import { getPostBySlug } from '../../../lib/blog';
+import { getAllPosts, getPostBySlug } from '../../../lib/blog';
 import { truncateDescription, truncateTitle } from '../../../lib/ogHelpers';
 
 export const alt = 'AllMCPs Blog';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
+
+// Render every post's card at build. Left dynamic, each crawler hit re-ran
+// Satori/resvg (~5.5s on the Worker), long enough for SEO auditors and social
+// scrapers to time out ("social preview image does not load").
+export const dynamicParams = false;
+export async function generateStaticParams() {
+  return getAllPosts().map((post) => ({ slug: post.slug }));
+}
 
 export default async function Image({
   params,

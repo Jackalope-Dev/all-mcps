@@ -131,6 +131,16 @@
   color: var(--text-secondary);
 }
 
+.content-byline a {
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.content-byline a:hover {
+  text-decoration: underline;
+}
+
 .content-meta .content-tags {
   display: flex;
   flex-wrap: wrap;

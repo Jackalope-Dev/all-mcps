@@ -2,6 +2,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import type React from 'react';
 import { TableOfContents, type TocItem } from '@/components/ui/TableOfContents';
+import { SITE_AUTHOR } from '@/lib/siteAuthor';
 import { STATIC_PAGE_LASTMOD } from '@/lib/sitemapHelpers';
 import {
   GUIDE_TOPICS,
@@ -105,25 +106,29 @@ export function ArticleLayout({
               {icon ? <div className="content-head-icon">{icon}</div> : null}
               <h1 className="content-title">{title}</h1>
               {lede ? <div className="content-lede">{lede}</div> : null}
-              {date || minutes || meta || topicLabel ? (
-                <div className="content-meta">
-                  {guide && topicLabel ? (
-                    <span
-                      className={`tint-pill hue-${guideTopicHue(guide.topic)}`}
-                    >
-                      {topicLabel}
-                    </span>
-                  ) : null}
-                  {date ? (
-                    <span>
-                      {updatedLabel}{' '}
-                      <time dateTime={date}>{formatArticleDate(date)}</time>
-                    </span>
-                  ) : null}
-                  {minutes ? <span>{minutes} min read</span> : null}
-                  {meta}
-                </div>
-              ) : null}
+              <div className="content-meta">
+                {guide && topicLabel ? (
+                  <span
+                    className={`tint-pill hue-${guideTopicHue(guide.topic)}`}
+                  >
+                    {topicLabel}
+                  </span>
+                ) : null}
+                <span className="content-byline">
+                  By{' '}
+                  <Link href={SITE_AUTHOR.href} rel="author">
+                    {SITE_AUTHOR.name}
+                  </Link>
+                </span>
+                {date ? (
+                  <span>
+                    {updatedLabel}{' '}
+                    <time dateTime={date}>{formatArticleDate(date)}</time>
+                  </span>
+                ) : null}
+                {minutes ? <span>{minutes} min read</span> : null}
+                {meta}
+              </div>
             </header>
 
             {hasToc && toc ? (
