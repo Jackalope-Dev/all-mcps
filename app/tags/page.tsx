@@ -5,6 +5,10 @@ import { TagGridClient } from '@/components/TagGridClient';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { getAllTagsWithCounts } from '@/lib/tags';
 
+// Hourly, like /tags/[slug]. Without it the page was rendered once at build,
+// where D1 isn't reachable, and served that (empty) list until the next deploy.
+export const revalidate = 3600;
+
 export const metadata: Metadata = {
   title: 'Browse MCP Tools by Tag',
   description:
