@@ -1,4 +1,4 @@
-import { ServerRowSkeleton, skeletonKeys } from './ServerRow';
+import { ServerRowSkeleton } from './ServerRow';
 
 /** Breadcrumb + title + lead placeholder shared by directory loading.tsx files. */
 export function HeadSkeleton({ withIcon = false }: { withIcon?: boolean }) {
@@ -22,23 +22,6 @@ export function ListSkeleton({ rows = 8 }: { rows?: number }) {
   return (
     <div className="dir-list" aria-hidden="true">
       <ServerRowSkeleton count={rows} />
-    </div>
-  );
-}
-
-/** Grid of placeholder cards (categories, top picks, topics). */
-export function CardGridSkeleton({
-  count = 9,
-  height = 120,
-}: {
-  count?: number;
-  height?: number;
-}) {
-  return (
-    <div className="dir-grid" aria-hidden="true">
-      {skeletonKeys(count).map((k) => (
-        <div key={k} className="skeleton dir-card-skel" style={{ height }} />
-      ))}
     </div>
   );
 }

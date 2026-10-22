@@ -723,6 +723,7 @@ export default async function MCPDetail({
       ? [{ id: 'tools-schema', label: 'Tools', count: toolCount }]
       : []),
     { id: 'security', label: 'Security' },
+    { id: 'how-it-works', label: 'How it works' },
     { id: 'reviews', label: 'Reviews', count: reviewSummary.count },
     { id: 'faq', label: 'FAQ' },
     ...(hasRelated ? [{ id: 'alternatives', label: 'Alternatives' }] : []),
@@ -1499,86 +1500,6 @@ export default async function MCPDetail({
                     title={`${displayName} Screenshot`}
                   />
                 )}
-
-                <div id="overview-doc" className="lst-doc">
-                  {(server.aiDoc?.trim() || readme) && (
-                    <h3 className="lst-doc-title">
-                      {server.aiDoc?.trim()
-                        ? `How ${displayName} works`
-                        : 'From the project README'}
-                    </h3>
-                  )}
-                  <ExpandableDoc>
-                    <div className="markdown-body">
-                      {server.aiDoc?.trim() ? (
-                        // Our own restructured writeup — original prose grounded in
-                        // the README, not a mirror of it. The full upstream README
-                        // is one click away at the noindex /mcp/[id]/readme route.
-                        <SafeMarkdown
-                          content={server.aiDoc}
-                          utmContent={server.id}
-                          repoUrl={server.url}
-                        />
-                      ) : readme ? (
-                        // Fallback until the enrich cron writes this listing's
-                        // writeup: show the README excerpt as before rather than
-                        // leave the page thin in the interim.
-                        <SafeMarkdown
-                          content={
-                            truncateReadmeExcerpt(readme).excerpt ?? readme
-                          }
-                          utmContent={server.id}
-                          repoUrl={server.url}
-                        />
-                      ) : (
-                        <>
-                          <p>
-                            {displayName} is a {server.category} MCP server
-                            {org ? ` from ${org}` : ''} listed on AllMCPs.{' '}
-                            {server.description}
-                          </p>
-                          {!hasSuppliedDescription && (
-                            <p>
-                              We couldn&rsquo;t automatically pull a README for
-                              this listing
-                              {repoHost ? ` from ${repoHost}` : ''}, so the
-                              summary above comes from its listing details. Use
-                              the config in <a href="#install">Install</a>{' '}
-                              above, then open the source repository for full
-                              setup instructions and the tools it exposes over
-                              MCP.
-                            </p>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </ExpandableDoc>
-                  <p className="lst-doc-links">
-                    <Link
-                      href={`/mcp/${server.id}/readme`}
-                      rel="nofollow"
-                      className="link-arrow"
-                    >
-                      Read the full README <ArrowRight size={14} />
-                    </Link>
-                    {hasRepository && (
-                      <OutboundLink
-                        href={server.url}
-                        destinationType="github"
-                        serverId={server.id}
-                        target="_blank"
-                        rel={repoLinkRel(
-                          !!server.isPremium,
-                          !!server.isOfficial,
-                        )}
-                        className="link-arrow"
-                      >
-                        View source on {repoHost || 'the source repository'}{' '}
-                        <ExternalLink size={13} />
-                      </OutboundLink>
-                    )}
-                  </p>
-                </div>
               </section>
 
               {/* ── Tools ─────────────────────────────────────────── */}
@@ -1671,6 +1592,97 @@ export default async function MCPDetail({
                   copies={server.copies}
                   upvotes={server.upvotes}
                 />
+              </section>
+
+              {/* ── How it works ──────────────────────────────────── */}
+              {/* Below our own verified data (tools, health, security) on
+                  purpose: what we checked first-hand is what this page offers
+                  that the upstream repo doesn't, so it leads; the written
+                  walkthrough supports it. */}
+              <section
+                id="how-it-works"
+                className="lst-section reveal"
+                aria-label={`How ${displayName} works`}
+              >
+                <div id="overview-doc" className="lst-doc">
+                  {(server.aiDoc?.trim() || readme) && (
+                    <h3 className="lst-doc-title">
+                      {server.aiDoc?.trim()
+                        ? `How ${displayName} works`
+                        : 'From the project README'}
+                    </h3>
+                  )}
+                  <ExpandableDoc>
+                    <div className="markdown-body">
+                      {server.aiDoc?.trim() ? (
+                        // Our own restructured writeup — original prose grounded in
+                        // the README, not a mirror of it. The full upstream README
+                        // is one click away at the noindex /mcp/[id]/readme route.
+                        <SafeMarkdown
+                          content={server.aiDoc}
+                          utmContent={server.id}
+                          repoUrl={server.url}
+                        />
+                      ) : readme ? (
+                        // Fallback until the enrich cron writes this listing's
+                        // writeup: show the README excerpt as before rather than
+                        // leave the page thin in the interim.
+                        <SafeMarkdown
+                          content={
+                            truncateReadmeExcerpt(readme).excerpt ?? readme
+                          }
+                          utmContent={server.id}
+                          repoUrl={server.url}
+                        />
+                      ) : (
+                        <>
+                          <p>
+                            {displayName} is a {server.category} MCP server
+                            {org ? ` from ${org}` : ''} listed on AllMCPs.{' '}
+                            {server.description}
+                          </p>
+                          {!hasSuppliedDescription && (
+                            <p>
+                              We couldn&rsquo;t automatically pull a README for
+                              this listing
+                              {repoHost ? ` from ${repoHost}` : ''}, so the
+                              summary above comes from its listing details. Use
+                              the config in <a href="#install">Install</a>{' '}
+                              above, then open the source repository for full
+                              setup instructions and the tools it exposes over
+                              MCP.
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </ExpandableDoc>
+                  <p className="lst-doc-links">
+                    <Link
+                      href={`/mcp/${server.id}/readme`}
+                      rel="nofollow"
+                      className="link-arrow"
+                    >
+                      Read the full README <ArrowRight size={14} />
+                    </Link>
+                    {hasRepository && (
+                      <OutboundLink
+                        href={server.url}
+                        destinationType="github"
+                        serverId={server.id}
+                        target="_blank"
+                        rel={repoLinkRel(
+                          !!server.isPremium,
+                          !!server.isOfficial,
+                        )}
+                        className="link-arrow"
+                      >
+                        View source on {repoHost || 'the source repository'}{' '}
+                        <ExternalLink size={13} />
+                      </OutboundLink>
+                    )}
+                  </p>
+                </div>
               </section>
 
               <ReviewsSection serverId={server.id} summary={reviewSummary} />
