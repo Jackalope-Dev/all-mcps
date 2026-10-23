@@ -198,6 +198,10 @@ describe('endpoint bar', () => {
     // the Server URL; the real endpoint is https://htmlkin.ru/mcp.
     expect(looksLikeMcpEndpointUrl('https://htmlkin.ru/docs/mcp')).toBe(false);
     expect(looksLikeMcpEndpointUrl('https://htmlkin.ru/mcp')).toBe(true);
+    // An mcp.* host clears the bar on its own, so the docs path must still lose.
+    expect(looksLikeMcpEndpointUrl('https://mcp.mailsenpai.com/docs')).toBe(
+      false,
+    );
   });
 });
 

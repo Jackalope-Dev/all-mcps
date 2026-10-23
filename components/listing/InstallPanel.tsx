@@ -159,9 +159,16 @@ export function InstallPanel({
   const hostedOk = hostedInstall ? !isUnverifiedInstall(hostedInstall) : false;
   const hasBoth = localOk && hostedOk && localInstall.kind !== 'remote';
   const [mode, setMode] = useState<'local' | 'hosted'>('local');
+  // A cached remote URL is not a local install, just an older guess at the
+  // hosted one, so the owner-set endpoint replaces it rather than sitting
+  // beside it ("Server URL" showed a /docs page above the real endpoint).
   const install: ResolvedInstall =
-    (hasBoth && mode === 'hosted') || (!localOk && hostedOk && hostedInstall)
-      ? (hostedInstall as ResolvedInstall)
+    hostedOk &&
+    hostedInstall &&
+    ((hasBoth && mode === 'hosted') ||
+      !localOk ||
+      localInstall.kind === 'remote')
+      ? hostedInstall
       : localInstall;
   const unverified = isUnverifiedInstall(install);
 
