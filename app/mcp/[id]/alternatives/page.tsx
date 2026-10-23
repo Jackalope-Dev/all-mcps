@@ -31,6 +31,7 @@ import { publicViewCount } from '../../../../lib/format';
 import {
   isUnverifiedInstall,
   resolveInstallConfig,
+  transportLabel,
 } from '../../../../lib/installConfig';
 import { redirectIfListingMoved } from '../../../../lib/listingRedirect';
 import {
@@ -190,7 +191,7 @@ function getInstallLabel(s: Server): string | null {
     installConfidence: s.installConfidence,
   });
   if (isUnverifiedInstall(cfg)) return null;
-  if (cfg.kind === 'remote') return 'Remote (SSE)';
+  if (cfg.kind === 'remote') return transportLabel(cfg);
   return cfg.command;
 }
 

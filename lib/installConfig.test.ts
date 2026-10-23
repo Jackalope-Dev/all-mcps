@@ -247,6 +247,45 @@ describe('toCachedInstallFields refuses to persist a non-endpoint as remote', ()
   });
 });
 
+describe('submitted trailing subcommand', () => {
+  const cachedArgs = [
+    '-y',
+    '--registry=https://registry.npmjs.org',
+    '@vibe-monitor/setup@latest',
+  ];
+  const cached = {
+    ...base,
+    url: 'https://github.com/tubban1/vibe-monitor',
+    installKind: 'stdio',
+    installCommand: 'npx',
+    installArgs: cachedArgs,
+    installPackage: '@vibe-monitor/setup@latest',
+    installConfidence: 'high',
+  };
+
+  it('keeps the subcommand the extractor dropped', () => {
+    const install = resolveInstallConfig({
+      ...cached,
+      suggestedInstallCommand: 'npx',
+      suggestedInstallArgs: JSON.stringify([...cachedArgs, 'mcp']),
+    });
+    expect(install).toMatchObject({
+      kind: 'stdio',
+      args: [...cachedArgs, 'mcp'],
+      packageName: '@vibe-monitor/setup@latest',
+    });
+  });
+
+  it('ignores a suggestion that disagrees with the cached args', () => {
+    const install = resolveInstallConfig({
+      ...cached,
+      suggestedInstallCommand: 'npx',
+      suggestedInstallArgs: JSON.stringify(['-y', 'other-package', 'mcp']),
+    });
+    expect(install).toMatchObject({ args: cachedArgs });
+  });
+});
+
 describe('transport / runtime labels', () => {
   it('omits both for a hosted listing we only have a homepage for', () => {
     // The reported case: a hosted server whose primary URL is a marketing page
@@ -292,8 +331,17 @@ describe('transport / runtime labels', () => {
       remoteEndpointUrl: 'https://brainscanner.dev/mcp',
     });
     expect(install.kind).toBe('remote');
-    expect(transportLabel(install)).toBe('SSE (Remote)');
+    expect(transportLabel(install)).toBe('Streamable HTTP (Remote)');
     expect(runtimeLabel(install)).toBeNull();
+  });
+
+  it('labels SSE only for a legacy /sse endpoint', () => {
+    const install = resolveInstallConfig({
+      ...base,
+      url: 'https://brainscanner.dev',
+      remoteEndpointUrl: 'https://brainscanner.dev/sse',
+    });
+    expect(transportLabel(install)).toBe('SSE (Remote)');
   });
 });
 

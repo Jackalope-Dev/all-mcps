@@ -531,10 +531,11 @@ function buildSystemPrompt(
       "(d) other people's servers mentioned as examples, comparisons, or things this project can proxy to. " +
       'When "install" is not null: "kind" is "stdio" (runs locally via a package manager) or "remote" (a hosted HTTP/SSE endpoint URL); ' +
       'for "stdio", "command" is the runner binary alone (e.g. "npx", "uvx", "bunx", "pipx", "docker" — never a flag), "args" is the full real argument list including the actual package/image name as it would be typed, "package" is that same package/image name alone. ' +
+      'When the package is a multi-command CLI, "args" must end with the subcommand that starts the MCP server (e.g. "mcp", "serve", "stdio") — without it the CLI prints help and exits — and must never be an installer/setup subcommand (e.g. "install", "init", "setup"), which configures clients rather than running the server. ' +
       'A stdio command must be directly runnable with no editing — this rules out two common README patterns: ' +
       '(i) a bare "npx <package>" with no confirmation flag will prompt interactively when run non-interactively and hang forever — always include "-y" as the first arg for npx (uvx/bunx/pipx do not need it); ' +
       '(ii) placeholder values in example commands (e.g. "/path/to/your/file", "<YOUR_API_KEY>", "your-project-id") are template text for the human reader to replace, not real arguments — omit them from "args" entirely rather than including the literal placeholder text, unless the exact real value is stated elsewhere in the material. ' +
-      'for "remote", "package" is the endpoint URL and "command"/"args" are omitted; ' +
+      'for "remote", "package" is the endpoint URL a client connects to (never a documentation page about it, e.g. a /docs/ URL) and "command"/"args" are omitted; ' +
       '"confidence" is "high" only if the README states the exact command verbatim, "medium" if you inferred it from strong context (e.g. the npm/PyPI package name matches the repo unambiguously) — use "medium", or null the whole field, for anything less certain.';
   } else {
     prompt += '.';

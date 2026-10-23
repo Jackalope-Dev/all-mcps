@@ -259,14 +259,27 @@ export function resolveInstallConfig(
   }
 
   const cached = fromCached(input);
-  // High/medium cached wins. Low-confidence cache falls through so submitter
-  // suggestions (and description/endpoint hints) can still improve the result.
-  if (cached && cached.confidence !== 'low') return cached;
-
   const suggestedCmd =
     typeof input.suggestedInstallCommand === 'string'
       ? input.suggestedInstallCommand.trim()
       : '';
+  // The extractor finds the right package but routinely drops a trailing
+  // subcommand the server needs to start (`… @vibe-monitor/setup@latest mcp`),
+  // which leaves a config that prints help and exits. When the submitter's args
+  // are the cached args plus extra trailing ones, they only add what was lost.
+  if (cached?.kind === 'stdio' && suggestedCmd === cached.command) {
+    const suggestedArgs = parseArgsJson(input.suggestedInstallArgs) || [];
+    if (
+      suggestedArgs.length > cached.args.length &&
+      cached.args.every((a, i) => suggestedArgs[i] === a)
+    ) {
+      return { ...cached, args: suggestedArgs };
+    }
+  }
+  // High/medium cached wins. Low-confidence cache falls through so submitter
+  // suggestions (and description/endpoint hints) can still improve the result.
+  if (cached && cached.confidence !== 'low') return cached;
+
   if (suggestedCmd) {
     const args = parseArgsJson(input.suggestedInstallArgs) || [];
     const packageName = args[args.length - 1] || input.id;
@@ -421,8 +434,23 @@ export function runtimeLabel(install: ResolvedInstall): string | null {
  * only guessed. "SSE (Remote)" used to be asserted for any listing whose
  * primary URL merely wasn't a repository URL, which labelled ordinary product
  * homepages as MCP endpoints.
+ *
+ * A remote endpoint is only labelled SSE when its path says so (the legacy
+ * HTTP+SSE transport lives at /sse); everything else is Streamable HTTP, the
+ * current transport and the one our own introspection speaks.
  */
 export function transportLabel(install: ResolvedInstall): string | null {
   if (isUnverifiedInstall(install)) return null;
-  return install.kind === 'remote' ? 'SSE (Remote)' : 'STDIO';
+  if (install.kind !== 'remote') return 'STDIO';
+  return isLegacySseUrl(install.url)
+    ? 'SSE (Remote)'
+    : 'Streamable HTTP (Remote)';
+}
+
+function isLegacySseUrl(url: string): boolean {
+  try {
+    return /(^|\/)sse\/?$/i.test(new URL(url).pathname);
+  } catch {
+    return false;
+  }
 }

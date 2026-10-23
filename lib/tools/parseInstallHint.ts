@@ -90,6 +90,13 @@ export function looksLikeMcpEndpointUrl(raw: string): boolean {
     // mcp.* host, so it clears every other bar here while being the one URL on the page
     // guaranteed to be the wrong thing to hand a client.
     if (/(^|\/)\.well-known(\/|$)/i.test(u.pathname)) return false;
+    // Documentation about a server routinely lives at /docs/mcp or /guides/mcp, which
+    // clears the /mcp segment test below while being a web page, not a transport.
+    if (
+      /(^|\/)(docs?|documentation|guides?|blog|help)(\/|$)/i.test(u.pathname)
+    ) {
+      return false;
+    }
     return (
       /(^|\/)(mcp|sse|message|messages)(\/|$)/i.test(u.pathname) ||
       /^(api|mcp|sse)\./i.test(u.hostname)

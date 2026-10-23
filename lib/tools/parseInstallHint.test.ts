@@ -192,6 +192,13 @@ describe('endpoint bar', () => {
   it('still accepts the hosted endpoint itself', () => {
     expect(looksLikeMcpEndpointUrl('https://mcp.magichour.ai/')).toBe(true);
   });
+
+  it('rejects a docs page about the server', () => {
+    // htmlkin listed https://htmlkin.ru/docs/mcp (its docs) and we served it as
+    // the Server URL; the real endpoint is https://htmlkin.ru/mcp.
+    expect(looksLikeMcpEndpointUrl('https://htmlkin.ru/docs/mcp')).toBe(false);
+    expect(looksLikeMcpEndpointUrl('https://htmlkin.ru/mcp')).toBe(true);
+  });
 });
 
 describe('ordinary READMEs still resolve', () => {
