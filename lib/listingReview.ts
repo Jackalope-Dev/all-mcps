@@ -19,6 +19,7 @@
 import { fetchGithubReadme, parseGithubUrl } from './listingEnrich';
 import type { RepoStatus } from './repoCheck';
 import { githubRepoSlug } from './repoUrl';
+import { fetchSitePage, ownSites } from './tools/discoverRemoteEndpoint';
 import {
   askJev,
   type JevNoulQuestion,
@@ -51,7 +52,7 @@ const LISTING_QUALITY_LEVELS = [
 const isMcpServerQuestion: JevNoulQuestion = {
   type: 'noul',
   instructions:
-    'This project provides an MCP (Model Context Protocol) server that exposes tools, resources, or prompts to an AI client. The MCP server may be the whole project or one part of a larger product: a hosted MCP endpoint from a SaaS or API vendor, the official MCP integration of an app, a package or CLI that can also run as an MCP server, or a monorepo that contains one all count. It does not count when the project is only an MCP client, a curated list of servers, documentation or a registry manifest with no server code and no endpoint, or unrelated software.',
+    'This project provides an MCP (Model Context Protocol) server that exposes tools, resources, or prompts to an AI client. The MCP server may be the whole project or one part of a larger product: a hosted MCP endpoint from a SaaS or API vendor, the official MCP integration of an app, a package or CLI that can also run as an MCP server, or a monorepo that contains one all count. It does not count when the project is only an MCP client, a curated list of servers, documentation or a registry manifest with no server code and no endpoint, or unrelated software. When the evidence says our check of the hosted endpoint got an MCP answer, an MCP server exists.',
   criteria: {
     true: 'It provides an MCP server, on its own or as part of a larger product',
     false:
@@ -242,7 +243,7 @@ const isSubstantiveQuestion: JevNoulQuestion = {
 const isUsableQuestion: JevNoulQuestion = {
   type: 'noul',
   instructions:
-    'A developer could install or connect to this server today from the information given: a published package, an install command, a documented hosted endpoint, or clear setup instructions. A hosted endpoint that needs an account, OAuth, an API key, or a paid plan still counts as usable.',
+    'A developer could install or connect to this server today from the information given: a published package, an install command, a documented hosted endpoint, or clear setup instructions. A hosted endpoint that needs an account, OAuth, an API key, or a paid plan still counts as usable. When the evidence says our check of the hosted endpoint got an MCP answer, it is usable.',
   criteria: {
     true: 'There is a clear way to install or connect to it',
     false: 'No usable install or connection path is given',
@@ -376,6 +377,9 @@ export type TriageEvidence = {
   installCommand?: string | null;
   installPackage?: string | null;
   remoteEndpointUrl?: string | null;
+  /** Our own check of remoteEndpointUrl (lib/tools/discoverRemoteEndpoint.ts), or null when not checked. */
+  endpointLive?: boolean | null;
+  endpointAuth?: string | null;
 };
 
 /** Names from a servers.tools JSON column, capped so the request stays small. */
@@ -433,6 +437,40 @@ export async function triageReadme(
   }
 }
 
+const SITE_TEXT_CHARS = 3000;
+
+/** Visible text of an HTML page, roughly: what a reader sees, not markup. */
+export function pageText(html: string): string {
+  return html
+    .replace(/<(script|style|noscript|svg|template)\b[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&#39;|&rsquo;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, SITE_TEXT_CHARS);
+}
+
+/**
+ * What a hosted listing's own website says, for triage when there is no
+ * README: a SaaS submitted by its homepage was judged from a one-line
+ * description and landed on "usable 12%" with a live OAuth endpoint. Only the
+ * listing's own site (ownSites), never a vendor site a wrapper links. Null
+ * when there is nothing to read; never throws.
+ */
+export async function triageSiteText(
+  url: string | null | undefined,
+  websiteUrl: string | null | undefined,
+): Promise<string | null> {
+  const site = url ? ownSites(url, websiteUrl)[0] : undefined;
+  if (!site) return null;
+  const html = await fetchSitePage(site);
+  const text = html ? pageText(html) : '';
+  return text.length >= 80 ? text : null;
+}
+
 /**
  * Full review plus a curator recommendation, in one Jev request. Never throws;
  * all-null when Jev is unavailable.
@@ -466,6 +504,13 @@ export async function triageListing(
           command: evidence.installCommand ?? null,
           package: evidence.installPackage ?? null,
           hosted_endpoint: evidence.remoteEndpointUrl ?? null,
+          hosted_endpoint_check: !evidence.remoteEndpointUrl
+            ? null
+            : evidence.endpointLive === true
+              ? `answered as an MCP server (auth: ${evidence.endpointAuth ?? 'unknown'})`
+              : evidence.endpointLive === false
+                ? 'did not answer as an MCP server'
+                : 'not checked',
         },
         github_stars: evidence.githubStars ?? null,
         npm_monthly_downloads: evidence.npmDownloads ?? null,
@@ -526,7 +571,8 @@ export function settleVerdict(
   if (raw === null) return null;
   const proven =
     evidence.sandboxStatus === 'ok' ||
-    evidence.sandboxStatus === 'needs_credentials';
+    evidence.sandboxStatus === 'needs_credentials' ||
+    evidence.endpointLive === true;
   if (evidence.repoStatus === 'gone') return proven ? 'needs_review' : 'reject';
   if (raw === 'reject' && proven) return 'needs_review';
   return raw;
@@ -578,6 +624,11 @@ export function explainTriage(
       evidence.sandboxStatus === 'ok'
         ? `handshake ok (${evidence.toolCount ?? 0} tools)`
         : `sandbox ${evidence.sandboxStatus.replace(/_/g, ' ')}`,
+    );
+  }
+  if (evidence.endpointLive) {
+    parts.push(
+      `endpoint live${evidence.endpointAuth ? ` (${evidence.endpointAuth.replace('_', ' ')})` : ''}`,
     );
   }
   if (evidence.repoStatus === 'gone') parts.push('source 404');

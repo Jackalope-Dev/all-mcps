@@ -55,6 +55,11 @@ type TriageItem = {
   sandboxStderr: string | null;
   sandboxToolCount: number | null;
   trustTier: TrustTier;
+  /** The automation gate's call on a pending listing (Jev plus hard evidence). */
+  recommendation: {
+    decision: 'approve' | 'reject' | 'hold';
+    reasons: string[];
+  } | null;
 };
 
 type TriageResponse = {
@@ -68,6 +73,26 @@ const VERDICT_STYLE: Record<Verdict, { label: string; hue: string }> = {
   needs_review: { label: 'Jev: look closer', hue: 'hue-amber' },
   reject: { label: 'Jev: reject', hue: 'hue-red' },
 };
+
+const RECOMMENDATION_STYLE = {
+  approve: { label: 'Recommend: approve', hue: 'hue-green' },
+  reject: { label: 'Recommend: reject', hue: 'hue-red' },
+  hold: { label: 'Your call', hue: 'hue-amber' },
+} as const;
+
+/**
+ * What a row's bulk action keys on: the gate's recommendation on the pending
+ * queue (it already folds in Jev), Jev's verdict on the flagged-live queue.
+ */
+function bulkVerdict(item: TriageItem): 'approve' | 'reject' | null {
+  if (item.recommendation) {
+    const d = item.recommendation.decision;
+    return d === 'hold' ? null : d;
+  }
+  return item.triageVerdict === 'approve' || item.triageVerdict === 'reject'
+    ? item.triageVerdict
+    : null;
+}
 
 const TIER_HUE: Record<TrustTier, string> = {
   verified: 'hue-green',
@@ -234,9 +259,9 @@ export function AdminTriageQueue() {
     [markBusy],
   );
 
-  /** Accept Jev's confident verdicts for everything on this page. */
+  /** Accept the confident calls for everything on this page. */
   const bulkAccept = async (which: 'approve' | 'reject') => {
-    const targets = items.filter((i) => i.triageVerdict === which);
+    const targets = items.filter((i) => bulkVerdict(i) === which);
     if (targets.length === 0) return;
     const verb =
       queue === 'pending'
@@ -247,9 +272,7 @@ export function AdminTriageQueue() {
           ? 'Keep'
           : 'Unpublish';
     if (
-      !window.confirm(
-        `${verb} ${targets.length} listing(s) Jev marked "${which}"?`,
-      )
+      !window.confirm(`${verb} ${targets.length} listing(s) marked "${which}"?`)
     )
       return;
     let ok = 0;
@@ -315,8 +338,9 @@ export function AdminTriageQueue() {
     () => Object.values(counts).reduce((a, b) => a + b, 0),
     [counts],
   );
-  const pageApprove = items.filter((i) => i.triageVerdict === 'approve').length;
-  const pageReject = items.filter((i) => i.triageVerdict === 'reject').length;
+  const pageApprove = items.filter((i) => bulkVerdict(i) === 'approve').length;
+  const pageReject = items.filter((i) => bulkVerdict(i) === 'reject').length;
+  const bulkSource = queue === 'pending' ? 'recommended' : 'Jev-';
   const acceptLabel = queue === 'pending' ? 'Approve' : 'Keep';
   const rejectLabel = queue === 'pending' ? 'Reject' : 'Unpublish';
 
@@ -401,8 +425,9 @@ export function AdminTriageQueue() {
               disabled={pageApprove === 0}
               onClick={() => void bulkAccept('approve')}
             >
-              <Check size={14} aria-hidden="true" /> {acceptLabel} all
-              Jev-approved ({pageApprove})
+              <Check size={14} aria-hidden="true" /> {acceptLabel} all{' '}
+              {bulkSource === 'recommended' ? 'recommended' : 'Jev-approved'} (
+              {pageApprove})
             </button>
             <button
               type="button"
@@ -410,8 +435,9 @@ export function AdminTriageQueue() {
               disabled={pageReject === 0}
               onClick={() => void bulkAccept('reject')}
             >
-              <X size={14} aria-hidden="true" /> {rejectLabel} all Jev-rejected
-              ({pageReject})
+              <X size={14} aria-hidden="true" /> {rejectLabel} all{' '}
+              {bulkSource === 'recommended' ? 'recommended' : 'Jev-rejected'} (
+              {pageReject})
             </button>
           </div>
         </div>
@@ -457,6 +483,19 @@ export function AdminTriageQueue() {
                   <Chip>Ingested</Chip>
                 )}
               </div>
+
+              {item.recommendation && (
+                <div className="adm-verdict">
+                  <Chip
+                    hue={RECOMMENDATION_STYLE[item.recommendation.decision].hue}
+                  >
+                    {RECOMMENDATION_STYLE[item.recommendation.decision].label}
+                  </Chip>
+                  <span className="adm-muted">
+                    {item.recommendation.reasons.join(' · ')}
+                  </span>
+                </div>
+              )}
 
               {v ? (
                 <div className="adm-verdict">

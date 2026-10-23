@@ -5,6 +5,12 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { listingSignals, servers, stdioVerifications } from '@/db/schema';
 import { getAuthorizedAdminEmail } from '@/lib/adminAuth';
+import {
+  decideIngestPromote,
+  decideSubmission,
+  GATE_EVIDENCE_COLUMNS,
+  gateEvidenceFromRow,
+} from '@/lib/autoDecision';
 import { getGithubToken } from '@/lib/githubAuth';
 import {
   reviewColumns,
@@ -78,6 +84,7 @@ export async function GET(req: Request) {
 
     const rows = await db
       .select({
+        ...GATE_EVIDENCE_COLUMNS,
         id: servers.id,
         name: servers.name,
         url: servers.url,
@@ -153,6 +160,7 @@ export async function GET(req: Request) {
       ),
       items: rows.map((r) => ({
         ...r,
+        recommendation: recommend(r),
         staleReasons: parseStaleReasons(r.staleReasons),
         trustTier: computeTrustTier(r),
         sandboxStderr: r.sandboxStderr ? r.sandboxStderr.slice(-600) : null,
@@ -165,6 +173,30 @@ export async function GET(req: Request) {
       { status: 500 },
     );
   }
+}
+
+/**
+ * What the automation gate would do with a pending listing right now, so the
+ * card shows the combined call (Jev plus hard evidence) and not Jev alone.
+ * Null for live listings, which no gate decides here.
+ */
+function recommend(
+  r: Parameters<typeof gateEvidenceFromRow>[0] & {
+    status: string;
+    submitterEmail: string | null;
+  },
+) {
+  if (r.status !== 'pending') return null;
+  const evidence = gateEvidenceFromRow(
+    { ...r, repoGoneCount: r.repoGoneCount ?? 0 },
+    new Date(),
+  );
+  const result = r.submitterEmail
+    ? decideSubmission(evidence)
+    : decideIngestPromote(evidence);
+  return result
+    ? { decision: result.decision, reasons: result.reasons }
+    : { decision: 'hold' as const, reasons: ['still gathering evidence'] };
 }
 
 const postSchema = z.object({

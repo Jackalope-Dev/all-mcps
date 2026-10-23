@@ -16,10 +16,18 @@ import { discoverRemoteEndpoint } from '../../../../lib/tools/discoverRemoteEndp
  * command, and a guessed hosted endpoint beside it is all risk. Only ever
  * fills empty columns, so an owner's own endpoint or auth type always wins.
  *
+ * Two rowid cursors, like tag-classify: pending listings first, so Jev's
+ * triage and the automation gates see the endpoint before a decision, then
+ * the whole catalog. The catalog walk restarts REWALK_MS after it drains, so
+ * a server that ships its endpoint after we last looked is still found.
+ *
  * Network-only (no LLM), so it runs on the fast tick in small batches.
  */
 
-const CURSOR = 'endpoint-discovery:v1';
+const PHASES = ['pending', 'all'] as const;
+type Phase = (typeof PHASES)[number];
+const cursorName = (phase: Phase) => `endpoint-discovery:v1:${phase}`;
+const REWALK_MS = 30 * 24 * 60 * 60 * 1000;
 const DEFAULT_BATCH_SIZE = 30;
 const MAX_BATCH_SIZE = 100;
 const CONCURRENCY = 6;
@@ -65,11 +73,52 @@ export async function POST(req: Request) {
         ? Math.min(Math.floor(requested), MAX_BATCH_SIZE)
         : DEFAULT_BATCH_SIZE;
 
-    const [cursorRow] = await db
-      .select({ value: jobCursors.value })
+    const now = new Date();
+    const cursorRows = await db
+      .select({
+        name: jobCursors.name,
+        value: jobCursors.value,
+        updatedAt: jobCursors.updatedAt,
+      })
       .from(jobCursors)
-      .where(eq(jobCursors.name, CURSOR));
-    const after = Number(cursorRow?.value) || 0;
+      .where(inArray(jobCursors.name, PHASES.map(cursorName)));
+    const cursors = new Map(
+      cursorRows.map((r) => [
+        r.name,
+        { value: Number(r.value) || 0, updatedAt: r.updatedAt },
+      ]),
+    );
+    const phaseWhere = (phase: Phase) =>
+      phase === 'pending' ? and(due, eq(servers.status, 'pending')) : due;
+    const remainingIn = async (phase: Phase) => {
+      const after = cursors.get(cursorName(phase))?.value ?? 0;
+      const [r] = await db
+        .select({ n: sql<number>`count(*)` })
+        .from(servers)
+        .where(and(phaseWhere(phase), gt(sql`rowid`, after)));
+      return Number(r?.n ?? 0);
+    };
+
+    // A drained catalog walk starts over once it is REWALK_MS old.
+    const all = cursors.get(cursorName('all'));
+    if (
+      all &&
+      all.value > 0 &&
+      all.updatedAt &&
+      now.getTime() - all.updatedAt.getTime() > REWALK_MS &&
+      (await remainingIn('all')) === 0
+    ) {
+      all.value = 0;
+    }
+
+    let phase: Phase = 'all';
+    for (const p of PHASES) {
+      if ((await remainingIn(p)) > 0) {
+        phase = p;
+        break;
+      }
+    }
+    const after = cursors.get(cursorName(phase))?.value ?? 0;
 
     const rows = (await db
       .select({
@@ -80,7 +129,7 @@ export async function POST(req: Request) {
         description: servers.description,
       })
       .from(servers)
-      .where(and(due, gt(sql`rowid`, after)))
+      .where(and(phaseWhere(phase), gt(sql`rowid`, after)))
       .orderBy(asc(sql`rowid`))
       .limit(batchSize)) as Row[];
 
@@ -99,6 +148,8 @@ export async function POST(req: Request) {
           .update(servers)
           .set({
             remoteEndpointUrl: hit.url,
+            remoteEndpointHealthy: true,
+            remoteEndpointCheckedAt: now,
             authType: sql`COALESCE(${servers.authType}, ${hit.authType})`,
           })
           .where(
@@ -118,24 +169,27 @@ export async function POST(req: Request) {
     // Every row in the batch was asked, hit or not; a miss is retried only if
     // the cursor is versioned and restarted.
     const cursor = rows.length ? rows[rows.length - 1].rowid : after;
-    if (cursor !== after) {
-      const now = new Date();
+    const stored = cursorRows.find((r) => r.name === cursorName(phase));
+    if (cursor !== Number(stored?.value ?? 0)) {
       await db
         .insert(jobCursors)
-        .values({ name: CURSOR, value: String(cursor), updatedAt: now })
+        .values({
+          name: cursorName(phase),
+          value: String(cursor),
+          updatedAt: now,
+        })
         .onConflictDoUpdate({
           target: jobCursors.name,
           set: { value: String(cursor), updatedAt: now },
         });
+      cursors.set(cursorName(phase), { value: cursor, updatedAt: now });
     }
 
-    const [left] = await db
-      .select({ n: sql<number>`count(*)` })
-      .from(servers)
-      .where(and(due, gt(sql`rowid`, cursor)));
-    const remaining = Number(left?.n ?? 0);
+    let remaining = 0;
+    for (const p of PHASES) remaining += await remainingIn(p);
 
     return NextResponse.json({
+      phase,
       processed: rows.length,
       found,
       remaining,

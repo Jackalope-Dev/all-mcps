@@ -45,6 +45,7 @@ import {
   toolNamesFromJson,
   triageListing,
   triageReadme,
+  triageSiteText,
 } from '../../../../lib/listingReview';
 import {
   bareName,
@@ -73,6 +74,7 @@ import {
   shouldAutoRemove,
   siteDownFromHistory,
 } from '../../../../lib/staleness';
+import { checkEndpoint } from '../../../../lib/tools/discoverRemoteEndpoint';
 import {
   findTyposquatTarget,
   type PopularPackage,
@@ -708,35 +710,65 @@ export async function POST(req: Request) {
     const triaged = await mapWithConcurrency(
       triageRows,
       TRIAGE_CONCURRENCY,
-      async (r) => ({
-        id: r.id,
-        triage: await triageListing(
-          { name: r.name, description: r.description, url: r.url },
-          {
-            sandboxStatus:
-              r.sandboxStatus && r.sandboxStatus !== 'pending'
-                ? r.sandboxStatus
-                : null,
-            toolCount: r.toolCount,
-            toolNames: toolNamesFromJson(r.tools),
-            websiteUrl: r.websiteUrl,
-            installKind: r.installKind,
-            installCommand: r.installCommand,
-            installPackage: r.installPackage,
-            remoteEndpointUrl: r.remoteEndpointUrl,
-            // Pending listings get no health-cron stars; the repo check's
-            // count stands in.
-            githubStars: r.githubStars ?? r.repoStars,
-            npmDownloads: r.npmDownloads,
-            lastCommitAt: r.lastCommitAt,
-            repoForkOf: r.repoForkOf,
-            staleReasons: parseStaleReasons(r.staleReasons),
-            readme: await triageReadme(r.url, r.aiOverview, githubToken),
-            repoStatus: r.repoStatus as RepoStatus | null,
-          },
+      async (r) => {
+        // One request each: whether the named endpoint answers, and what a
+        // hosted listing's own site says when there's no README to read.
+        const [endpoint, readme] = await Promise.all([
+          r.remoteEndpointUrl ? checkEndpoint(r.remoteEndpointUrl) : null,
+          triageReadme(r.url, r.aiOverview, githubToken).then(
+            (text) => text ?? triageSiteText(r.url, r.websiteUrl),
+          ),
+        ]);
+        return {
+          id: r.id,
+          endpoint,
+          triage: await triageListing(
+            { name: r.name, description: r.description, url: r.url },
+            {
+              sandboxStatus:
+                r.sandboxStatus && r.sandboxStatus !== 'pending'
+                  ? r.sandboxStatus
+                  : null,
+              toolCount: r.toolCount,
+              toolNames: toolNamesFromJson(r.tools),
+              websiteUrl: r.websiteUrl,
+              installKind: r.installKind,
+              installCommand: r.installCommand,
+              installPackage: r.installPackage,
+              remoteEndpointUrl: r.remoteEndpointUrl,
+              endpointLive: endpoint?.live ?? null,
+              endpointAuth: endpoint?.authType ?? null,
+              // Pending listings get no health-cron stars; the repo check's
+              // count stands in.
+              githubStars: r.githubStars ?? r.repoStars,
+              npmDownloads: r.npmDownloads,
+              lastCommitAt: r.lastCommitAt,
+              repoForkOf: r.repoForkOf,
+              staleReasons: parseStaleReasons(r.staleReasons),
+              readme,
+              repoStatus: r.repoStatus as RepoStatus | null,
+            },
+          ),
+          isActive: r.status === 'active',
+        };
+      },
+    );
+    // Pending rows get no health cron, so this check is the endpoint reading
+    // the automation gates use (lib/autoDecision.ts liveEndpoint).
+    await runChunked(
+      db,
+      triaged
+        .filter((t) => t.endpoint && !t.isActive)
+        .map(({ id, endpoint }) =>
+          db
+            .update(servers)
+            .set({
+              remoteEndpointHealthy: endpoint?.live ?? null,
+              remoteEndpointCheckedAt: now,
+              authType: sql`COALESCE(${servers.authType}, ${endpoint?.authType ?? null})`,
+            })
+            .where(eq(servers.id, id)),
         ),
-        isActive: r.status === 'active',
-      }),
     );
     const answered = triaged.filter((t) => t.triage.verdict !== null);
     // Every attempt is stamped, answered or not, so a listing Jev can't judge

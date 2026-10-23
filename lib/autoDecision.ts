@@ -65,6 +65,13 @@ export type GateEvidence = {
   sandboxStatus: string | null;
   /** The registry says the install package exists and isn't deprecated. */
   packageAlive: boolean;
+  /**
+   * The listing's hosted endpoint answered the MCP handshake (or an OAuth/API-key
+   * challenge) the last time we asked: lib/tools/discoverRemoteEndpoint.ts at
+   * intake and in its cron, the health cron once live. Hosted servers have no
+   * package or stars, so without this "no sign of real use" held every one.
+   */
+  liveEndpoint: boolean;
 };
 
 export type GateResult = { decision: AutoDecision; reasons: string[] };
@@ -88,15 +95,29 @@ export const INGEST_BAR = {
   stars: 5,
 } as const;
 
-/** Null while evidence is still being gathered — the gate waits rather than guessing. */
+/**
+ * Null while evidence is still being gathered — the gate waits rather than
+ * guessing. A hosted product often has no repo for the source check to read,
+ * and its live endpoint is the stronger evidence anyway.
+ */
 function evidenceReady(e: GateEvidence): boolean {
-  return e.triageVerdict !== null && e.repoStatus !== null;
+  return e.triageVerdict !== null && (e.repoStatus !== null || e.liveEndpoint);
+}
+
+/** The server was seen running, so a text-only judgment can't reject it. */
+function provenRunning(e: GateEvidence): boolean {
+  return (
+    e.liveEndpoint ||
+    e.sandboxStatus === 'ok' ||
+    e.sandboxStatus === 'needs_credentials'
+  );
 }
 
 function proofOfUse(e: GateEvidence, minStars: number): string | null {
   if (e.sandboxStatus === 'ok') return 'ran in our sandbox';
   if (e.sandboxStatus === 'needs_credentials')
     return 'started in our sandbox (needs keys)';
+  if (e.liveEndpoint) return 'hosted endpoint answers MCP';
   if (e.packageAlive) return 'package published';
   if ((e.stars ?? 0) >= minStars) return `${e.stars} GitHub stars`;
   return null;
@@ -106,8 +127,18 @@ function pct(n: number | null): string {
   return n === null ? '?' : `${Math.round(n * 100)}%`;
 }
 
+/**
+ * Backtested on the 140 submissions an admin decided 2026-10-13..23: the 49
+ * Jev rejects the admin also rejected all had no sign of real use, and the 3
+ * the admin overrode were hosted products with a live endpoint. So a Jev
+ * reject rejects only when nothing (stars, package, sandbox, endpoint) says
+ * the server is used; on its own it still holds. A live endpoint also stands
+ * in for the is-MCP bar and the source check: a completed handshake is better
+ * evidence than either, and a hosted product's root URL often 404s.
+ */
 export function decideSubmission(e: GateEvidence): GateResult | null {
-  if (e.repoGoneConfirmed) {
+  const proven = provenRunning(e);
+  if (e.repoGoneConfirmed && !proven) {
     return {
       decision: 'reject',
       reasons: ['source repo gone (404 twice, a day apart)'],
@@ -115,13 +146,30 @@ export function decideSubmission(e: GateEvidence): GateResult | null {
   }
   if (!evidenceReady(e)) return null;
 
+  const proof = proofOfUse(e, SUBMISSION_BAR.stars);
+  if (e.triageVerdict === 'reject' && !proof) {
+    return {
+      decision: 'reject',
+      reasons: [
+        'Jev said reject',
+        `MCP ${pct(e.mcpProbability)}`,
+        'no sign of real use',
+      ],
+    };
+  }
+
   const missing: string[] = [];
   if (e.triageVerdict === 'reject') missing.push('Jev said reject');
-  if ((e.mcpProbability ?? 0) < SUBMISSION_BAR.mcpProbability)
+  if (
+    !e.liveEndpoint &&
+    (e.mcpProbability ?? 0) < SUBMISSION_BAR.mcpProbability
+  )
     missing.push(`MCP ${pct(e.mcpProbability)}`);
-  if (e.repoStatus !== 'ok') missing.push(`source ${e.repoStatus}`);
-  if (e.reviewFlagged) missing.push('flagged at intake');
-  const proof = proofOfUse(e, SUBMISSION_BAR.stars);
+  if (e.repoStatus !== 'ok' && !e.liveEndpoint)
+    missing.push(`source ${e.repoStatus}`);
+  // The intake flag is a text guess that this isn't an MCP server (or has
+  // useless copy); a live handshake answers the first half.
+  if (e.reviewFlagged && !e.liveEndpoint) missing.push('flagged at intake');
   if (!proof) missing.push('no sign of real use');
 
   if (missing.length > 0) return { decision: 'hold', reasons: missing };
@@ -130,7 +178,7 @@ export function decideSubmission(e: GateEvidence): GateResult | null {
     reasons: [
       `Jev ${e.triageVerdict === 'approve' ? 'approve' : 'no objection'}`,
       `MCP ${pct(e.mcpProbability)}`,
-      'source live',
+      e.repoStatus === 'ok' ? 'source live' : 'endpoint live',
       proof as string,
     ],
   };
@@ -153,7 +201,7 @@ export function decideIngestPromote(e: GateEvidence): GateResult | null {
   // proof that doesn't come from the repo itself.
   const proof =
     e.repoStatus === 'site_only'
-      ? e.packageAlive || e.sandboxStatus === 'ok'
+      ? e.packageAlive || e.sandboxStatus === 'ok' || e.liveEndpoint
         ? proofOfUse(e, Number.POSITIVE_INFINITY)
         : null
       : proofOfUse(e, INGEST_BAR.stars);
@@ -186,6 +234,8 @@ export type GateEvidenceRow = {
   packageMissingAt: Date | null;
   packageDeprecated: string | null;
   sandboxStatus: string | null;
+  remoteEndpointUrl: string | null;
+  remoteEndpointHealthy: boolean | null;
 };
 
 export function gateEvidenceFromRow(
@@ -214,6 +264,8 @@ export function gateEvidenceFromRow(
       row.registryCheckedAt != null &&
       row.packageMissingAt == null &&
       !row.packageDeprecated,
+    liveEndpoint:
+      Boolean(row.remoteEndpointUrl) && row.remoteEndpointHealthy === true,
   };
 }
 
@@ -231,6 +283,8 @@ export const GATE_EVIDENCE_COLUMNS = {
   packageMissingAt: listingSignals.packageMissingAt,
   packageDeprecated: listingSignals.packageDeprecated,
   sandboxStatus: stdioVerifications.status,
+  remoteEndpointUrl: servers.remoteEndpointUrl,
+  remoteEndpointHealthy: servers.remoteEndpointHealthy,
 };
 
 /**

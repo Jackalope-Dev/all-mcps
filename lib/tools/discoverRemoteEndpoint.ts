@@ -160,7 +160,7 @@ export function repoOwnerMatchesSite(
 }
 
 /** The listing's own site origins, in priority order. */
-function ownSites(url: string, websiteUrl?: string | null): string[] {
+export function ownSites(url: string, websiteUrl?: string | null): string[] {
   const urlHost = hostOf(url);
   const siteHost = hostOf(websiteUrl);
   const out: string[] = [];
@@ -295,7 +295,8 @@ export function judgeCandidate(
   return { match, authType: null };
 }
 
-async function fetchPage(url: string): Promise<string | null> {
+/** A listing's own web page as HTML, or null. Never throws. */
+export async function fetchSitePage(url: string): Promise<string | null> {
   if (!isSafeSubmissionUrl(url)) return null;
   try {
     const res = await fetch(url, {
@@ -324,7 +325,7 @@ export async function discoverRemoteEndpoint(input: {
   const sites = ownSites(input.url, input.websiteUrl);
   const pages = (
     await Promise.all(
-      sites.map(async (url) => ({ url, html: await fetchPage(url) })),
+      sites.map(async (url) => ({ url, html: await fetchSitePage(url) })),
     )
   ).filter((p): p is { url: string; html: string } => p.html !== null);
 
@@ -345,4 +346,24 @@ export async function discoverRemoteEndpoint(input: {
     authType: verdicts[best].authType,
     source: candidates[best].source,
   };
+}
+
+/**
+ * Re-check an endpoint the listing already names (owner-set or discovered
+ * earlier) and read its auth scheme. `live` false covers "answered, but not as
+ * MCP" and "unreachable" alike, so callers must not clear anything on it.
+ */
+export async function checkEndpoint(
+  url: string,
+): Promise<{ live: boolean; authType: DiscoveredAuth | null }> {
+  if (!isSafeSubmissionUrl(url)) return { live: false, authType: null };
+  try {
+    const { match, authType } = judgeCandidate(
+      await postInitialize(url),
+      'stated',
+    );
+    return { live: match, authType };
+  } catch {
+    return { live: false, authType: null };
+  }
 }

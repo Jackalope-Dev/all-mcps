@@ -11,7 +11,10 @@ import {
   normalizeCompatibleClients,
   normalizeTags,
 } from './serverEnums';
-import { discoverRemoteEndpoint } from './tools/discoverRemoteEndpoint';
+import {
+  checkEndpoint,
+  discoverRemoteEndpoint,
+} from './tools/discoverRemoteEndpoint';
 import {
   type ExistingListingMatch,
   findExistingListingByUrl,
@@ -299,17 +302,22 @@ export async function prepareListingIntake(
 
   // Runs alongside the review: the review only reads text, and a hosted server
   // submitted by its homepage rarely says "MCP" in a way it can see.
-  const [review, discovered] = await Promise.all([
+  // A submitted endpoint is checked the same way, so the automation gate can
+  // count it as proof the server runs (lib/autoDecision.ts).
+  const submittedEndpoint = remoteEndpointUrl;
+  const [review, endpoint] = await Promise.all([
     reviewListing({ name, description, url }),
-    remoteEndpointUrl
-      ? Promise.resolve(null)
+    submittedEndpoint
+      ? checkEndpoint(submittedEndpoint).then((c) =>
+          c.live ? { url: submittedEndpoint, authType: c.authType } : null,
+        )
       : discoverRemoteEndpoint({ url, websiteUrl, description }),
   ]);
-  if (discovered) remoteEndpointUrl = discovered.url;
+  if (endpoint) remoteEndpointUrl = endpoint.url;
   // A live endpoint answering the MCP handshake outranks a text guess that
   // this isn't an MCP server.
   const reviewFlagged =
-    (review.reviewed && review.isMcpServer === false && !discovered) ||
+    (review.reviewed && review.isMcpServer === false && !endpoint) ||
     (review.qualityScore !== null && review.qualityScore < 2);
 
   return {
@@ -343,7 +351,7 @@ export async function prepareListingIntake(
       pricingNotes: (input.pricingNotes || '').trim().slice(0, 280) || null,
       authType: isAuthType(input.authType)
         ? input.authType
-        : (discovered?.authType ?? null),
+        : (endpoint?.authType ?? null),
       license: (input.license || '').trim().slice(0, 60) || null,
       compatibleClients: compatibleClients.length
         ? JSON.stringify(compatibleClients)
@@ -353,6 +361,9 @@ export async function prepareListingIntake(
         : null,
       supportUrl: supportUrl || null,
       remoteEndpointUrl: remoteEndpointUrl || null,
+      ...(endpoint
+        ? { remoteEndpointHealthy: true, remoteEndpointCheckedAt: new Date() }
+        : {}),
       suggestedInstallCommand:
         (input.suggestedInstallCommand || '')
           .trim()

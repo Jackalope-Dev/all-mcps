@@ -3,6 +3,7 @@ import {
   deriveTriageVerdict,
   explainTriage,
   type ListingReview,
+  pageText,
   settleVerdict,
   type TriageMatrix,
   toolNamesFromJson,
@@ -87,6 +88,37 @@ describe('settleVerdict', () => {
   it('passes the matrix verdict through otherwise', () => {
     expect(settleVerdict('approve', {})).toBe('approve');
     expect(settleVerdict(null, {})).toBeNull();
+  });
+});
+
+describe('a live hosted endpoint', () => {
+  it('counts as proof, like a sandbox run', () => {
+    expect(settleVerdict('reject', { endpointLive: true })).toBe(
+      'needs_review',
+    );
+    expect(settleVerdict('reject', { endpointLive: false })).toBe('reject');
+    expect(
+      settleVerdict('approve', { endpointLive: true, repoStatus: 'gone' }),
+    ).toBe('needs_review');
+  });
+
+  it('shows on the admin card with its auth scheme', () => {
+    expect(
+      explainTriage('approve', review, {
+        endpointLive: true,
+        endpointAuth: 'api_key',
+      }),
+    ).toContain('endpoint live (api key)');
+  });
+});
+
+describe('pageText', () => {
+  it('keeps what a reader sees and drops scripts and markup', () => {
+    expect(
+      pageText(
+        '<html><head><style>p{}</style><script>track()</script></head><body><h1>Brain&nbsp;Scanner</h1><p>Connect your agent &amp; scan.</p></body></html>',
+      ),
+    ).toBe('Brain Scanner Connect your agent & scan.');
   });
 });
 

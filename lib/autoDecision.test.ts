@@ -15,6 +15,18 @@ const strong: GateEvidence = {
   reviewFlagged: false,
   sandboxStatus: null,
   packageAlive: false,
+  liveEndpoint: false,
+};
+
+/** A hosted product submitted by its homepage: no repo, stars or package. */
+const hosted: GateEvidence = {
+  ...strong,
+  triageVerdict: 'needs_review',
+  mcpProbability: 0.45,
+  repoStatus: 'site_only',
+  stars: null,
+  reviewFlagged: true,
+  liveEndpoint: true,
 };
 
 describe('decideSubmission', () => {
@@ -70,6 +82,40 @@ describe('decideSubmission', () => {
     ).toBe('reject');
   });
 
+  it('approves a hosted product on its live endpoint', () => {
+    const r = decideSubmission(hosted);
+    expect(r?.decision).toBe('approve');
+    expect(r?.reasons).toContain('hosted endpoint answers MCP');
+    expect(decideSubmission({ ...hosted, liveEndpoint: false })?.decision).toBe(
+      'hold',
+    );
+  });
+
+  it("doesn't wait on a repo check for a hosted product with a live endpoint", () => {
+    expect(decideSubmission({ ...hosted, repoStatus: null })?.decision).toBe(
+      'approve',
+    );
+    expect(
+      decideSubmission({ ...hosted, repoStatus: null, liveEndpoint: false }),
+    ).toBeNull();
+  });
+
+  it('rejects a Jev reject with no sign of real use', () => {
+    expect(
+      decideSubmission({ ...strong, triageVerdict: 'reject', stars: 0 })
+        ?.decision,
+    ).toBe('reject');
+  });
+
+  it('never rejects a server seen running', () => {
+    expect(
+      decideSubmission({ ...hosted, triageVerdict: 'reject' })?.decision,
+    ).toBe('hold');
+    expect(
+      decideSubmission({ ...hosted, repoGoneConfirmed: true })?.decision,
+    ).not.toBe('reject');
+  });
+
   it('never rejects on Jev alone', () => {
     expect(
       decideSubmission({
@@ -82,6 +128,18 @@ describe('decideSubmission', () => {
 });
 
 describe('decideIngestPromote', () => {
+  it('takes a live endpoint as proof for a site-only listing', () => {
+    const site = {
+      ...strong,
+      repoStatus: 'site_only' as const,
+      stars: null,
+    };
+    expect(decideIngestPromote(site)?.decision).toBe('hold');
+    expect(decideIngestPromote({ ...site, liveEndpoint: true })?.decision).toBe(
+      'approve',
+    );
+  });
+
   it("promotes on Jev's look-closer verdict but holds a low MCP probability", () => {
     expect(
       decideIngestPromote({
