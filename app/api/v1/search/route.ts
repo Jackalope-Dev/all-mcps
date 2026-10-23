@@ -7,9 +7,9 @@ import { fetchActiveSponsorAd } from '@/lib/ads';
 import { resolveCategoryParam } from '@/lib/categories';
 import {
   installConfidenceNote,
-  resolveInstallConfig,
   toClaudeConfigSnippet,
 } from '@/lib/installConfig';
+import { resolveListingInstall } from '@/lib/listingClientConfigs';
 import { computeQualityScore } from '@/lib/qualityScore';
 import {
   checkRateLimit,
@@ -88,17 +88,7 @@ export async function GET(request: Request) {
     .slice(0, limit);
 
   const results = servers.map((server) => {
-    const install = resolveInstallConfig({
-      id: server.id,
-      name: server.name,
-      url: server.url,
-      description: server.description,
-      installKind: server.installKind,
-      installCommand: server.installCommand,
-      installArgs: server.installArgs,
-      installPackage: server.installPackage,
-      installConfidence: server.installConfidence,
-    });
+    const install = resolveListingInstall(server);
     const installName =
       install.kind === 'stdio' ? install.packageName : server.id;
     const snippetKey = server.id;

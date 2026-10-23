@@ -259,6 +259,48 @@ export function withSubmittedTrailingArgs(
     : args;
 }
 
+/**
+ * The package a runner's args install: the first non-flag arg (`npx -y pkg
+ * mcp` ends in a subcommand), except docker, whose image follows its flags.
+ */
+function packageFromArgs(command: string, args: string[]): string | null {
+  const positional = args.filter((a) => !a.startsWith('-'));
+  return (
+    (command === 'docker'
+      ? positional[positional.length - 1]
+      : positional[0]) || null
+  );
+}
+
+/**
+ * Install cache columns from a submitter's or owner's own command, for when
+ * the extractor has no confident answer of its own. Clearing to null there
+ * erased a command the owner had confirmed working. Null when nothing usable
+ * was submitted.
+ */
+export function installCacheFromSubmission(
+  command: string | null | undefined,
+  argsJson: string | string[] | null | undefined,
+): {
+  installKind: 'stdio';
+  installCommand: string;
+  installArgs: string;
+  installPackage: string;
+  installConfidence: 'medium';
+} | null {
+  const cmd = (command || '').trim();
+  const args = parseArgsJson(argsJson) || [];
+  const pkg = cmd ? packageFromArgs(cmd, args) : null;
+  if (!cmd || !pkg) return null;
+  return {
+    installKind: 'stdio',
+    installCommand: cmd,
+    installArgs: JSON.stringify(args),
+    installPackage: pkg,
+    installConfidence: 'medium',
+  };
+}
+
 export function resolveInstallConfig(
   input: {
     id: string;
@@ -300,7 +342,7 @@ export function resolveInstallConfig(
 
   if (suggestedCmd) {
     const args = parseArgsJson(input.suggestedInstallArgs) || [];
-    const packageName = args[args.length - 1] || input.id;
+    const packageName = packageFromArgs(suggestedCmd, args) || input.id;
     return {
       kind: 'stdio',
       command: suggestedCmd,

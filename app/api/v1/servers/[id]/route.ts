@@ -2,10 +2,12 @@ import { NextResponse } from 'next/server';
 import { extractRequestMeta, logApiAccess } from '@/lib/accessLog';
 import {
   installConfidenceNote,
-  resolveInstallConfig,
   toClaudeConfigSnippet,
 } from '@/lib/installConfig';
-import { listingClientConfigs } from '@/lib/listingClientConfigs';
+import {
+  listingClientConfigs,
+  resolveListingInstall,
+} from '@/lib/listingClientConfigs';
 import { listingRedirectTarget } from '@/lib/listingRedirect';
 import { computeQualityScore } from '@/lib/qualityScore';
 import {
@@ -74,17 +76,7 @@ export async function GET(
   const readme = await fetchServerReadme(server.url);
   // Same resolver the search endpoint and /mcp/[id] use, so a remote server gets its
   // endpoint URL and a stdio server its real package — never a guessed `npx -y <name>`.
-  const install = resolveInstallConfig({
-    id: server.id,
-    name: server.name,
-    url: server.url,
-    description: server.description,
-    installKind: server.installKind,
-    installCommand: server.installCommand,
-    installArgs: server.installArgs,
-    installPackage: server.installPackage,
-    installConfidence: server.installConfidence,
-  });
+  const install = resolveListingInstall(server);
   // Same key rule as /api/v1/search: the real package for stdio, else the id.
   const installName =
     install.kind === 'stdio' ? install.packageName : server.id;

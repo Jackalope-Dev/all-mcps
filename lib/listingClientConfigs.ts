@@ -19,10 +19,17 @@ type ListingInstallFields = {
   installArgs?: string[] | string | null;
   installPackage?: string | null;
   installConfidence?: string | null;
+  remoteEndpointUrl?: string | null;
+  suggestedInstallCommand?: string | null;
+  suggestedInstallArgs?: string[] | string | null;
   aiEnvVars?: string[] | null;
 };
 
-/** The resolved install for a listing, with the same inputs every surface uses. */
+/**
+ * The resolved install for a listing, with the same inputs every surface uses.
+ * The endpoint and submitted command are part of that: without them the API
+ * served a guess for a listing whose page showed the owner's endpoint.
+ */
 export function resolveListingInstall(
   server: ListingInstallFields,
 ): ResolvedInstall {
@@ -36,6 +43,9 @@ export function resolveListingInstall(
     installArgs: server.installArgs,
     installPackage: server.installPackage,
     installConfidence: server.installConfidence,
+    remoteEndpointUrl: server.remoteEndpointUrl,
+    suggestedInstallCommand: server.suggestedInstallCommand,
+    suggestedInstallArgs: server.suggestedInstallArgs,
   });
 }
 

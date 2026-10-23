@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  installCacheFromSubmission,
   isUnverifiedInstall,
   resolveInstallConfig,
   runtimeLabel,
@@ -274,6 +275,33 @@ describe('submitted trailing subcommand', () => {
       args: [...cachedArgs, 'mcp'],
       packageName: '@acme/brain-cli@latest',
     });
+  });
+
+  it('names the package, not the subcommand, when only the submission is known', () => {
+    const install = resolveInstallConfig({
+      ...base,
+      url: 'https://github.com/acme/brain-cli',
+      suggestedInstallCommand: 'npx',
+      suggestedInstallArgs: JSON.stringify([...cachedArgs, 'mcp']),
+    });
+    expect(install).toMatchObject({
+      source: 'submitted',
+      packageName: '@acme/brain-cli@latest',
+    });
+  });
+
+  it('turns a submission into install columns when the extractor has none', () => {
+    expect(
+      installCacheFromSubmission('npx', JSON.stringify([...cachedArgs, 'mcp'])),
+    ).toEqual({
+      installKind: 'stdio',
+      installCommand: 'npx',
+      installArgs: JSON.stringify([...cachedArgs, 'mcp']),
+      installPackage: '@acme/brain-cli@latest',
+      installConfidence: 'medium',
+    });
+    expect(installCacheFromSubmission(null, null)).toBeNull();
+    expect(installCacheFromSubmission('npx', '["-y"]')).toBeNull();
   });
 
   it('ignores a suggestion that disagrees with the cached args', () => {

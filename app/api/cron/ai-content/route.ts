@@ -31,6 +31,7 @@ import { DEFAULT_SUBMIT_CATEGORY } from '../../../../lib/categories';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
 import { cleanListingDescription } from '../../../../lib/description';
 import { getGithubToken } from '../../../../lib/githubAuth';
+import { installCacheFromSubmission } from '../../../../lib/installConfig';
 import {
   fetchGithubReadme,
   parseGithubUrl,
@@ -96,6 +97,35 @@ const INSTALL_RECHECK_MS = 7 * 24 * 60 * 60 * 1000;
  * stays honest. Rows without a summary are unaffected: aiEnrichedAt already
  * keeps them out of the claim.
  */
+/**
+ * Install columns for a listing the extractor found no confident command for:
+ * the submitter's or owner's own command when there is one, else cleared.
+ * Clearing outright erased a command an owner had confirmed working (and took
+ * the listing out of the sandbox, which only tests rows with an install).
+ */
+async function submittedOrClearedInstall(
+  db: ReturnType<typeof drizzle>,
+  id: string,
+) {
+  const [row] = await db
+    .select({
+      command: servers.suggestedInstallCommand,
+      args: servers.suggestedInstallArgs,
+    })
+    .from(servers)
+    .where(eq(servers.id, id))
+    .limit(1);
+  return (
+    installCacheFromSubmission(row?.command, row?.args) ?? {
+      installKind: null,
+      installCommand: null,
+      installArgs: null,
+      installPackage: null,
+      installConfidence: null,
+    }
+  );
+}
+
 async function markWriteupSkipped(
   db: ReturnType<typeof drizzle>,
   id: string,
@@ -433,21 +463,12 @@ export async function POST(req: Request) {
           continue;
         }
         if ('hint' in r && r.server.pass === 'install') {
-          const cached = r.hint ? installHintToCache(r.hint) : null;
+          const cached = r.hint
+            ? installHintToCache(r.hint)
+            : await submittedOrClearedInstall(db, r.server.id);
           await db
             .update(servers)
-            .set(
-              cached
-                ? { ...cached, installExtractedAt: claimTime }
-                : {
-                    installKind: null,
-                    installCommand: null,
-                    installArgs: null,
-                    installPackage: null,
-                    installConfidence: null,
-                    installExtractedAt: claimTime,
-                  },
-            )
+            .set({ ...cached, installExtractedAt: claimTime })
             .where(eq(servers.id, r.server.id));
           stats.installPicked++;
           keep.add(r.server.id);
@@ -514,11 +535,10 @@ export async function POST(req: Request) {
             updatePayload.installPackage = install.package ?? null;
             updatePayload.installConfidence = install.confidence;
           } else {
-            updatePayload.installKind = null;
-            updatePayload.installCommand = null;
-            updatePayload.installArgs = null;
-            updatePayload.installPackage = null;
-            updatePayload.installConfidence = null;
+            Object.assign(
+              updatePayload,
+              await submittedOrClearedInstall(db, r.server.id),
+            );
           }
 
           // Tags from the fixed vocabulary, confirmed by Jev against the new
