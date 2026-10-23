@@ -47,7 +47,7 @@ export type ProbeResponseFacts = {
 };
 
 /** Is this body a JSON-RPC response to our initialize call from a real MCP server? */
-function looksLikeInitializeResult(body: string): boolean {
+export function looksLikeInitializeResult(body: string): boolean {
   // Both transports are covered: a bare JSON body, or SSE frames whose `data:` lines
   // carry the JSON-RPC message.
   const candidates = body.includes('data:')
@@ -133,7 +133,7 @@ export function classifyProbeResponse(facts: ProbeResponseFacts): ProbeResult {
   return { verdict: 'unknown', detail: `Inconclusive (HTTP ${facts.status})` };
 }
 
-async function postInitialize(url: string): Promise<ProbeResponseFacts> {
+export async function postInitialize(url: string): Promise<ProbeResponseFacts> {
   const res = await fetch(url, {
     method: 'POST',
     headers: {

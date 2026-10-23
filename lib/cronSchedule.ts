@@ -92,6 +92,7 @@ export const FAST_JOBS: CronJob[] = [
   // (lib/tagClassifier.ts), indexable listings first. Jev only, no OpenAI,
   // so it rides the fast tick; no-ops once the catalog is tagged.
   { path: '/api/cron/tag-classify', secretVar: 'CRON_SECRET' },
+  { path: '/api/cron/endpoint-discovery', secretVar: 'CRON_SECRET' },
   // Catalog ingest (app/api/cron/ingest): new servers from public sources,
   // staged as pending. On the :30 fast ticks rather than the 4h list so its
   // bounded few minutes never sit in front of blog-pipeline's long budget.

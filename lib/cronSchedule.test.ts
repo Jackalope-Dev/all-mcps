@@ -173,12 +173,13 @@ describe('catalog sourcing jobs', () => {
     expect(due('2026-10-14T06:30:00Z')).not.toContain('/api/cron/dedupe');
   });
 
-  it('keeps health, enrich, stale-sweep and tag-classify on every fast tick', () => {
+  it('keeps the catalog upkeep jobs on every fast tick', () => {
     expect(due('2026-10-14T05:15:00Z')).toEqual([
       '/api/cron/health',
       '/api/cron/enrich',
       '/api/cron/stale-sweep',
       '/api/cron/tag-classify',
+      '/api/cron/endpoint-discovery',
     ]);
   });
 
