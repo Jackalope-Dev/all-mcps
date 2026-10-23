@@ -16,7 +16,10 @@ import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { servers, stdioVerifications } from '../../../../../db/schema';
 import { isCronAuthorized } from '../../../../../lib/cronAuth';
-import { parseArgsJson } from '../../../../../lib/installConfig';
+import {
+  parseArgsJson,
+  withSubmittedTrailingArgs,
+} from '../../../../../lib/installConfig';
 
 /**
  * Hands the E2B stdio verification run (GitHub Actions runner — E2B's SDK
@@ -137,6 +140,8 @@ export async function POST(req: Request) {
         installArgs: servers.installArgs,
         installPackage: servers.installPackage,
         aiEnvVars: servers.aiEnvVars,
+        suggestedInstallCommand: servers.suggestedInstallCommand,
+        suggestedInstallArgs: servers.suggestedInstallArgs,
         verifyStatus: stdioVerifications.status,
       })
       .from(servers)
@@ -266,7 +271,12 @@ export async function POST(req: Request) {
         id: r.id,
         name: r.name,
         installCommand: r.installCommand as string,
-        installArgs: parseArgsJson(r.installArgs) ?? [],
+        installArgs: withSubmittedTrailingArgs(
+          r.installCommand as string,
+          parseArgsJson(r.installArgs) ?? [],
+          r.suggestedInstallCommand,
+          r.suggestedInstallArgs,
+        ),
         installPackage: r.installPackage as string,
         // Names only — the sandbox fills them with placeholders so servers
         // that exit on a missing key get far enough to say so.

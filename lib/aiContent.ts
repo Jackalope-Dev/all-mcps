@@ -498,6 +498,7 @@ function buildSystemPrompt(
     '(5) "doc" must be an ORIGINAL, RESTRUCTURED writeup in your own words — never reuse sentences verbatim from the README. ' +
     '(6) Write as a reviewer describing the server itself. NEVER mention or allude to your inputs: no "the README", "the supplied/provided material", "the excerpt", "the documentation provided", "is not documented", "does not specify". If something is unknown, leave it out silently — do not tell the reader it is missing. ' +
     '(7) Each writeup must read differently from other listings: skip sections that would be generic, vary paragraph length and sentence openings, and put the most distinctive detail about this server first. ' +
+    '(7b) Never state a specific release number as the current or latest version (e.g. "the current stable release is 1.0.9") — it goes stale with the next release. Refer to the latest release or the package\'s @latest tag instead; a minimum runtime version (e.g. "Node.js 22+") is fine. ' +
     `\n\nName this server "${focusKeyphrase}" (or just "${name}") naturally in the first sentence of the "overview". Use the name where a human writer would, not to hit a count; do not force it into headings.\n`;
 
   if (isCategoryConfirmed && category) {

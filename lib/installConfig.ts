@@ -237,6 +237,28 @@ export function resolveInstallFromText(
   };
 }
 
+/**
+ * The extractor finds the right package but routinely drops a trailing
+ * subcommand the server needs to start (`npx -y some-cli mcp`), which leaves a
+ * config that prints help and exits. When the submitter's args are the cached
+ * args plus extra trailing ones, they only add what was lost. Returns `args`
+ * itself when the suggestion doesn't apply. Shared with the sandbox batch, so
+ * the command it tests is the one the listing shows.
+ */
+export function withSubmittedTrailingArgs(
+  command: string,
+  args: string[],
+  suggestedCommand: string | null | undefined,
+  suggestedArgs: string | string[] | null | undefined,
+): string[] {
+  if ((suggestedCommand || '').trim() !== command) return args;
+  const suggested = parseArgsJson(suggestedArgs) || [];
+  return suggested.length > args.length &&
+    args.every((a, i) => suggested[i] === a)
+    ? suggested
+    : args;
+}
+
 export function resolveInstallConfig(
   input: {
     id: string;
@@ -263,18 +285,14 @@ export function resolveInstallConfig(
     typeof input.suggestedInstallCommand === 'string'
       ? input.suggestedInstallCommand.trim()
       : '';
-  // The extractor finds the right package but routinely drops a trailing
-  // subcommand the server needs to start (`npx -y some-cli mcp`),
-  // which leaves a config that prints help and exits. When the submitter's args
-  // are the cached args plus extra trailing ones, they only add what was lost.
-  if (cached?.kind === 'stdio' && suggestedCmd === cached.command) {
-    const suggestedArgs = parseArgsJson(input.suggestedInstallArgs) || [];
-    if (
-      suggestedArgs.length > cached.args.length &&
-      cached.args.every((a, i) => suggestedArgs[i] === a)
-    ) {
-      return { ...cached, args: suggestedArgs };
-    }
+  if (cached?.kind === 'stdio') {
+    const args = withSubmittedTrailingArgs(
+      cached.command,
+      cached.args,
+      suggestedCmd,
+      input.suggestedInstallArgs,
+    );
+    if (args !== cached.args) return { ...cached, args };
   }
   // High/medium cached wins. Low-confidence cache falls through so submitter
   // suggestions (and description/endpoint hints) can still improve the result.

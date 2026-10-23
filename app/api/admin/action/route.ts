@@ -7,6 +7,7 @@ import {
   reports,
   reviews,
   servers,
+  stdioVerifications,
   upvoteRecords,
   users,
   viewRecords,
@@ -598,6 +599,17 @@ export async function POST(req: Request) {
           pending.proposed.description !== server.description
         ) {
           await upsertSignals(db, id, { contentChangedAt: new Date() });
+        }
+        // The sandbox only retests on its own 7/30-day windows, so a verdict
+        // on the old command ("couldn't confirm it starts") outlived the fix.
+        // No row reads as never tested, which the batch picks up first.
+        if (
+          'suggestedInstallCommand' in pending.proposed ||
+          'suggestedInstallArgs' in pending.proposed
+        ) {
+          await db
+            .delete(stdioVerifications)
+            .where(eq(stdioVerifications.serverId, id));
         }
       } else {
         await db
