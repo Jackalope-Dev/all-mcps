@@ -206,6 +206,10 @@ export async function POST(req: Request) {
         // an 'install-broken' or 'abandoned' flag clears before removal.
         sql`CASE WHEN ${servers.staleFlaggedAt} IS NULL THEN 0 ELSE 1 END`,
         sql`CASE WHEN ${servers.installExtractedAt} IS NULL THEN 1 ELSE 0 END`,
+        // A claimed listing's owner is watching its "does it start" note and
+        // fixing what it says; behind thousands of untested rows by views, a
+        // new listing's retest after a fix waited weeks. Claimed rows are few.
+        sql`CASE WHEN ${servers.ownerUserId} IS NULL THEN 1 ELSE 0 END`,
         sql`CASE WHEN ${stdioVerifications.id} IS NULL THEN 0 ELSE 1 END`,
         desc(servers.views),
         desc(servers.copies),
