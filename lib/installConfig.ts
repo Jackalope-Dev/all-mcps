@@ -264,7 +264,7 @@ export function resolveInstallConfig(
       ? input.suggestedInstallCommand.trim()
       : '';
   // The extractor finds the right package but routinely drops a trailing
-  // subcommand the server needs to start (`… @vibe-monitor/setup@latest mcp`),
+  // subcommand the server needs to start (`npx -y some-cli mcp`),
   // which leaves a config that prints help and exits. When the submitter's args
   // are the cached args plus extra trailing ones, they only add what was lost.
   if (cached?.kind === 'stdio' && suggestedCmd === cached.command) {
@@ -376,12 +376,17 @@ export function installConfidenceNote(install: ResolvedInstall): string {
  * empty-value placeholders in an `env` block — the caller must still fill in real
  * secrets, but the config now at least documents that they're required instead of
  * silently omitting them.
+ *
+ * Null when the install was only guessed, matching listingClientConfigs: agents
+ * run this snippet as-is, and a guessed `npx -y <listing-id>` installs whatever
+ * npm package happens to own that name.
  */
 export function toClaudeConfigSnippet(
   install: ResolvedInstall,
   key: string,
   envVars?: string[],
-): Record<string, unknown> {
+): Record<string, unknown> | null {
+  if (isUnverifiedInstall(install)) return null;
   if (install.kind === 'remote') {
     return {
       mcpServers: {

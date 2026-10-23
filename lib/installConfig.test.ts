@@ -251,15 +251,15 @@ describe('submitted trailing subcommand', () => {
   const cachedArgs = [
     '-y',
     '--registry=https://registry.npmjs.org',
-    '@vibe-monitor/setup@latest',
+    '@acme/brain-cli@latest',
   ];
   const cached = {
     ...base,
-    url: 'https://github.com/tubban1/vibe-monitor',
+    url: 'https://github.com/acme/brain-cli',
     installKind: 'stdio',
     installCommand: 'npx',
     installArgs: cachedArgs,
-    installPackage: '@vibe-monitor/setup@latest',
+    installPackage: '@acme/brain-cli@latest',
     installConfidence: 'high',
   };
 
@@ -272,7 +272,7 @@ describe('submitted trailing subcommand', () => {
     expect(install).toMatchObject({
       kind: 'stdio',
       args: [...cachedArgs, 'mcp'],
-      packageName: '@vibe-monitor/setup@latest',
+      packageName: '@acme/brain-cli@latest',
     });
   });
 
@@ -482,5 +482,16 @@ describe('Screenpipe installation and config resolution', () => {
         },
       },
     });
+  });
+
+  it('returns no snippet for a guessed install', () => {
+    // A native-binary server with no npm package: the API used to serve a
+    // guessed `npx -y <id>` while the listing page said nothing was confirmed.
+    const install = resolveInstallConfig({
+      ...base,
+      url: 'https://github.com/acme/brain-scanner',
+    });
+    expect(isUnverifiedInstall(install)).toBe(true);
+    expect(toClaudeConfigSnippet(install, 'brain-scanner')).toBeNull();
   });
 });

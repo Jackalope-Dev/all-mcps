@@ -194,12 +194,14 @@ describe('endpoint bar', () => {
   });
 
   it('rejects a docs page about the server', () => {
-    // htmlkin listed https://htmlkin.ru/docs/mcp (its docs) and we served it as
-    // the Server URL; the real endpoint is https://htmlkin.ru/mcp.
-    expect(looksLikeMcpEndpointUrl('https://htmlkin.ru/docs/mcp')).toBe(false);
-    expect(looksLikeMcpEndpointUrl('https://htmlkin.ru/mcp')).toBe(true);
+    // A listing whose URL was its docs page got that page served as the
+    // Server URL instead of the real /mcp endpoint.
+    expect(looksLikeMcpEndpointUrl('https://brainscanner.dev/docs/mcp')).toBe(
+      false,
+    );
+    expect(looksLikeMcpEndpointUrl('https://brainscanner.dev/mcp')).toBe(true);
     // An mcp.* host clears the bar on its own, so the docs path must still lose.
-    expect(looksLikeMcpEndpointUrl('https://mcp.mailsenpai.com/docs')).toBe(
+    expect(looksLikeMcpEndpointUrl('https://mcp.brainscanner.dev/docs')).toBe(
       false,
     );
   });
