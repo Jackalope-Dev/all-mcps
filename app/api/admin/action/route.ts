@@ -591,6 +591,14 @@ export async function POST(req: Request) {
           fieldUpdates.reciprocalBadgeOk = server.readmeBadgeOk;
         }
         await db.update(servers).set(fieldUpdates).where(eq(servers.id, id));
+        // The overview, use cases, features and FAQ were written from the old
+        // description; queue a rewrite the same way a README change does.
+        if (
+          pending.proposed.description !== undefined &&
+          pending.proposed.description !== server.description
+        ) {
+          await upsertSignals(db, id, { contentChangedAt: new Date() });
+        }
       } else {
         await db
           .update(servers)
