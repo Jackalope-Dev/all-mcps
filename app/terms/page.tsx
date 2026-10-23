@@ -171,8 +171,11 @@ export default function TermsPage() {
           <p>When using the Service, you agree not to:</p>
           <ul>
             <li>
-              submit spam, bulk, or automated submissions, or otherwise abuse
-              the submission or engagement-tracking features of the Site;
+              submit spam, bulk, or unattended automated submissions, or
+              otherwise abuse the submission or engagement-tracking features of
+              the Site. A single submission made by an AI assistant acting on
+              your behalf through our submission form, API, or MCP server is
+              permitted, and you remain responsible for its accuracy;
             </li>
             <li>
               attempt to gain unauthorized access to any part of the Service,

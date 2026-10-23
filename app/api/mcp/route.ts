@@ -242,7 +242,7 @@ const TOOLS = [
   {
     name: 'submit_mcp_server',
     description:
-      'Programmatically submit a new MCP server repository to AllMCPs.com for indexing and review. Supports the same optional enrichment fields as the human submission form — fill in whichever you can confidently determine from the repository (README, package.json, code) to produce a fully flushed-out listing. Omit anything you are not confident about rather than guessing; all enrichment fields are optional and unrecognized enum values are simply dropped, not rejected.',
+      'Programmatically submit a new MCP server repository to AllMCPs.com for indexing and review. Supports the same optional enrichment fields as the human submission form — fill in whichever you can confidently determine from the repository (README, package.json, code) to produce a fully flushed-out listing. Omit anything you are not confident about rather than guessing; all enrichment fields are optional and unrecognized enum values are simply dropped, not rejected. Submit each server once, on behalf of the person authorised to list it; bulk or unattended submissions are not allowed (see https://allmcps.com/terms#prohibited-conduct).',
     inputSchema: {
       type: 'object',
       properties: {
