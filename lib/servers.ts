@@ -670,6 +670,74 @@ export async function getNewestActiveServers(limit: number): Promise<Server[]> {
     .slice(0, limit);
 }
 
+/** What the stack builder (/stack) reads per listing: no tools, no AI text. */
+const STACK_BUILDER_COLUMNS = {
+  id: serversTable.id,
+  name: serversTable.name,
+  url: serversTable.url,
+  description: serversTable.description,
+  category: serversTable.category,
+  logoUrl: serversTable.logoUrl,
+  installKind: serversTable.installKind,
+  installCommand: serversTable.installCommand,
+  installArgs: serversTable.installArgs,
+  installPackage: serversTable.installPackage,
+  installConfidence: serversTable.installConfidence,
+  suggestedInstallCommand: serversTable.suggestedInstallCommand,
+  suggestedInstallArgs: serversTable.suggestedInstallArgs,
+} as const;
+
+/**
+ * Newest listings for the stack builder, trimmed to STACK_BUILDER_COLUMNS.
+ * 500 full rows (tool schemas, aiDoc) blew the Worker memory limit on /stack
+ * and were serialized into the page for the client.
+ */
+export async function getStackBuilderServers(limit: number): Promise<Server[]> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx?.env && (ctx.env as any).DB) {
+      const db = drizzle((ctx.env as any).DB);
+      const rows = await db
+        .select(STACK_BUILDER_COLUMNS)
+        .from(serversTable)
+        .where(servableFilter())
+        .orderBy(desc(serversTable.createdAt))
+        .limit(limit);
+      if (rows.length > 0) {
+        return rows.map((r) => ({
+          ...r,
+          description: cleanListingDescription(r.description),
+          suggestedInstallArgs: parseStringArray(r.suggestedInstallArgs),
+        })) as unknown as Server[];
+      }
+    }
+  } catch (_e) {
+    // Fall back to static JSON
+  }
+  return snapshotCatalogServers()
+    .sort((a, b) => toEpoch(b.createdAt) - toEpoch(a.createdAt))
+    .slice(0, limit)
+    .map(
+      (s) =>
+        ({
+          id: s.id,
+          name: s.name,
+          url: s.url,
+          description: cleanListingDescription(s.description),
+          category: s.category,
+          logoUrl: s.logoUrl,
+          installKind: s.installKind,
+          installCommand: s.installCommand,
+          installArgs: s.installArgs,
+          installPackage: s.installPackage,
+          installConfidence: s.installConfidence,
+          suggestedInstallCommand: s.suggestedInstallCommand,
+          suggestedInstallArgs: parseStringArray(s.suggestedInstallArgs),
+        }) as unknown as Server,
+    );
+}
+
 /**
  * Homepage showcase: the strongest active listings (logo, alive, adopted,
  * well-documented) rather than the newest imports. Pulls a popularity-ordered

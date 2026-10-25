@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { PresetStackGrid } from '@/components/PresetStackGrid';
 import { StackBuilderModal } from '@/components/StackBuilderModal';
 import { ToolPage } from '@/components/tools/ToolPage';
-import { getNewestActiveServers } from '@/lib/servers';
+import { getStackBuilderServers } from '@/lib/servers';
 
 export const metadata: Metadata = {
   title: 'MCP Stack Builder: Combine Tools in 1-Click',
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 };
 
 export default async function StackPage() {
-  const servers = await getNewestActiveServers(500);
+  const servers = await getStackBuilderServers(500);
 
   return (
     <ToolPage
