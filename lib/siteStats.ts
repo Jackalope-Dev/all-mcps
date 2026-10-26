@@ -123,7 +123,9 @@ function calcQualityTiers(serverList: any[]): {
 }
 
 let cachedSiteStats: CachedSiteStats | null = null;
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10 min memory cache to protect Worker memory & D1 budget
+// 30-day aggregates over every access-log row (~1.5M rows read per refresh):
+// a few hours stale is invisible, a 10-minute refresh was ~$30/month of D1.
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
 let memoizedSnapshotFallback: SiteStats | null = null;
 

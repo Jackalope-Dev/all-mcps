@@ -77,6 +77,20 @@ function servableFilter(): SQL {
   ) as SQL;
 }
 
+/**
+ * servableFilter for a batch of ids. The unary `+` keeps `status` out of
+ * index selection: D1 has no sqlite_stat1, so the planner guesses `status = ?`
+ * matches ~10 rows and walks a status index (all ~34k active rows) instead of
+ * looking the ids up by primary key. That one plan was ~78% of our D1 reads.
+ */
+function servableByIdsFilter(ids: string[]): SQL {
+  return and(
+    inArray(serversTable.id, ids),
+    sql`+${serversTable.status} = ${'active'}`,
+    isNull(serversTable.staleFlaggedAt),
+  ) as SQL;
+}
+
 export type ServerTool = {
   name: string;
   description?: string;
@@ -628,7 +642,7 @@ async function getServersByIds(ids: string[]): Promise<Server[]> {
       const rows = await db
         .select(PUBLIC_SERVER_COLUMNS)
         .from(serversTable)
-        .where(and(inArray(serversTable.id, ids), servableFilter()));
+        .where(servableByIdsFilter(ids));
       found = rows.map((r) => normalizeServer(r as unknown as Server));
     }
   } catch (_e) {
@@ -1496,12 +1510,7 @@ async function hydrateSearchResults(
     const rows = await db
       .select(SCORING_SERVER_COLUMNS)
       .from(serversTable)
-      .where(
-        and(
-          inArray(serversTable.id, ids.slice(i, i + D1_ID_CHUNK)),
-          servableFilter(),
-        ),
-      );
+      .where(servableByIdsFilter(ids.slice(i, i + D1_ID_CHUNK)));
     for (const r of rows) {
       found.set(r.id, normalizeServer(r as unknown as Server));
     }
@@ -2056,10 +2065,7 @@ export async function getFeedItemsByIds(
       for (let i = 0; i < ids.length; i += D1_ID_CHUNK) {
         const rows = await selectFeedRows(
           conn.db,
-          and(
-            inArray(serversTable.id, ids.slice(i, i + D1_ID_CHUNK)),
-            servableFilter(),
-          ) as SQL,
+          servableByIdsFilter(ids.slice(i, i + D1_ID_CHUNK)),
         );
         for (const r of rows) found.set(r.id, toFeedItem(r));
       }
