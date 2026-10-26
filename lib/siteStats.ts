@@ -124,8 +124,8 @@ function calcQualityTiers(serverList: any[]): {
 
 let cachedSiteStats: CachedSiteStats | null = null;
 // 30-day aggregates over every access-log row (~1.5M rows read per refresh):
-// a few hours stale is invisible, a 10-minute refresh was ~$30/month of D1.
-const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+// a day stale is invisible, a 10-minute refresh was ~$30/month of D1.
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 let memoizedSnapshotFallback: SiteStats | null = null;
 
@@ -229,8 +229,12 @@ let inflightSiteStats: Promise<SiteStats> | null = null;
 
 const SHARED_CACHE_KEY = 'site-stats/v2';
 
-/** How long a cached copy is kept past freshness (served while it refreshes). */
-const SHARED_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+/**
+ * Total age a cached copy is kept (served stale while it refreshes). Must
+ * exceed CACHE_TTL_MS, or copies expire as they go stale and `/` computes
+ * the stats inline.
+ */
+const SHARED_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 type CachedSiteStats = { data: SiteStats; timestamp: number };
 
