@@ -9,7 +9,10 @@
     "binding": "ASSETS"
   },
   "observability": {
-    "enabled": true
+    "enabled": true,
+    // Workers Logs bills every invocation and console line past 20M events a
+    // month. Most traffic is crawlers, so keep 1 in 5: plenty to debug from.
+    "head_sampling_rate": 0.2
   },
   "limits": {
     "cpu_ms": 300000

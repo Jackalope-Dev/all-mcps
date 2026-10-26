@@ -68,6 +68,11 @@ const PAIR_KEYS = new Set(
   INDEXABLE_COMPARE_PAIRS.map((p) => pairKey(p.a, p.b)),
 );
 
+/** True when the pair (either order) is one of the curated compare pairs. */
+export function isCuratedPair(idA: string, idB: string): boolean {
+  return PAIR_KEYS.has(pairKey(idA, idB));
+}
+
 type CompareSide = { status?: string | null; aiDoc?: string | null };
 
 /** True when this pair is curated AND both sides currently have real content. */
@@ -77,7 +82,7 @@ export function isIndexableCompare(
   a: CompareSide,
   b: CompareSide,
 ): boolean {
-  if (!PAIR_KEYS.has(pairKey(idA, idB))) return false;
+  if (!isCuratedPair(idA, idB)) return false;
   return [a, b].every(
     (s) => s.status === 'active' && !!s.aiDoc && s.aiDoc.trim().length > 0,
   );

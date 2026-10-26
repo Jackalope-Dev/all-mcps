@@ -2078,8 +2078,21 @@ details[open] > summary .lst-chevron {
   color: var(--text-tertiary);
 }
 
+/* CompareLink renders non-curated pairs as a button; :where keeps this reset
+   at zero specificity so the link classes and inline styles still win. */
+:where(button.compare-link-btn) {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
 .lst-related-compare {
   display: flex;
+  width: 100%;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;

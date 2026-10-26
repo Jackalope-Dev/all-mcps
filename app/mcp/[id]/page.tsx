@@ -25,6 +25,7 @@ import {
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { CSSProperties } from 'react';
+import { CompareLink } from '@/components/listing/CompareLink';
 import { ExpandableDoc } from '@/components/listing/ExpandableDoc';
 import { InstallPanel } from '@/components/listing/InstallPanel';
 import { ListingMoreMenu } from '@/components/listing/ListingMoreMenu';
@@ -1774,14 +1775,14 @@ export default async function MCPDetail({
                               </span>
                             </span>
                           </Link>
-                          <Link
-                            href={`/mcp/${server.id}/vs/${rel.id}`}
-                            rel="nofollow"
+                          <CompareLink
+                            a={server.id}
+                            b={rel.id}
                             className="lst-related-compare"
                           >
                             Compare vs {relName}
                             <ArrowRight size={13} aria-hidden="true" />
-                          </Link>
+                          </CompareLink>
                         </li>
                       );
                     })}

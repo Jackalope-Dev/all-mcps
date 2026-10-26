@@ -12,6 +12,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { serializeJsonLd } from '@/lib/jsonLd';
+import { CompareLink } from '../../../../components/listing/CompareLink';
 import { Badge } from '../../../../components/ui/Badge';
 import { FaqSection } from '../../../../components/ui/FaqSection';
 import { SafeMarkdown } from '../../../../components/ui/SafeMarkdown';
@@ -735,8 +736,9 @@ export default async function AlternativesPage({
                           {alt.copies ? alt.copies.toLocaleString() : '—'}
                         </td>
                         <td style={{ padding: '0.85rem 1rem' }}>
-                          <Link
-                            href={`/mcp/${server.id}/vs/${alt.id}`}
+                          <CompareLink
+                            a={server.id}
+                            b={alt.id}
                             style={{
                               fontSize: '0.8rem',
                               fontWeight: 700,
@@ -746,7 +748,7 @@ export default async function AlternativesPage({
                             }}
                           >
                             Compare →
-                          </Link>
+                          </CompareLink>
                         </td>
                       </tr>
                     );
@@ -975,8 +977,9 @@ export default async function AlternativesPage({
                       }}
                     >
                       <StatRow s={alt} />
-                      <Link
-                        href={`/mcp/${server.id}/vs/${alt.id}`}
+                      <CompareLink
+                        a={server.id}
+                        b={alt.id}
                         style={{
                           fontSize: '0.8rem',
                           fontWeight: 700,
@@ -988,7 +991,7 @@ export default async function AlternativesPage({
                         }}
                       >
                         Compare side-by-side <ArrowRight size={14} />
-                      </Link>
+                      </CompareLink>
                     </div>
                   </article>
                 );
