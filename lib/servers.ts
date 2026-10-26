@@ -3148,6 +3148,20 @@ const RELATED_RANKING_COLUMNS = {
 } as const;
 
 /**
+ * Related candidate pools are the same for every listing in a category (the
+ * current listing is filtered out in JS), so they are cached per category
+ * instead of queried per render. Listing pages revalidate hourly across ~34k
+ * listings, and each uncached pool walk read ~2k rows: ~1B D1 rows a day for
+ * 54 distinct answers. Hydration (hydrateSearchResults) still re-checks the
+ * winners are servable, so a listing removed since the pool was cached drops
+ * out at once.
+ */
+const RELATED_POOL_CACHE = {
+  freshMs: 6 * 60 * 60 * 1000,
+  maxAgeSeconds: 3 * 24 * 60 * 60,
+};
+
+/**
  * Engagement-ordered slim ranking candidates other than `current`, either from
  * its own category or (fallback) from every other one. Empty on a D1 error:
  * related listings are a garnish and must not break the page.
@@ -3158,8 +3172,26 @@ async function getRelatedRankingCandidates(
   sameCategory: boolean,
   poolLimit: number,
 ): Promise<Server[]> {
+  const pool = await swrEdgeCache(
+    `related-pool/v1/${sameCategory ? 'same' : 'other'}/${current.category}`,
+    RELATED_POOL_CACHE,
+    // One extra row so dropping `current` still leaves a full pool.
+    () => queryRelatedPool(db, current.category, sameCategory, poolLimit + 1),
+  );
+  return (pool ?? [])
+    .filter((r) => r.id !== current.id)
+    .slice(0, poolLimit)
+    .map((r) => normalizeServer(r as unknown as Server));
+}
+
+async function queryRelatedPool(
+  db: D1Drizzle,
+  category: string,
+  sameCategory: boolean,
+  limit: number,
+) {
   try {
-    const rows = await db
+    return await db
       .select(RELATED_RANKING_COLUMNS)
       .from(serversTable)
       .where(
@@ -3170,9 +3202,8 @@ async function getRelatedRankingCandidates(
           // of the ~20k noindexed stubs.
           indexableListingSql(),
           sameCategory
-            ? eq(serversTable.category, current.category)
-            : ne(serversTable.category, current.category),
-          ne(serversTable.id, current.id),
+            ? eq(serversTable.category, category)
+            : ne(serversTable.category, category),
         ),
       )
       .orderBy(
@@ -3180,10 +3211,10 @@ async function getRelatedRankingCandidates(
         desc(serversTable.copies),
         desc(serversTable.upvotes),
       )
-      .limit(poolLimit);
-    return rows.map((r) => normalizeServer(r as unknown as Server));
+      .limit(limit);
   } catch (_e) {
-    return [];
+    // null is never cached, so the next render retries D1.
+    return null;
   }
 }
 
