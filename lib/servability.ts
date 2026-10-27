@@ -24,6 +24,21 @@ export function isServable(s: ServabilityInput): boolean {
   return s.status === 'active' && s.staleFlaggedAt == null;
 }
 
+/**
+ * Taken down at its owner's request (a takedown email, a registry
+ * withdrawal). Unlike 'removed', which keeps the page up with a banner, every
+ * public URL for a withdrawn listing 404s: the page and its subpages, the OG
+ * image, badge, markdown, public API and MCP tools. The row is kept on
+ * purpose: ingest and the submit form count any existing row as already
+ * listed, so the server is never re-added. Nothing moves a listing out of this
+ * status on its own; the crons only touch active and pending rows.
+ */
+export const WITHDRAWN_STATUS = 'withdrawn';
+
+export function isWithdrawn(s: ServabilityInput): boolean {
+  return s.status === WITHDRAWN_STATUS;
+}
+
 /** The same rule as raw SQL, for hand-written queries over `servers` (optionally aliased). */
 export function servableSql(alias?: string): string {
   const c = alias ? `${alias}.` : '';

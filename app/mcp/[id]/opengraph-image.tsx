@@ -6,6 +6,7 @@ import { servers as serversTable } from '../../../db/schema';
 import { cleanListingDescription } from '../../../lib/description';
 import { parseServerName } from '../../../lib/displayName';
 import { truncateDescription, truncateTitle } from '../../../lib/ogHelpers';
+import { isWithdrawn } from '../../../lib/servability';
 
 export const alt = 'AllMCPs - Tool Directory';
 export const size = { width: 1200, height: 630 };
@@ -125,6 +126,7 @@ const OG_COLUMNS = {
   category: serversTable.category,
   logoUrl: serversTable.logoUrl,
   redirectTo: serversTable.redirectTo,
+  status: serversTable.status,
 } as const;
 
 async function getServer(
@@ -146,6 +148,7 @@ async function getServer(
         .limit(1);
       if (dbServers.length > 0) {
         const row = dbServers[0];
+        if (isWithdrawn(row)) return null;
         if (row.redirectTo && row.redirectTo !== id) {
           return getServer(row.redirectTo, hops + 1);
         }
@@ -160,6 +163,7 @@ async function getServer(
         .limit(1);
       if (altServers.length > 0) {
         const row = altServers[0];
+        if (isWithdrawn(row)) return null;
         if (row.redirectTo && row.redirectTo !== rawId) {
           return getServer(row.redirectTo, hops + 1);
         }

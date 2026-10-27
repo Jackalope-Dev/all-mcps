@@ -254,12 +254,6 @@ export async function GET(
   const style = parseStyle(url.searchParams.get('style'));
   const metric = parseMetric(url.searchParams.get('metric'));
 
-  let isOfficial = false;
-  let upvotes = 0;
-  let views = 0;
-  let copies = 0;
-  let serverName = id;
-
   const server = await getServerById(id);
   const redirectTarget = listingRedirectTarget(id, server);
   if (redirectTarget) {
@@ -267,13 +261,16 @@ export async function GET(
     dest.pathname = `/api/badge/${redirectTarget}`;
     return NextResponse.redirect(dest, 308);
   }
-  if (server) {
-    serverName = server.name || id;
-    isOfficial = server.isOfficial || false;
-    upvotes = server.upvotes || 0;
-    views = publicViewCount(server);
-    copies = server.copies || 0;
+  // No listing (never existed, deleted, or withdrawn at the owner's request):
+  // a "Listed" badge would claim a listing that isn't there.
+  if (!server) {
+    return new NextResponse('Not found', { status: 404 });
   }
+  const serverName = server.name || id;
+  const isOfficial = server.isOfficial || false;
+  const upvotes = server.upvotes || 0;
+  const views = publicViewCount(server);
+  const copies = server.copies || 0;
 
   const metricsData = { upvotes, views, copies };
   const accent = isOfficial ? '#10b981' : '#8b5cf6';

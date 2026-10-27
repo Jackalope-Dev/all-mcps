@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   ArrowUpDown,
   Award,
+  Ban,
   Check,
   CheckCircle2,
   ChevronLeft,
@@ -286,6 +287,7 @@ export default function ManageListings({
       | 'edit'
       | 'unpublish'
       | 'republish'
+      | 'withdraw'
       | 'merge_duplicate'
       | 'delete'
       | 'feature'
@@ -352,14 +354,20 @@ export default function ManageListings({
       } else if (
         action === 'unpublish' ||
         action === 'republish' ||
-        action === 'merge_duplicate'
+        action === 'merge_duplicate' ||
+        action === 'withdraw'
       ) {
         setItems((prev) =>
           prev.map((s) =>
             s.id === id
               ? {
                   ...s,
-                  status: action === 'republish' ? 'active' : 'removed',
+                  status:
+                    action === 'republish'
+                      ? 'active'
+                      : action === 'withdraw'
+                        ? 'withdrawn'
+                        : 'removed',
                 }
               : s,
           ),
@@ -439,6 +447,18 @@ export default function ManageListings({
       : `Permanently delete "${listing.name}"? This cannot be undone.`;
     if (!window.confirm(warning)) return;
     runAction(listing.id, 'delete');
+  };
+
+  // For an owner's takedown request. Unlike Delete, the row stays, so ingest
+  // and the submit form never re-add the server.
+  const withdrawListing = (listing: Listing) => {
+    if (
+      !window.confirm(
+        `Withdraw "${listing.name}" at its owner's request? Every public URL for it (page, readme, alternatives, embed, claim, badge, markdown, API) will 404, and it will never be re-imported. Republish does not undo this.`,
+      )
+    )
+      return;
+    runAction(listing.id, 'withdraw');
   };
 
   const page = Math.floor(offset / PAGE_SIZE) + 1;
@@ -743,6 +763,11 @@ export default function ManageListings({
                       <h3>{listing.name}</h3>
                       {listing.status === 'removed' && (
                         <span className="adm-tag is-dot hue-red">Removed</span>
+                      )}
+                      {listing.status === 'withdrawn' && (
+                        <span className="adm-tag is-dot hue-red">
+                          Withdrawn
+                        </span>
                       )}
                       {listing.status === 'pending' && (
                         <span className="adm-tag is-dot hue-amber">
@@ -1121,6 +1146,17 @@ export default function ManageListings({
                         </button>
                       ) : null}
 
+                      {listing.status !== 'withdrawn' && (
+                        <button
+                          type="button"
+                          onClick={() => withdrawListing(listing)}
+                          disabled={rowLoading}
+                          className="btn btn-sm adm-btn-tint hue-red"
+                          title="Owner asked us to take it down: 404 every URL and never re-import it"
+                        >
+                          <Ban size={14} aria-hidden="true" /> Withdraw
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => deleteListing(listing)}

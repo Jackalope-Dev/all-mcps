@@ -3,12 +3,14 @@ import { drizzle } from 'drizzle-orm/d1';
 import { Terminal } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import { SafeMarkdown } from '../../../../components/ui/SafeMarkdown';
 import { ServerAvatar } from '../../../../components/ui/ServerAvatar';
 import serversData from '../../../../data/mcp-servers.json';
 import { servers as serversTable } from '../../../../db/schema';
 import { parseServerName } from '../../../../lib/displayName';
 import { redirectIfListingMoved } from '../../../../lib/listingRedirect';
+import { isWithdrawn } from '../../../../lib/servability';
 import { PUBLIC_SERVER_COLUMNS } from '../../../../lib/servers';
 
 type Server = {
@@ -23,6 +25,7 @@ type Server = {
 };
 
 async function getServer(id: string): Promise<Server | undefined> {
+  let withdrawn = false;
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
@@ -33,9 +36,17 @@ async function getServer(id: string): Promise<Server | undefined> {
         .from(serversTable)
         .where(eq(serversTable.id, id))
         .limit(1);
-      if (dbServers.length > 0) return dbServers[0] as unknown as Server;
+      if (dbServers.length > 0) {
+        if (!isWithdrawn(dbServers[0])) {
+          return dbServers[0] as unknown as Server;
+        }
+        withdrawn = true;
+      }
     }
   } catch (_e) {}
+  // Withdrawn at the owner's request: a real 404, not the "not found" widget.
+  // Outside the try, which would swallow notFound()'s throw.
+  if (withdrawn) notFound();
 
   const servers = serversData as Server[];
   return servers.find((s) => s.id === id);

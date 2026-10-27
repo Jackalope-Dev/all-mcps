@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isServable } from './servability';
+import { isServable, isWithdrawn } from './servability';
 
 describe('isServable', () => {
   it('serves active, unflagged listings', () => {
@@ -14,8 +14,24 @@ describe('isServable', () => {
   });
 
   it('hides every non-active status', () => {
-    for (const status of ['pending', 'rejected', 'removed', '', null]) {
+    for (const status of [
+      'pending',
+      'rejected',
+      'removed',
+      'withdrawn',
+      '',
+      null,
+    ]) {
       expect(isServable({ status })).toBe(false);
+    }
+  });
+});
+
+describe('isWithdrawn', () => {
+  it('is true only for an owner takedown, not for auto-removal', () => {
+    expect(isWithdrawn({ status: 'withdrawn' })).toBe(true);
+    for (const status of ['active', 'pending', 'removed', null]) {
+      expect(isWithdrawn({ status })).toBe(false);
     }
   });
 });

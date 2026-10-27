@@ -4,6 +4,7 @@ import { classifyCategory } from './categoryClassifier';
 import { getGithubToken, githubApiHeaders } from './githubAuth';
 import { alignListings, reviewColumns, reviewListing } from './listingReview';
 import { isRepositoryUrl } from './repoUrl';
+import { isWithdrawn } from './servability';
 import {
   isAuthType,
   isMaintenanceStatus,
@@ -226,7 +227,9 @@ export async function prepareListingIntake(
       ok: false,
       status: 409,
       body: {
-        error: `This server is already listed as "${existingByUrl.name}" (${existingByUrl.status}). Visit /mcp/${existingByUrl.id} to view or claim it instead of submitting a duplicate.`,
+        error: isWithdrawn(existingByUrl)
+          ? `"${existingByUrl.name}" was withdrawn from the directory at its owner's request and can't be listed again.`
+          : `This server is already listed as "${existingByUrl.name}" (${existingByUrl.status}). Visit /mcp/${existingByUrl.id} to view or claim it instead of submitting a duplicate.`,
         duplicate: true,
         existing: existingByUrl,
       },

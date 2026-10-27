@@ -1,5 +1,5 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -39,6 +39,7 @@ import {
   parsePendingRevision,
   pendingRevisionToDbPatch,
 } from '../../../../lib/pendingRevision';
+import { WITHDRAWN_STATUS } from '../../../../lib/servability';
 import { parseServerTools } from '../../../../lib/servers';
 import { upsertSignals } from '../../../../lib/signalStore';
 import { getAppUrl } from '../../../../lib/stripe';
@@ -55,6 +56,7 @@ const actionSchema = z.object({
     'edit',
     'unpublish',
     'republish',
+    'withdraw',
     'delete',
     'feature',
     'unfeature',
@@ -109,6 +111,7 @@ const MESSAGES: Record<string, string> = {
   edit: 'Listing updated.',
   unpublish: 'Listing unpublished.',
   republish: 'Listing republished.',
+  withdraw: 'Listing withdrawn: every public URL now 404s.',
   merge_duplicate: 'Listing merged as duplicate and redirected.',
   delete: 'Listing permanently deleted.',
   feature: 'Featured placement granted.',
@@ -325,6 +328,21 @@ export async function POST(req: Request) {
       // Republished listing should re-enter search indexes promptly.
       if (action === 'republish' && updateResult[0]) {
         void notifyListingIndexed(updateResult[0].id).catch(() => {});
+      }
+    } else if (action === 'withdraw') {
+      // An owner's takedown request. One-way on purpose: republish only
+      // accepts 'removed' rows, so bringing it back takes a deliberate edit.
+      const updateResult = await db
+        .update(servers)
+        .set({ status: WITHDRAWN_STATUS })
+        .where(and(eq(servers.id, id), ne(servers.status, WITHDRAWN_STATUS)))
+        .returning({ id: servers.id });
+
+      if (updateResult.length === 0) {
+        return NextResponse.json(
+          { error: 'Server not found or already withdrawn.' },
+          { status: 400 },
+        );
       }
     } else if (action === 'merge_duplicate') {
       const targetId = fields?.targetId?.trim() ?? '';

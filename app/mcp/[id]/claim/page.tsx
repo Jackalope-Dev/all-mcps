@@ -7,6 +7,7 @@ import { servers } from '../../../../db/schema';
 import { auth } from '../../../../lib/auth';
 import { parseServerName } from '../../../../lib/displayName';
 import { redirectIfListingMoved } from '../../../../lib/listingRedirect';
+import { isWithdrawn } from '../../../../lib/servability';
 import ClaimClient from './ClaimClient';
 
 async function getServer(id: string) {
@@ -20,7 +21,9 @@ async function getServer(id: string) {
         .from(servers)
         .where(eq(servers.id, id))
         .limit(1);
-      if (dbServers.length > 0) return dbServers[0];
+      if (dbServers.length > 0) {
+        return isWithdrawn(dbServers[0]) ? undefined : dbServers[0];
+      }
     }
   } catch (_e) {}
 

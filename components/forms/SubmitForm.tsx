@@ -588,7 +588,21 @@ export function SubmitForm() {
               </p>
             </div>
 
-            {duplicateMatch && (
+            {duplicateMatch?.status === 'withdrawn' && (
+              <div role="alert" className="acct-callout acct-callout--warn">
+                <AlertTriangle size={18} aria-hidden="true" />
+                <div>
+                  <p className="acct-callout-title">
+                    This server can&rsquo;t be listed
+                  </p>
+                  <p className="acct-callout-body">
+                    &ldquo;{duplicateMatch.name}&rdquo; was withdrawn from the
+                    directory at its owner&rsquo;s request.
+                  </p>
+                </div>
+              </div>
+            )}
+            {duplicateMatch && duplicateMatch.status !== 'withdrawn' && (
               <div role="alert" className="acct-callout acct-callout--warn">
                 <AlertTriangle size={18} aria-hidden="true" />
                 <div>

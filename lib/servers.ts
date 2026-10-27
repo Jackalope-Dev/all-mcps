@@ -62,7 +62,7 @@ import {
   markSearchFtsUnavailable,
   SEARCH_FTS_READY_CURSOR,
 } from './searchFts';
-import { servableSql } from './servability';
+import { isWithdrawn, servableSql } from './servability';
 import { rankShowcaseServers } from './showcase';
 import { computeTrustTier, type TrustTierInput } from './trustTier';
 
@@ -2230,6 +2230,8 @@ export async function getServerById(id: string): Promise<Server | undefined> {
         .where(eq(serversTable.id, id))
         .limit(1);
       if (dbServers.length > 0) {
+        // Withdrawn at the owner's request: no public surface may serve it.
+        if (isWithdrawn(dbServers[0])) return undefined;
         return normalizeServer(dbServers[0] as unknown as Server);
       }
     }
