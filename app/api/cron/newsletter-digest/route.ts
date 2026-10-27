@@ -1,165 +1,214 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { and, desc, eq, gte, notInArray, sql } from 'drizzle-orm';
+import {
+  and,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  notInArray,
+  or,
+  type SQL,
+  sql,
+} from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
-import { servers } from '../../../../db/schema';
+import {
+  listingSignals,
+  servers,
+  upvoteRecords,
+  viewRecords,
+} from '../../../../db/schema';
+import { getAllPosts } from '../../../../lib/blog';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
-import { cleanListingDescription } from '../../../../lib/description';
+import {
+  buildDigestBlocks,
+  type DigestBlogPost,
+  type DigestCandidate,
+  type DigestEditorial,
+  displayName,
+  githubRepoKey,
+  listingSummary,
+  listingUseCases,
+  newListingScore,
+  pickDiverse,
+  plainCategory,
+  trendingScore,
+  truncate,
+} from '../../../../lib/newsletterDigest';
 import { chatJson } from '../../../../lib/openai';
 
-const NEW_WINDOW_DAYS = 7;
-const MAX_PER_SECTION = 6;
+const WINDOW_DAYS = 7;
+const NEW_COUNT = 4;
+const TRENDING_COUNT = 4;
+/** Candidates pulled per section before scoring. Bounded so the repo-dedupe query stays under D1's 100 bound-parameter limit. */
+const POOL_SIZE = 30;
+/** A listing needs this many unique viewers in the window to count as trending. */
+const MIN_WEEKLY_VIEWS = 3;
+/** Ingested listings score 1-4 on listing_quality; below 1.5 is mostly thin or near-empty pages. */
+const MIN_NEW_QUALITY = 1.5;
+/** Only feature a blog post this recent, so the slot never repeats an old post. */
+const BLOG_MAX_AGE_DAYS = 14;
 const NEWSLETTER_SUBSCRIBERS_LIST_ID = 'ta0zh9e3l9rcjlfpzpk80tcn';
-const APP_URL = 'https://allmcps.com';
 
-/**
- * Logos are stored as site-relative paths (e.g. `/logos/<id>`, served from R2 by
- * app/logos/[id]/route.ts). That works in the browser but breaks in email, where an
- * `<img src="/logos/…">` resolves against the mail client's own domain and 404s — this
- * is why claimed listings (which have a logo) showed a broken image while unclaimed ones
- * fell back cleanly to the letter tile. Absolutize every relative asset URL for email.
- */
-function absoluteUrl(path: string): string {
-  if (/^https?:\/\//i.test(path)) return path;
-  return `${APP_URL}${path.startsWith('/') ? '' : '/'}${path}`;
-}
+type Db = ReturnType<typeof drizzle>;
 
-type ListingSummary = {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  logoUrl: string | null;
+const CANDIDATE_FIELDS = {
+  id: servers.id,
+  name: servers.name,
+  url: servers.url,
+  description: servers.description,
+  category: servers.category,
+  logoUrl: servers.logoUrl,
+  aiSummary: servers.aiSummary,
+  aiUseCases: servers.aiUseCases,
+  githubStars: servers.githubStars,
+  npmDownloads: servers.npmDownloads,
+  isOfficial: servers.isOfficial,
+  toolsSource: servers.toolsSource,
+  tools: servers.tools,
+  pricingModel: servers.pricingModel,
+  authType: servers.authType,
+  installKind: servers.installKind,
+  listingQuality: listingSignals.listingQuality,
 };
-type SequenzyBlock = Record<string, any>;
 
-function truncate(text: string, max: number): string {
-  return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
+/** Listings fit to put in front of subscribers: enriched, alive, not a fork, not triaged out. */
+function featurable(): SQL {
+  return and(
+    eq(servers.status, 'active'),
+    isNotNull(servers.aiSummary),
+    notInArray(servers.healthStatus, ['offline', 'archived']),
+    sql`coalesce(${listingSignals.repoStatus}, '') != 'gone'`,
+    isNull(listingSignals.repoForkOf),
+    sql`coalesce(${listingSignals.triageVerdict}, '') != 'reject'`,
+  ) as SQL;
 }
 
-function escapeHtml(text: string): string {
-  return (
-    text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      // Also used inside quoted attributes (alt/src/href), where an unescaped
-      // quote in a listing name would end the attribute early.
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;')
+async function loadNewCandidates(
+  db: Db,
+  since: Date,
+): Promise<DigestCandidate[]> {
+  const rows = await db
+    .select(CANDIDATE_FIELDS)
+    .from(servers)
+    .leftJoin(listingSignals, eq(listingSignals.serverId, servers.id))
+    .where(
+      and(
+        featurable(),
+        gte(servers.createdAt, since),
+        sql`coalesce(${listingSignals.listingQuality}, 0) >= ${MIN_NEW_QUALITY}`,
+      ),
+    )
+    .orderBy(desc(sql`coalesce(${servers.githubStars}, 0)`))
+    .limit(POOL_SIZE);
+
+  // "New" should mean a new project. Ingest sometimes adds a monorepo sub-package
+  // (github.com/o/r/tree/main/...) for a repo we already list, so drop any candidate
+  // whose GitHub repo is already listed from before the window, or twice in the pool.
+  const seen = new Set<string>();
+  const unique = rows.filter((r) => {
+    const key = githubRepoKey(r.url);
+    if (!key) return true;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const keys = [...seen];
+  if (keys.length === 0) return unique;
+
+  const existing = await db
+    .select({ url: servers.url })
+    .from(servers)
+    .where(
+      and(
+        eq(servers.status, 'active'),
+        lt(servers.createdAt, since),
+        // instr, not LIKE: D1 rejects LIKE patterns over 50 chars, which long
+        // owner/repo URLs exceed. Over-matches (repo-foo for repo) are dropped below.
+        or(
+          ...keys.map(
+            (k) => sql`instr(lower(${servers.url}), ${`github.com/${k}`}) > 0`,
+          ),
+        ),
+      ),
+    );
+  const listedBefore = new Set(
+    existing.map((r) => githubRepoKey(r.url)).filter(Boolean),
   );
+  return unique.filter((r) => {
+    const key = githubRepoKey(r.url);
+    return !key || !listedBefore.has(key);
+  });
 }
 
-const INSTALL_COMMAND_RE =
-  /\b(npx|npm\s+install|pip3?\s+install|uvx|uv\s+pip|docker\s+run|go\s+install|cargo\s+install|brew\s+install)\b/i;
+async function loadTrendingCandidates(
+  db: Db,
+  since: Date,
+): Promise<DigestCandidate[]> {
+  // view_records keeps one row per (listing, hashed IP), and last_counted_at moves
+  // whenever that visitor's view counts again, so rows in the window = unique viewers.
+  const weekly = db
+    .select({
+      serverId: viewRecords.serverId,
+      views: sql<number>`count(*)`.as('weekly_views'),
+    })
+    .from(viewRecords)
+    .where(gte(viewRecords.lastCountedAt, since))
+    .groupBy(viewRecords.serverId)
+    .as('weekly');
 
-// Shared cleaner strips the scraped README chrome (leading badge link, platform-icon
-// emoji, separator dash). On top of that, a marketing email also wants the trailing
-// install-command clause ("npx -y ...", "Install: npx ...") gone — it reads as noise
-// here rather than on the directory page it belongs on.
-function cleanDescription(description: string): string {
-  let text = cleanListingDescription(description);
+  const rows = await db
+    .select({ ...CANDIDATE_FIELDS, weeklyViews: weekly.views })
+    .from(weekly)
+    .innerJoin(servers, eq(servers.id, weekly.serverId))
+    .leftJoin(listingSignals, eq(listingSignals.serverId, servers.id))
+    .where(
+      and(
+        featurable(),
+        // Listings from this window belong to "New & notable".
+        lt(servers.createdAt, since),
+        gte(weekly.views, MIN_WEEKLY_VIEWS),
+      ),
+    )
+    .orderBy(desc(weekly.views))
+    .limit(POOL_SIZE);
+  if (rows.length === 0) return [];
 
-  const installIdx = text.search(INSTALL_COMMAND_RE);
-  if (installIdx !== -1) {
-    text = text
-      .slice(0, installIdx)
-      .replace(/[\s.;:,(\-–—]+$/, '')
-      .trim();
-  }
+  const upvotes = await db
+    .select({
+      serverId: upvoteRecords.serverId,
+      n: sql<number>`count(*)`,
+    })
+    .from(upvoteRecords)
+    .where(
+      and(
+        gte(upvoteRecords.createdAt, since),
+        inArray(
+          upvoteRecords.serverId,
+          rows.map((r) => r.id),
+        ),
+      ),
+    )
+    .groupBy(upvoteRecords.serverId);
+  const upvotesById = new Map(upvotes.map((u) => [u.serverId, u.n]));
 
-  return text;
+  return rows.map((r) => ({
+    ...r,
+    weeklyUpvotes: upvotesById.get(r.id) || 0,
+  }));
 }
 
-// Solid-color counterparts of DirectoryGrid.tsx's getGradient() palette (the darker
-// stop of each gradient, for contrast with white text) — CSS gradients aren't
-// reliably supported in email clients, but using the same hash keeps a given
-// listing's fallback color consistent between the site and this email.
-const FALLBACK_COLORS = [
-  '#007bff',
-  '#0f172a',
-  '#0369a1',
-  '#1e3a8a',
-  '#164e63',
-  '#1d4ed8',
-];
-
-function fallbackColor(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++)
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return FALLBACK_COLORS[Math.abs(hash) % FALLBACK_COLORS.length];
+function latestBlogPost(now: Date): DigestBlogPost | null {
+  const post = getAllPosts()[0];
+  if (!post) return null;
+  const ageDays = (now.getTime() - Date.parse(post.date)) / 86_400_000;
+  return ageDays <= BLOG_MAX_AGE_DAYS
+    ? { slug: post.slug, title: post.title, excerpt: post.excerpt }
+    : null;
 }
-
-function initialLetter(name: string): string {
-  const match = name.match(/[\p{L}\p{N}]/u);
-  return (match ? match[0] : 'M').toUpperCase();
-}
-
-function listingHeaderHtml(listing: ListingSummary): string {
-  const name = escapeHtml(listing.name);
-  const category = escapeHtml(listing.category);
-  // Absolutize the (site-relative) logo path so it renders in email clients, and use the
-  // listing name as alt text so a missing image degrades to a label rather than a blank box.
-  const icon = listing.logoUrl
-    ? `<img src="${escapeHtml(absoluteUrl(listing.logoUrl))}" width="48" height="48" alt="${name}" style="display:block;border-radius:8px;object-fit:cover" />`
-    : `<table role="presentation" width="48" height="48" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr><td width="48" height="48" align="center" valign="middle" style="width:48px;height:48px;border-radius:8px;background-color:${fallbackColor(
-        listing.name,
-      )};color:#ffffff;font-family:Arial,sans-serif;font-size:20px;font-weight:800">${escapeHtml(
-        initialLetter(listing.name),
-      )}</td></tr></table>`;
-
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr><td width="48" valign="top" style="width:48px;padding-right:12px">${icon}</td><td valign="top"><div style="font-weight:700;font-size:16px;color:#020617;line-height:1.3;margin-bottom:4px">${name}</div><span style="display:inline-block;background-color:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:9999px;padding:2px 10px;font-size:11px;font-weight:600">${category}</span></td></tr></table>`;
-}
-
-// Shared "card" look for a listing: light background + hairline border + radius,
-// via Sequenzy's block-level `styles` object rather than hand-rolled HTML, so it
-// renders through the same email-safe pipeline as every other block.
-const LISTING_CARD_STYLES = {
-  backgroundColor: '#f8fafc',
-  borderColor: '#e2e8f0',
-  borderWidth: 1,
-  borderRadius: 12,
-  paddingTop: 20,
-  paddingBottom: 20,
-  paddingLeft: 20,
-  paddingRight: 20,
-};
-
-function listingBlocks(
-  listing: ListingSummary,
-  blurb?: string,
-): SequenzyBlock[] {
-  // Prefer the LLM-written editorial blurb ("why it's worth a look"); fall back to the
-  // cleaned scrape so the section still reads well when the LLM is unavailable.
-  const copy =
-    blurb && /[\p{L}\p{N}]/u.test(blurb)
-      ? truncate(blurb.trim(), 160)
-      : truncate(cleanDescription(listing.description), 140);
-
-  let content = listingHeaderHtml(listing);
-  if (/[\p{L}\p{N}]/u.test(copy)) {
-    content += `<p style="margin:12px 0 0;font-size:14px;line-height:1.6;color:#475569">${escapeHtml(copy)}</p>`;
-  }
-  // A plain text link, not a button — one full-width button per listing (6+ per
-  // email) read as a wall of chrome. The link lives inside the card's own HTML
-  // block (rather than a separate `button` block) so it sits flush under the
-  // blurb instead of as a visually distinct element under it.
-  content += `<a href="${escapeHtml(`${APP_URL}/mcp/${listing.id}`)}" style="display:inline-block;margin-top:14px;font-size:13px;font-weight:600;color:#2563eb;text-decoration:none">${escapeHtml(
-    truncate(listing.name, 30),
-  )} →</a>`;
-
-  return [
-    { type: 'text', variant: 'html', content, styles: LISTING_CARD_STYLES },
-    { type: 'spacer', height: 12 },
-  ];
-}
-
-// --- Weekly variety -------------------------------------------------------
-// The digest goes out every Monday. To keep it from feeling like the same
-// template each week, section headings, the intro line, and the subject teaser
-// rotate on an ISO-week cadence — deterministic (stable within a week) but
-// different week to week even if the LLM editorial pass is unavailable.
 
 function isoWeek(d: Date): number {
   const date = new Date(
@@ -178,206 +227,144 @@ function isoWeek(d: Date): number {
   );
 }
 
-function rotate<T>(arr: T[], week: number): T {
-  return arr[((week % arr.length) + arr.length) % arr.length];
-}
-
-const NEW_HEADINGS = [
-  'New this week',
-  'Fresh arrivals',
-  'Just added',
-  'New in the directory',
-];
-const TRENDING_HEADINGS = [
-  'Trending',
-  'Community favorites',
-  'Catching on',
-  'Most loved right now',
-];
+// Used when the LLM pass is unavailable; rotated weekly so the email doesn't read
+// identically two Mondays in a row.
 const FALLBACK_INTROS = [
-  'Fresh MCP servers and community favorites, hand-picked from the directory.',
-  'A few new tools to give your agents this week — plus what the community is loving.',
-  "The latest servers to hit AllMCPs, and the ones everyone's installing.",
-  'New capabilities for your AI agents, straight from this week’s directory activity.',
-];
-const FALLBACK_TEASERS = [
-  'fresh servers to try',
-  'this week’s standouts',
-  'new tools for your agents',
-  'what the community is loving',
+  'The strongest new MCP servers from this week, plus what developers are looking at right now.',
+  'A few new tools worth giving your agents this week, and the servers getting the most attention.',
+  'This week’s standout additions to the directory, and what’s trending with other developers.',
+  'New capabilities for your AI agents, picked from this week’s directory activity.',
 ];
 
-type Editorial = {
-  intro: string;
-  subjectTeaser: string;
-  blurbs: Record<string, string>;
+type LlmEditorial = DigestEditorial & {
+  pickId: string | null;
+  subject: string;
+  previewText: string;
 };
 
 /**
- * Ask the LLM to write an editorial intro and a one-line "why it's worth a look" blurb
- * per featured listing, so the email reads like a curated newsletter rather than a scrape
- * dump. Fail-soft: any budget/timeout/parse error returns null and the caller uses the
- * deterministic weekly-rotation fallbacks instead — the send never depends on the LLM.
+ * One LLM pass writes the editorial layer: which shortlisted server leads as the
+ * pick, a short write-up for it, a concrete blurb per card, and the subject and
+ * preview text. Fail-soft: any budget/timeout/parse error returns null and the
+ * deterministic copy is used, so the send never depends on the LLM.
  */
 async function generateEditorial(
   week: number,
-  newListings: ListingSummary[],
-  trendingListings: ListingSummary[],
-): Promise<Editorial | null> {
-  const all = [...newListings, ...trendingListings];
-  if (all.length === 0) return null;
-
-  const payload = all.map((l) => ({
-    id: l.id,
-    name: l.name,
-    category: l.category,
-    about: truncate(cleanDescription(l.description) || l.description, 220),
-  }));
+  shortlist: DigestCandidate[],
+  others: DigestCandidate[],
+  blogPost: DigestBlogPost | null,
+): Promise<LlmEditorial | null> {
+  const describe = (c: DigestCandidate) => ({
+    id: c.id,
+    name: displayName(c.name).title,
+    category: plainCategory(c.category),
+    summary: truncate(listingSummary(c), 240),
+    useCases: listingUseCases(c).slice(0, 3),
+    githubStars: c.githubStars ?? undefined,
+    pricing: c.pricingModel ?? undefined,
+    auth: c.authType ?? undefined,
+    official: c.isOfficial || undefined,
+  });
 
   const result = await chatJson<{
+    pickId?: string;
+    pickWriteup?: string;
     intro?: string;
-    subjectTeaser?: string;
+    subject?: string;
+    previewText?: string;
     items?: Array<{ id: string; blurb?: string }>;
   }>({
     model: 'gpt-5.6-luna',
     temperature: 0.6,
-    maxTokens: 900,
-    timeoutMs: 20_000,
+    maxTokens: 1400,
+    timeoutMs: 30_000,
     messages: [
       {
         role: 'system',
         content:
-          'You are the editor of AllMCPs, a directory of Model Context Protocol (MCP) servers for AI agents. ' +
-          'Write concise, energetic-but-professional copy for a weekly email digest. ' +
-          'No hype clichés ("game-changer", "revolutionary"), no emoji, no marketing filler. ' +
-          'Return JSON with: "intro" (1-2 sentences, under 240 chars, sets up this week\'s picks), ' +
-          '"subjectTeaser" (3-6 words, no trailing punctuation, for the email subject line), and ' +
-          '"items" (array of {id, blurb} for every listing you are given; blurb is ONE sentence under 130 chars ' +
-          "on what the server does and who'd want it). Keep every id exactly as provided.",
+          'You are the editor of AllMCPs, a directory of Model Context Protocol (MCP) servers that give AI agents ' +
+          '(Claude, Cursor, Codex, etc.) new tools. Readers are developers deciding what to plug into their agent. ' +
+          'Write a weekly email that makes them want to click through and try something. ' +
+          'Be concrete: name the task the server lets an agent do ("have Claude diff two Postgres schemas"), not adjectives. ' +
+          'Use only facts present in the input. No hype ("game-changer", "revolutionary", "supercharge", "unlock"), no emoji, no exclamation marks. ' +
+          'Return JSON with:\n' +
+          '"pickId": the id from SHORTLIST most likely to be useful and interesting to the broadest set of developers;\n' +
+          '"pickWriteup": 2-3 sentences (under 330 chars) on what it lets you do and who should try it — do not start with its name;\n' +
+          '"intro": 1-2 sentences (under 200 chars) setting up this week\'s email;\n' +
+          '"subject": email subject under 60 chars that names the pick or one concrete thing from this week; no "This week on AllMCPs";\n' +
+          '"previewText": inbox preview under 100 chars that complements the subject (mention another highlight, not a repeat);\n' +
+          '"items": [{id, blurb}] for EVERY listing in SHORTLIST and OTHERS — one sentence under 140 chars on what you can do with it; ' +
+          'do not start with the server name or "This server". Keep every id exactly as provided.',
       },
       {
         role: 'user',
         content:
-          `Write the digest for ISO week ${week}. Featured listings (JSON):\n` +
-          JSON.stringify(payload),
+          `ISO week ${week}.\n` +
+          `SHORTLIST (pick candidates): ${JSON.stringify(shortlist.map(describe))}\n` +
+          `OTHERS: ${JSON.stringify(others.map(describe))}\n` +
+          (blogPost
+            ? `New blog post this week: ${JSON.stringify({ title: blogPost.title })}\n`
+            : ''),
       },
     ],
   });
 
   if (!result.ok) return null;
+  const data = result.data;
+  const text = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 
   const blurbs: Record<string, string> = {};
-  for (const item of result.data.items || []) {
-    if (item?.id && typeof item.blurb === 'string' && item.blurb.trim()) {
-      blurbs[item.id] = item.blurb.trim();
-    }
+  for (const item of data.items || []) {
+    const blurb = text(item?.blurb);
+    if (item?.id && blurb) blurbs[item.id] = blurb;
   }
-
-  const intro =
-    typeof result.data.intro === 'string' ? result.data.intro.trim() : '';
-  const subjectTeaser =
-    typeof result.data.subjectTeaser === 'string'
-      ? result.data.subjectTeaser.trim().replace(/[.!?]+$/, '')
-      : '';
+  const pickId = shortlist.some((c) => c.id === data.pickId)
+    ? (data.pickId as string)
+    : null;
+  const subject = text(data.subject);
 
   return {
-    intro: intro || rotate(FALLBACK_INTROS, week),
-    subjectTeaser: subjectTeaser || rotate(FALLBACK_TEASERS, week),
+    pickId,
+    pickWriteup: text(data.pickWriteup),
+    intro: text(data.intro) || FALLBACK_INTROS[week % FALLBACK_INTROS.length],
+    // A runaway subject gets clipped by every inbox; fall back rather than truncate mid-word.
+    subject: subject.length <= 80 ? subject : '',
+    previewText: truncate(text(data.previewText), 140),
     blurbs,
   };
 }
 
-function buildDigestBlocks(
-  newListings: ListingSummary[],
-  trendingListings: ListingSummary[],
-  week: number,
-  editorial: Editorial | null,
-): SequenzyBlock[] {
-  const intro = editorial?.intro || rotate(FALLBACK_INTROS, week);
-  const blurbs = editorial?.blurbs || {};
-
-  const blocks: SequenzyBlock[] = [
-    { type: 'logo', alt: 'AllMCPs Logo', align: 'center', width: 64 },
-    { type: 'heading', content: 'This week on AllMCPs', level: 1 },
-    {
-      type: 'text',
-      variant: 'paragraph',
-      content: `<p>${escapeHtml(intro)}</p>`,
-    },
-    { type: 'spacer', height: 8 },
-  ];
-
-  if (newListings.length > 0) {
-    blocks.push({
-      type: 'heading',
-      content: rotate(NEW_HEADINGS, week),
-      level: 2,
-    });
-    blocks.push({ type: 'spacer', height: 4 });
-    for (const listing of newListings)
-      blocks.push(...listingBlocks(listing, blurbs[listing.id]));
-  }
-
-  if (trendingListings.length > 0) {
-    // Only when both sections are present — a lone section already reads clearly
-    // without a rule separating it from nothing.
-    if (newListings.length > 0) blocks.push({ type: 'divider' });
-    blocks.push({
-      type: 'heading',
-      content: rotate(TRENDING_HEADINGS, week),
-      level: 2,
-    });
-    blocks.push({ type: 'spacer', height: 4 });
-    for (const listing of trendingListings)
-      blocks.push(...listingBlocks(listing, blurbs[listing.id]));
-  }
-
-  blocks.push({ type: 'spacer', height: 8 });
-  blocks.push({
-    type: 'button',
-    text: 'Browse the full directory →',
-    url: `${APP_URL}/browse`,
-    variant: 'primary',
-  });
-  blocks.push({
-    type: 'footer',
-    address: 'Jackalope Digital \n1500 N GRANT ST # 7225 \nDENVER, CO 80203',
-    variant: 'full',
-    companyName: 'AllMCPs',
-    privacyPolicyUrl: 'https://allmcps.com/privacy',
-  });
-
-  return blocks;
-}
-
-async function createSequenzyCampaign(input: {
-  subject: string;
-  blocks: SequenzyBlock[];
-}): Promise<string> {
+async function sequenzyFetch(path: string, body: unknown): Promise<Response> {
   const key = process.env.SEQUENZY_CAMPAIGNS_API_KEY;
   if (!key) throw new Error('SEQUENZY_CAMPAIGNS_API_KEY is not configured');
-
-  const res = await fetch('https://api.sequenzy.com/api/v1/campaigns', {
+  return fetch(`https://api.sequenzy.com/api/v1${path}`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${key}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      name: `Weekly Digest — ${new Date().toISOString().slice(0, 10)}`,
-      subject: input.subject,
-      blocks: input.blocks,
-      targetLists: { type: 'lists', listIds: [NEWSLETTER_SUBSCRIBERS_LIST_ID] },
-      // No senderProfileId/replyProfileId here on purpose: this inherits the
-      // company's default sender/reply identity so it can't go stale if that
-      // default ever changes (it hardcoded an old sender profile ID before).
-    }),
+    body: JSON.stringify(body),
   });
+}
 
+async function createSequenzyCampaign(input: {
+  subject: string;
+  previewText: string;
+  blocks: Record<string, any>[];
+}): Promise<string> {
+  const res = await sequenzyFetch('/campaigns', {
+    name: `Weekly Digest — ${new Date().toISOString().slice(0, 10)}`,
+    subject: input.subject,
+    previewText: input.previewText,
+    blocks: input.blocks,
+    targetLists: { type: 'lists', listIds: [NEWSLETTER_SUBSCRIBERS_LIST_ID] },
+    // No senderProfileId/replyProfileId here on purpose: this inherits the
+    // company's default sender/reply identity so it can't go stale if that
+    // default ever changes (it hardcoded an old sender profile ID before).
+  });
   if (!res.ok) {
     throw new Error(`Sequenzy campaign creation failed: ${res.status}`);
   }
-
   const data = (await res.json()) as { campaign?: { id?: string } };
   const campaignId = data.campaign?.id;
   if (!campaignId) throw new Error('Sequenzy campaign creation returned no id');
@@ -385,23 +372,10 @@ async function createSequenzyCampaign(input: {
 }
 
 async function scheduleSequenzyCampaign(campaignId: string): Promise<void> {
-  const key = process.env.SEQUENZY_CAMPAIGNS_API_KEY;
-  if (!key) throw new Error('SEQUENZY_CAMPAIGNS_API_KEY is not configured');
-
   const scheduledAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-
-  const res = await fetch(
-    `https://api.sequenzy.com/api/v1/campaigns/${campaignId}/schedule`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ scheduledAt }),
-    },
-  );
-
+  const res = await sequenzyFetch(`/campaigns/${campaignId}/schedule`, {
+    scheduledAt,
+  });
   if (!res.ok) {
     throw new Error(`Sequenzy campaign scheduling failed: ${res.status}`);
   }
@@ -425,45 +399,15 @@ export async function POST(req: Request) {
     }
 
     const db = drizzle((env as any).DB);
-    const sinceDate = new Date(
-      Date.now() - NEW_WINDOW_DAYS * 24 * 60 * 60 * 1000,
-    );
+    const now = new Date();
+    const since = new Date(now.getTime() - WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
-    const newRows = await db
-      .select({
-        id: servers.id,
-        name: servers.name,
-        description: servers.description,
-        category: servers.category,
-        logoUrl: servers.logoUrl,
-      })
-      .from(servers)
-      .where(
-        and(eq(servers.status, 'active'), gte(servers.createdAt, sinceDate)),
-      )
-      .orderBy(desc(servers.createdAt))
-      .limit(MAX_PER_SECTION);
+    const [newPool, trendingPool] = await Promise.all([
+      loadNewCandidates(db, since),
+      loadTrendingCandidates(db, since),
+    ]);
 
-    const newIds = newRows.map((r) => r.id);
-
-    const trendingRows = await db
-      .select({
-        id: servers.id,
-        name: servers.name,
-        description: servers.description,
-        category: servers.category,
-        logoUrl: servers.logoUrl,
-      })
-      .from(servers)
-      .where(
-        newIds.length > 0
-          ? and(eq(servers.status, 'active'), notInArray(servers.id, newIds))
-          : eq(servers.status, 'active'),
-      )
-      .orderBy(desc(sql`(${servers.upvotes} * 5 + ${servers.copies})`))
-      .limit(MAX_PER_SECTION);
-
-    if (newRows.length === 0 && trendingRows.length === 0) {
+    if (newPool.length === 0 && trendingPool.length === 0) {
       return NextResponse.json({
         success: true,
         skipped: true,
@@ -471,38 +415,88 @@ export async function POST(req: Request) {
       });
     }
 
-    const week = isoWeek(new Date());
+    const week = isoWeek(now);
+    const campaign = `digest-${now.getUTCFullYear()}-w${String(week).padStart(2, '0')}`;
+    const blogPost = latestBlogPost(now);
 
-    // Editorial pass (LLM): intro + per-listing blurbs + a subject teaser. Fail-soft —
-    // null here means the deterministic weekly-rotation fallbacks are used instead.
-    const editorial = await generateEditorial(week, newRows, trendingRows);
+    // Rank once with room to spare: the top few of each section are pick candidates,
+    // and whichever becomes the pick is dropped from its section below.
+    const newRanked = pickDiverse(newPool, newListingScore, NEW_COUNT + 3);
+    const trendingRanked = pickDiverse(
+      trendingPool,
+      trendingScore,
+      TRENDING_COUNT + 2,
+    );
+    const shortlist = [...newRanked.slice(0, 3), ...trendingRanked.slice(0, 2)];
 
-    // Subject line: prefer the LLM's fresh teaser so it varies week to week; otherwise
-    // fall back to the concrete "N new, M trending" summary.
-    let subject: string;
-    if (editorial?.subjectTeaser) {
-      subject = `This week on AllMCPs: ${editorial.subjectTeaser}`;
-    } else {
-      const subjectParts: string[] = [];
-      if (newRows.length > 0)
-        subjectParts.push(
-          `${newRows.length} new server${newRows.length === 1 ? '' : 's'}`,
-        );
-      if (trendingRows.length > 0)
-        subjectParts.push(`${trendingRows.length} trending`);
-      subject = `This week on AllMCPs: ${subjectParts.join(', ')}`;
-    }
+    const llm = await generateEditorial(
+      week,
+      shortlist,
+      [...newRanked.slice(3), ...trendingRanked.slice(2)],
+      blogPost,
+    );
 
-    const blocks = buildDigestBlocks(newRows, trendingRows, week, editorial);
-    const campaignId = await createSequenzyCampaign({ subject, blocks });
+    const pick =
+      shortlist.find((c) => c.id === llm?.pickId) || shortlist[0] || null;
+    const exclude = new Set(pick ? [pick.id] : []);
+    const newListings = pickDiverse(
+      newRanked,
+      newListingScore,
+      NEW_COUNT,
+      exclude,
+    );
+    const trending = pickDiverse(
+      trendingRanked,
+      trendingScore,
+      TRENDING_COUNT,
+      exclude,
+    );
+
+    const editorial: DigestEditorial = {
+      intro: llm?.intro || FALLBACK_INTROS[week % FALLBACK_INTROS.length],
+      pickWriteup: llm?.pickWriteup || '',
+      blurbs: llm?.blurbs || {},
+    };
+
+    const pickTitle = pick ? displayName(pick.name).title : '';
+    const subject =
+      llm?.subject ||
+      (pick
+        ? `Pick of the week: ${pickTitle} + ${newListings.length} new MCP servers`
+        : `This week on AllMCPs: ${newListings.length + trending.length} MCP servers worth a look`);
+    const previewText =
+      llm?.previewText ||
+      (pick
+        ? truncate(
+            `${pickTitle}: ${listingSummary(pick)} Plus what's new and trending.`,
+            140,
+          )
+        : 'The strongest new MCP servers this week, plus what developers are looking at.');
+
+    const blocks = buildDigestBlocks({
+      pick,
+      newListings,
+      trending,
+      blogPost,
+      editorial,
+      campaign,
+    });
+    const campaignId = await createSequenzyCampaign({
+      subject,
+      previewText,
+      blocks,
+    });
     await scheduleSequenzyCampaign(campaignId);
 
     return NextResponse.json({
       success: true,
       campaignId,
-      newCount: newRows.length,
-      trendingCount: trendingRows.length,
-      editorial: editorial ? 'llm' : 'fallback',
+      subject,
+      pick: pick?.id ?? null,
+      newCount: newListings.length,
+      trendingCount: trending.length,
+      blogPost: blogPost?.slug ?? null,
+      editorial: llm ? 'llm' : 'fallback',
       week,
     });
   } catch (error: any) {
