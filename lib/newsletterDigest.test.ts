@@ -151,6 +151,8 @@ describe('buildDigestBlocks', () => {
     });
     const html = JSON.stringify(blocks);
 
+    expect(html).toContain('https://allmcps.com/email-header.png');
+    expect(html).not.toContain('"type":"logo"');
     expect(html).toContain('utm_content=pick');
     expect(html).toContain('utm_content=new-1');
     expect(html).toContain('utm_content=trending-1');

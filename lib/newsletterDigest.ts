@@ -407,7 +407,17 @@ export function buildDigestBlocks(input: {
     withUtm(`/mcp/${c.id}`, campaign, slot);
 
   const blocks: SequenzyBlock[] = [
-    { type: 'logo', alt: 'AllMCPs Logo', align: 'center', width: 64 },
+    // The full wordmark (public/email-header.png, 800x180 for 2x screens) rather
+    // than Sequenzy's `logo` block, which only shows the company's square "M" icon.
+    {
+      type: 'image',
+      src: `${APP_URL}/email-header.png`,
+      alt: 'AllMCPs',
+      width: 280,
+      widthType: 'px',
+      align: 'center',
+      href: withUtm('/', campaign, 'header'),
+    },
     { type: 'heading', content: 'This week on AllMCPs', level: 1 },
     {
       type: 'text',
