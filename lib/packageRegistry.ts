@@ -43,6 +43,22 @@ export function npmPackageFor(listing: {
   return pkg ? bareName(pkg) : null;
 }
 
+/**
+ * Whether an install's args run the package and nothing else (`npx -y pkg`).
+ * Anything more (`--actors acme/scanner`, a URL, `--from pkg[mcp]`) is a
+ * launcher configured for this listing, which is legitimate even when the
+ * launcher package belongs to another project.
+ */
+export function runsBarePackage(
+  args: readonly string[] | null | undefined,
+  pkg: string,
+): boolean {
+  const name = bareName(pkg).toLowerCase();
+  return (args ?? []).every(
+    (a) => a === '-y' || a === '--yes' || bareName(a).toLowerCase() === name,
+  );
+}
+
 /** Strip a trailing @version / ==version, keeping a leading @scope. */
 export function bareName(pkg: string): string {
   return pkg

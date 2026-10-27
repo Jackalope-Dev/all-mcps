@@ -46,6 +46,10 @@ import {
   installHintToCache,
   pickInstallCommand,
 } from '../../../../lib/listingSignals';
+import {
+  packageBelongsElsewhere,
+  runsBarePackage,
+} from '../../../../lib/packageRegistry';
 import { parseServerTools } from '../../../../lib/servers';
 import { upsertSignals } from '../../../../lib/signalStore';
 import { classifyTags } from '../../../../lib/tagClassifier';
@@ -519,7 +523,28 @@ export async function POST(req: Request) {
           updatePayload.installExtractedAt = claimTime;
           const hint = 'hint' in r ? r.hint : undefined;
           const cached = hint ? installHintToCache(hint) : null;
-          const install = cached || o.content.install;
+          // The writeup's own install pick never went through the registry
+          // check pickInstallCommand applies to README candidates, so it could
+          // land on a tool the README merely uses (`npx -y playwright-core`,
+          // `npx -y shadcn@latest`) and ship it as the listing's install.
+          // A launcher given this listing's own args is left alone.
+          const llmInstall = o.content.install;
+          const llmPackage =
+            llmInstall?.kind === 'stdio'
+              ? (llmInstall.package ??
+                llmInstall.args?.[llmInstall.args.length - 1])
+              : null;
+          const llmInstallForeign =
+            !cached &&
+            !!llmPackage &&
+            llmInstall?.kind === 'stdio' &&
+            runsBarePackage(llmInstall.args, llmPackage) &&
+            (await packageBelongsElsewhere(
+              llmInstall.command,
+              llmPackage,
+              r.server.url,
+            ));
+          const install = cached || (llmInstallForeign ? null : llmInstall);
           if (cached) {
             Object.assign(updatePayload, cached);
           } else if (install && 'kind' in install) {

@@ -8,6 +8,7 @@ import {
   packageOwnership,
   pypiStatusFromDoc,
   registryFor,
+  runsBarePackage,
   sourceReposFromDoc,
 } from './packageRegistry';
 
@@ -18,6 +19,28 @@ describe('bareName', () => {
     );
     expect(bareName('@scope/pkg')).toBe('@scope/pkg');
     expect(bareName('mcp-server-time==0.6')).toBe('mcp-server-time');
+  });
+});
+
+describe('runsBarePackage', () => {
+  it('is true only when the args run the package and nothing else', () => {
+    expect(runsBarePackage(['-y', 'toolco@latest'], 'toolco@latest')).toBe(
+      true,
+    );
+    expect(runsBarePackage(['toolco'], 'toolco@1.2.0')).toBe(true);
+    expect(runsBarePackage(null, 'toolco')).toBe(true);
+    expect(
+      runsBarePackage(
+        ['-y', '@acme/launcher', '--actors', 'acme/brainscanner'],
+        '@acme/launcher',
+      ),
+    ).toBe(false);
+    expect(
+      runsBarePackage(
+        ['--from', 'brainscanner[mcp]', 'bs-server'],
+        'bs-server',
+      ),
+    ).toBe(false);
   });
 });
 
