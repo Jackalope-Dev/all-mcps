@@ -1,7 +1,7 @@
 ---
 title: "Wrap REST API as MCP Server: Task-Shaped Tool Design"
 excerpt: "Learn how to wrap a REST API as an MCP server by selecting useful endpoints, designing task-shaped tools, forwarding auth, and handling pagination."
-tags: ["MCP", "Guides", "Architecture", "Developer Tools", "Security"]
+tags: ["Building Servers"]
 faq:
   - q: "Can an OpenAPI specification automatically become an MCP server?"
     a: "Yes, an OpenAPI specification can be used to generate an MCP server that exposes REST operations as MCP tools. Generated servers are useful for initial coverage, but they often create one tool per operation with low-level parameters. Review the generated tool list and add task-shaped tools, safer defaults, pagination handling, and authentication controls before using the server in production."

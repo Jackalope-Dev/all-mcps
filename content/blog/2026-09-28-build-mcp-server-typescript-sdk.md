@@ -1,7 +1,7 @@
 ---
 title: "Build an MCP Server with the TypeScript SDK"
 excerpt: "Build an MCP server with the TypeScript SDK from zero: register a tool and resource, test both with an in-memory client, and compare stdio with HTTP."
-tags: ["MCP", "Guides", "Developer Tools", "Architecture"]
+tags: ["Building Servers"]
 faq:
   - q: "What package do I need to build an MCP server in TypeScript?"
     a: "Use the official `@modelcontextprotocol/sdk` package and its TypeScript server APIs. You will usually also need `zod` for tool input schemas, `typescript`, and a TypeScript runtime such as `tsx` for local development. SDK import paths and some transport details vary by SDK release, so verify them against the version installed in your project."

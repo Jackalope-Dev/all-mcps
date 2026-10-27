@@ -1,11 +1,12 @@
 /**
  * Deterministic quality gate for generated blog drafts — the half of the
  * self-review loop that doesn't depend on an LLM's judgment. Mirrors the
- * AGENTS.md "Blog Posts" rules (plain `##` headings, 2-5 tags, 800+ words) and
+ * AGENTS.md "Blog Posts" rules (plain `##` headings, 1-2 topic tags, 800+ words) and
  * adds link hygiene: every internal link must resolve to a page we know exists,
  * so a hallucinated /mcp/<id> never ships as a 404.
  */
 
+import { BLOG_TOPICS, isBlogTopic, MAX_POST_TOPICS } from '../blogTopics';
 import { keywordTokens } from './similarity';
 
 export type DraftFields = {
@@ -113,8 +114,15 @@ export function validateDraft(
     );
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(draft.slug))
     issues.push('Slug must be lowercase words joined by hyphens.');
-  if (draft.tags.length < 2 || draft.tags.length > 5)
-    issues.push(`Use 2-5 tags (has ${draft.tags.length}).`);
+  if (draft.tags.length < 1 || draft.tags.length > MAX_POST_TOPICS)
+    issues.push(
+      `Use 1-${MAX_POST_TOPICS} tags, main topic first (has ${draft.tags.length}).`,
+    );
+  const offList = draft.tags.filter((t) => !isBlogTopic(t));
+  if (offList.length > 0)
+    issues.push(
+      `Tags must come from: ${BLOG_TOPICS.join(', ')} (not ${offList.join(', ')}).`,
+    );
   if (draft.faq.length < 3 || draft.faq.length > 6)
     issues.push(`FAQ must have 3-6 items (has ${draft.faq.length}).`);
 

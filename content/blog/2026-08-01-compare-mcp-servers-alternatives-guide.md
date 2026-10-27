@@ -1,7 +1,7 @@
 ---
 title: "How to compare MCP servers (and pick the right alternative)"
 excerpt: "A practical framework for evaluating Model Context Protocol servers — tools, install path, health, and side-by-side comparisons on AllMCPs."
-tags: ["MCP", "Guides", "Directory"]
+tags: ["Directory & News", "Using MCP"]
 faq:
   - q: "How do I compare two MCP servers?"
     a: "On AllMCPs, open either listing and use Alternatives, or go to /mcp/{id}/vs/{other-id} for a side-by-side table of install path, tools, quality signal, and engagement."

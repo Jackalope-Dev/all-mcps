@@ -2,7 +2,7 @@ import { Rss } from 'lucide-react';
 import type { Metadata } from 'next';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { BlogListClient } from '../../components/BlogListClient';
-import { getAllPosts, getAllTags } from '../../lib/blog';
+import { getAllPosts, getFilterTags } from '../../lib/blog';
 
 export const dynamic = 'force-static';
 
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
 
 export default function BlogPage() {
   const posts = getAllPosts();
-  const tags = getAllTags();
+  const tags = getFilterTags();
 
   const jsonLd = {
     '@context': 'https://schema.org',

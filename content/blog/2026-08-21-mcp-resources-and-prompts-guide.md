@@ -1,7 +1,7 @@
 ---
 title: "MCP Resources and Prompts: The Primitives Most Servers Skip"
 excerpt: "Tools get all the attention, but MCP defines two other primitives — resources and prompts — with a completely different control model. Here's what they actually do, real TypeScript and Python code, and why most servers never implement them."
-tags: ["MCP", "Developer Tools", "Guides"]
+tags: ["Building Servers"]
 faq:
   - q: "What's the actual difference between an MCP tool, a resource, and a prompt?"
     a: "The difference is who decides to use it. A tool is model-controlled — the LLM reads the description and schema and decides on its own whether to call it, the same way it decides between any two functions. A resource is application-controlled — the host app decides how to surface it (a file picker, an auto-attach heuristic) and the model never chooses to invoke resources/read on its own. A prompt is user-controlled — it's meant to be triggered explicitly by a person, typically as a slash command, not selected autonomously by the model at all."

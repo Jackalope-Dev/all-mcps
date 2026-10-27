@@ -1313,8 +1313,13 @@ a.content-tag:hover {
 
 .blog-toolbar {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   margin-bottom: 1rem;
+}
+
+.blog-tags {
+  flex-wrap: wrap;
 }
 
 .blog-search {

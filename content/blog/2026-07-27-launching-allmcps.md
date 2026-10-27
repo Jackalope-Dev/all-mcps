@@ -1,7 +1,7 @@
 ---
 title: "Launching AllMCPs: A Directory for Model Context Protocol Servers"
 excerpt: "Why MCP server discovery is broken, how AllMCPs fixes it, and a practical guide to evaluating, installing, and claiming servers in the directory."
-tags: ["MCP", "Announcements"]
+tags: ["Directory & News"]
 faq:
   - q: "Do I need to pay to list my MCP server on AllMCPs?"
     a: "No. Submitting and listing a server is free. Claiming ownership and unlocking premium placement are optional upgrades on top of a free listing."

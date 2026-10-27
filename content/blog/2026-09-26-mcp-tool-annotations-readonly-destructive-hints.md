@@ -1,7 +1,7 @@
 ---
 title: "MCP Tool Annotations: readOnlyHint, destructiveHint, and What Clients Do With Them"
 excerpt: "Tool annotations are four booleans and a title that tell a client whether your tool reads, writes, deletes, or reaches the outside world. Here is what each hint means, the defaults that bite servers that skip them, and why clients must treat every hint as untrusted."
-tags: ["MCP", "Security", "Developer Tools", "Guides"]
+tags: ["Building Servers", "Security"]
 faq:
   - q: "What are MCP tool annotations?"
     a: "Tool annotations are an optional annotations object on each tool definition returned by tools/list. They carry a human-readable title plus four boolean hints: readOnlyHint, destructiveHint, idempotentHint, and openWorldHint. They describe how the tool behaves rather than what it does, so a client can decide how much friction to put in front of a call, such as auto-approving a read-only lookup while asking for confirmation before a delete."

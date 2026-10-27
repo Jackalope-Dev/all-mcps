@@ -1,7 +1,7 @@
 ---
 title: "MCP OAuth Authorization: Step-by-Step PKCE and Tokens"
 excerpt: "Learn the MCP OAuth authorization flow step by step, including protected resource metadata, dynamic client registration, PKCE, and token audience validation."
-tags: ["MCP", "Security", "Guides", "Developer Tools"]
+tags: ["Security", "Building Servers"]
 faq:
   - q: "Does every MCP server need OAuth?"
     a: "No. OAuth is primarily needed for remote MCP servers that protect user or organizational resources. A local server using stdio may rely on operating-system permissions, local process identity, or an existing application session. If a remote server exposes protected tools or data, MCP authorization provides a standardized discovery and token flow."

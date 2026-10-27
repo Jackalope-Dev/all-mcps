@@ -1,7 +1,7 @@
 ---
 title: "Claude Skills vs MCP: What's the Difference and When to Use Each"
 excerpt: "Skills and MCP servers both extend what Claude can do, and both ship from Anthropic, which is exactly why they get conflated. Here's the actual distinction — procedural knowledge vs live connections — and a practical framework for which one a given problem needs."
-tags: ["MCP", "Claude", "Guides"]
+tags: ["Using MCP"]
 faq:
   - q: "What's the actual difference between a Claude Skill and an MCP server?"
     a: "A Skill is a folder of instructions (and optionally scripts) that teaches Claude how to carry out a procedure using tools it already has, like its file system or code execution access. An MCP server is a separate running process that exposes new tools, data, or systems Claude couldn't reach at all — a live database, an internal API, a SaaS product. A Skill adds know-how; an MCP server adds reach."

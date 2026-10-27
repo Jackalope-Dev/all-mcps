@@ -1,7 +1,7 @@
 ---
 title: "MCP Registry vs MCP Directory: What the Official Registry Is and How to Publish to It"
 excerpt: "The official MCP registry, third-party directories, and in-client marketplaces are three different things doing three different jobs. Here's how they fit together, how to publish your server to the official registry with server.json, and where a curated directory listing still matters."
-tags: ["MCP", "Directory", "Guides"]
+tags: ["Directory & News", "Building Servers"]
 faq:
   - q: "What is the official MCP registry?"
     a: "It's the canonical, community-driven metadata catalog for publicly available Model Context Protocol servers, hosted by the MCP project at registry.modelcontextprotocol.io. It stores a standardized description of each server — name, namespace, repository, and package pointers — and exposes a REST API so clients and downstream directories can discover servers programmatically. It's a metadata layer, not a code host and not a human-browsable storefront."

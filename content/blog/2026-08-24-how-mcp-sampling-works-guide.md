@@ -1,7 +1,7 @@
 ---
 title: "MCP Sampling Explained: How to Build AI-Powered MCP Servers Without API Keys"
 excerpt: "MCP servers don't have to be dumb pipes. With MCP sampling, your server can request LLM reasoning directly through the host client — without bundling API keys, managing token billing, or leaking secrets. Here is how sampling works with TypeScript and Python implementations."
-tags: ["MCP", "Developer Tools", "Architecture", "Guides"]
+tags: ["Building Servers"]
 faq:
   - q: "What is MCP sampling (sampling/createMessage)?"
     a: "MCP sampling is a bidirectional protocol capability where an MCP server requests an LLM completion back from the host client (such as Claude Desktop, Cursor, Zed, or Claude Code) via a JSON-RPC method named sampling/createMessage. This allows the server to leverage LLM intelligence — for summarizing data, structuring queries, or multi-step reasoning — using the client's existing authenticated model session without needing its own OpenAI, Anthropic, or cloud API keys."

@@ -1,7 +1,7 @@
 ---
 title: "MCP Progress Notifications and Subscriptions: Handling Long-Running Tasks and Live Updates"
 excerpt: "Long-running MCP tools often fail silently or hit hard client timeouts in Claude and Cursor. Here is how to implement JSON-RPC progress tokens, resource subscriptions, logging levels, and cancellation in TypeScript and Python."
-tags: ["MCP", "Developer Tools", "Architecture", "Guides"]
+tags: ["Building Servers"]
 faq:
   - q: "What is an MCP progress token and how does it work?"
     a: "An MCP progress token is an opaque identifier (string or number) supplied by the host client in the _meta property of a request. When a server executes a long-running tool, it sends out-of-band JSON-RPC notifications named notifications/progress tagged with this token, reporting current progress, total expected steps, and descriptive status messages."

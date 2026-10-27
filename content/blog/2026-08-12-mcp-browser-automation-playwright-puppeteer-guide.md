@@ -1,7 +1,7 @@
 ---
 title: "Browser Automation MCP Servers: Playwright vs Puppeteer vs Browser-Use vs Selenium"
 excerpt: "A practical decision framework for picking a browser automation MCP server — what Playwright, Puppeteer, browser-use, and Selenium wrappers actually differ on, plus the headless, auth, and security tradeoffs that matter once an agent is driving a real browser."
-tags: ["MCP", "Browser Automation", "Guides"]
+tags: ["Using MCP"]
 faq:
   - q: "Should I use a Playwright, Puppeteer, or browser-use MCP server?"
     a: "Playwright if you need Chromium, Firefox, and WebKit from one server, or you're already using Playwright for testing. Puppeteer if you only care about Chromium and want a smaller, older, very stable dependency tree. Browser-use if you want the agent to reason about the page semantically (it layers an LLM-friendly action/observation loop on top of Playwright) rather than issuing raw selector-based commands."

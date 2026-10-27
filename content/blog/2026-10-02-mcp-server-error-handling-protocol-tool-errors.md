@@ -1,7 +1,7 @@
 ---
 title: "MCP Server Error Handling: Protocol vs Tool Errors"
 excerpt: "Learn MCP server error handling: distinguish JSON-RPC protocol failures from isError tool results, and return messages models can understand and recover from."
-tags: ["MCP", "Guides", "Developer Tools", "Architecture"]
+tags: ["Building Servers"]
 faq:
   - q: "What is the difference between an MCP protocol error and a tool error?"
     a: "A protocol error is a JSON-RPC failure that means the MCP request could not be processed at all, such as malformed JSON, an unknown method, or an unknown tool. A tool error is a tools/call response whose result has isError: true. Tool errors cover failures the model can act on, including invalid arguments, missing resources, and upstream API failures."

@@ -91,26 +91,29 @@ export function getPostBySlug(slug: string): BlogPost | undefined {
   return getAllPosts().find((post) => post.slug === slug);
 }
 
-export function getAllTags(): string[] {
-  const tags = new Set<string>();
+/**
+ * Topics worth a filter chip on /blog (see BLOG_TOPICS), most-used first. A
+ * topic on a single post just restates one title, so it waits for a second.
+ */
+export function getFilterTags(): { tag: string; count: number }[] {
+  const counts = new Map<string, number>();
   for (const post of getAllPosts()) {
-    for (const tag of post.tags) tags.add(tag);
+    for (const tag of post.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
   }
-  return Array.from(tags).sort();
+  return Array.from(counts, ([tag, count]) => ({ tag, count }))
+    .filter(({ count }) => count >= 2)
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
 }
-
-/** Tags on nearly every post — sharing one says nothing about relatedness. */
-const GENERIC_TAGS = new Set(['MCP', 'Guides']);
 
 /**
  * Posts most related to `post`, for the "Related articles" block: shared
- * specific tags plus overlap of title intent tokens (same tokenizer the blog
+ * topics plus overlap of title intent tokens (same tokenizer the blog
  * pipeline uses for cannibalization checks), newest first on ties. Gives every
  * post — including older ones — inbound links from its topical neighbours.
  */
 export function getRelatedPosts(post: BlogPost, limit = 3): BlogPost[] {
   const titleTokens = keywordTokens(post.title);
-  const tags = new Set(post.tags.filter((t) => !GENERIC_TAGS.has(t)));
+  const tags = new Set(post.tags);
   return getAllPosts()
     .filter((p) => p.slug !== post.slug)
     .map((p) => {

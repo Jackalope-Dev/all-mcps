@@ -329,9 +329,6 @@ async function claimTopic(
       .slice(0, 14)
       .map((h) => ({ url: h.url, title: h.title }));
     const listings = await relatedListings(db, env, queryText);
-    const existingTags = [
-      ...new Set(publishedPosts().flatMap((p) => p.tags)),
-    ].sort();
 
     await db
       .update(blogTopics)
@@ -359,7 +356,6 @@ async function claimTopic(
           .map((n) => ({ url: n.url, title: n.title })),
         linkCandidates,
         listings,
-        existingTags,
         today: today(),
       },
     };

@@ -1,7 +1,7 @@
 ---
 title: "How Many MCP Servers Is Too Many? Tool Overload and Context Budgets"
 excerpt: "Every MCP server you connect adds its full tool list to every request, whether you use it or not. A practical guide to measuring the cost, spotting overload, and trimming your setup without losing capability."
-tags: ["MCP", "Developer Tools", "Guides"]
+tags: ["Using MCP"]
 faq:
   - q: "How many MCP servers should I connect at once?"
     a: "There's no universal number, but as a rule of thumb: under roughly 20-30 tools total, most models pick correctly without much thought. Past 50-80 tools, expect measurable degradation in tool selection even on large-context models, independent of whether you hit a hard token limit. Count tools, not servers — a single server with 25 tools costs more than five servers with three tools each."

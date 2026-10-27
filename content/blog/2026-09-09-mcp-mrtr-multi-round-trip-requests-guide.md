@@ -1,7 +1,7 @@
 ---
 title: "Multi Round-Trip Requests: Porting MCP Servers Off Server-Initiated Calls"
 excerpt: "The 2026-07-28 revision removed a server's ability to send its own JSON-RPC request mid-tool-call. MRTR replaces sampling, elicitation, and roots with a resumable input_required result. Here is how to port a real server, what requestState has to carry, and how to sign it so the round trip is safe."
-tags: ["MCP", "Developer Tools", "Architecture", "Guides"]
+tags: ["Building Servers"]
 faq:
   - q: "What is a Multi Round-Trip Request (MRTR) in MCP?"
     a: "MRTR is the pattern that replaced server-initiated requests in the 2026-07-28 protocol revision. Instead of pausing mid-execution to send the client its own JSON-RPC request, a server answers the client's original request with a result whose resultType is input_required, containing an inputRequests map describing what it still needs and an opaque requestState string. The client gathers that input and retries the same original request under a new JSON-RPC id, supplying an inputResponses map plus the exact requestState it was handed."

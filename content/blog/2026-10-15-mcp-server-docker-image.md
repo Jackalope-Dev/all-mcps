@@ -1,7 +1,7 @@
 ---
 title: "MCP Server Docker Image: Run Stdio Servers with Docker"
 excerpt: "Learn how to build and run an MCP server Docker image for stdio clients, including docker run -i, volume mounts, secrets, debugging, and distribution trade-offs."
-tags: ["MCP", "Guides", "Security", "Developer Tools"]
+tags: ["Deployment"]
 faq:
   - q: "Can an MCP server run in Docker over stdio?"
     a: "Yes, an MCP server can run in Docker over stdio when the container keeps standard input open and writes only MCP protocol messages to standard output. Use `docker run --rm -i` rather than allocating a terminal, and configure the MCP client to launch Docker as the command with the image name and required arguments."

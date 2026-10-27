@@ -1,7 +1,7 @@
 ---
 title: "MCP Structured Tool Output: outputSchema and structuredContent"
 excerpt: "Learn when MCP tools should return plain text or structuredContent with an outputSchema, how protocol versions affect support, and how clients render each."
-tags: ["MCP", "Developer Tools", "Guides", "Architecture"]
+tags: ["Building Servers"]
 faq:
   - q: "Is outputSchema required for every MCP tool?"
     a: "No, outputSchema is optional. Add it when a tool has a stable, machine-readable result contract that clients or downstream logic can use. A tool that returns conversational prose, logs, or an intentionally flexible response can use text content without declaring an output schema."

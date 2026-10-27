@@ -1,7 +1,7 @@
 ---
 title: "MCP Server Stateless Scaling: Sessions and Routing"
 excerpt: "Learn how MCP server stateless scaling works with Streamable HTTP, including session IDs, protocol headers, load-balancer routing, external state, and serverless limits."
-tags: ["MCP", "Architecture", "Guides", "Security"]
+tags: ["Deployment"]
 faq:
   - q: "Can an MCP server run behind a load balancer?"
     a: "Yes, an MCP server can run behind a load balancer when the transport, session handling, and proxy configuration are compatible. A stateless Streamable HTTP server can generally send each request to any healthy replica. A stateful server needs sticky routing or shared state so that follow-up requests can find the initialized session and any server-side data associated with it."

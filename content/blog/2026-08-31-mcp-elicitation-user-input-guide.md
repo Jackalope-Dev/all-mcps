@@ -1,7 +1,7 @@
 ---
 title: "MCP Elicitation: How Servers Ask the User for Input Mid-Task"
 excerpt: "Sampling lets an MCP server ask the client for LLM reasoning. Elicitation is the other half — a server pausing mid-tool-call to ask the human for a missing value, a confirmation, or a choice. Here is how elicitation/create works, with current TypeScript and Python code."
-tags: ["MCP", "Developer Tools", "Architecture", "Guides"]
+tags: ["Building Servers"]
 faq:
   - q: "What is MCP elicitation (elicitation/create)?"
     a: "Elicitation is a client capability defined in the Model Context Protocol that lets a server pause during tool execution and request structured input directly from the user. The server sends an elicitation/create JSON-RPC request containing a human-readable message and a restricted JSON Schema describing the fields it needs. The host client renders a form, the user fills it in, and the client returns the values so the tool can finish. It is the human-facing counterpart to sampling, which requests model reasoning rather than user input."

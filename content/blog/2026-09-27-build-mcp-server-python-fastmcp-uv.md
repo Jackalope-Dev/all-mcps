@@ -1,7 +1,7 @@
 ---
 title: "Build an MCP Server in Python with FastMCP and uv"
 excerpt: "Build an MCP server in Python with FastMCP using decorators, typed tool arguments, context logging, and uv packaging that runs through uvx."
-tags: ["MCP", "Developer Tools", "Guides", "Architecture"]
+tags: ["Building Servers"]
 faq:
   - q: "Is FastMCP part of the Python MCP SDK?"
     a: "FastMCP and the official Python MCP SDK are related but should not be treated as interchangeable package APIs. FastMCP is commonly used as a Python framework with decorator-based server registration, while the official SDK is distributed separately and its APIs depend on the release you install. This tutorial uses the standalone fastmcp package and recommends pinning the version you test."

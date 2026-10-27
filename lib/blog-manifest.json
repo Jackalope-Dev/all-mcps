@@ -5,10 +5,7 @@
     "date": "2026-10-23",
     "excerpt": "Learn how MCP server stateless scaling works with Streamable HTTP, including session IDs, protocol headers, load-balancer routing, external state, and serverless limits.",
     "tags": [
-      "MCP",
-      "Architecture",
-      "Guides",
-      "Security"
+      "Deployment"
     ],
     "faq": [
       {
@@ -37,10 +34,8 @@
     "date": "2026-10-21",
     "excerpt": "MCP roots let clients announce approved filesystem locations to servers. Learn the roots capability, roots/list requests, change notifications, and safe boundaries.",
     "tags": [
-      "MCP",
       "Security",
-      "Architecture",
-      "Guides"
+      "Building Servers"
     ],
     "faq": [
       {
@@ -69,10 +64,7 @@
     "date": "2026-10-18",
     "excerpt": "Learn how MCP servers for data analysis connect a database, file server, and code sandbox to turn a question into a validated chart.",
     "tags": [
-      "MCP",
-      "Guides",
-      "Developer Tools",
-      "Security"
+      "Using MCP"
     ],
     "faq": [
       {
@@ -101,10 +93,7 @@
     "date": "2026-10-15",
     "excerpt": "Learn how to build and run an MCP server Docker image for stdio clients, including docker run -i, volume mounts, secrets, debugging, and distribution trade-offs.",
     "tags": [
-      "MCP",
-      "Guides",
-      "Security",
-      "Developer Tools"
+      "Deployment"
     ],
     "faq": [
       {
@@ -133,10 +122,7 @@
     "date": "2026-10-06",
     "excerpt": "Learn how to use MCP servers with a local LLM using Ollama, LM Studio, Cline, and Continue, with setup steps, tool-calling tests, and limits.",
     "tags": [
-      "Guides",
-      "MCP",
-      "Developer Tools",
-      "Architecture"
+      "Using MCP"
     ],
     "faq": [
       {
@@ -165,11 +151,7 @@
     "date": "2026-10-02",
     "excerpt": "Learn how to wrap a REST API as an MCP server by selecting useful endpoints, designing task-shaped tools, forwarding auth, and handling pagination.",
     "tags": [
-      "MCP",
-      "Guides",
-      "Architecture",
-      "Developer Tools",
-      "Security"
+      "Building Servers"
     ],
     "faq": [
       {
@@ -198,10 +180,7 @@
     "date": "2026-10-02",
     "excerpt": "Learn when MCP tools should return plain text or structuredContent with an outputSchema, how protocol versions affect support, and how clients render each.",
     "tags": [
-      "MCP",
-      "Developer Tools",
-      "Guides",
-      "Architecture"
+      "Building Servers"
     ],
     "faq": [
       {
@@ -234,10 +213,7 @@
     "date": "2026-10-02",
     "excerpt": "Learn MCP server error handling: distinguish JSON-RPC protocol failures from isError tool results, and return messages models can understand and recover from.",
     "tags": [
-      "MCP",
-      "Guides",
-      "Developer Tools",
-      "Architecture"
+      "Building Servers"
     ],
     "faq": [
       {
@@ -266,10 +242,8 @@
     "date": "2026-10-02",
     "excerpt": "Learn the MCP OAuth authorization flow step by step, including protected resource metadata, dynamic client registration, PKCE, and token audience validation.",
     "tags": [
-      "MCP",
       "Security",
-      "Guides",
-      "Developer Tools"
+      "Building Servers"
     ],
     "faq": [
       {
@@ -298,10 +272,7 @@
     "date": "2026-09-28",
     "excerpt": "Build an MCP server with the TypeScript SDK from zero: register a tool and resource, test both with an in-memory client, and compare stdio with HTTP.",
     "tags": [
-      "MCP",
-      "Guides",
-      "Developer Tools",
-      "Architecture"
+      "Building Servers"
     ],
     "faq": [
       {
@@ -330,10 +301,7 @@
     "date": "2026-09-27",
     "excerpt": "Build an MCP server in Python with FastMCP using decorators, typed tool arguments, context logging, and uv packaging that runs through uvx.",
     "tags": [
-      "MCP",
-      "Developer Tools",
-      "Guides",
-      "Architecture"
+      "Building Servers"
     ],
     "faq": [
       {
@@ -362,10 +330,8 @@
     "date": "2026-09-26",
     "excerpt": "Tool annotations are four booleans and a title that tell a client whether your tool reads, writes, deletes, or reaches the outside world. Here is what each hint means, the defaults that bite servers that skip them, and why clients must treat every hint as untrusted.",
     "tags": [
-      "MCP",
-      "Security",
-      "Developer Tools",
-      "Guides"
+      "Building Servers",
+      "Security"
     ],
     "faq": [
       {
@@ -398,10 +364,8 @@
     "date": "2026-09-17",
     "excerpt": "The HTTP+SSE transport is deprecated and the dual-endpoint session model is the reason. Here is what Streamable HTTP actually changes, how to run both transports from one handler during the window, and the proxy and infrastructure settings that quietly break the migration.",
     "tags": [
-      "MCP",
-      "Guides",
-      "Architecture",
-      "Developer Tools"
+      "Deployment",
+      "Building Servers"
     ],
     "faq": [
       {
@@ -434,10 +398,7 @@
     "date": "2026-09-09",
     "excerpt": "The 2026-07-28 revision removed a server's ability to send its own JSON-RPC request mid-tool-call. MRTR replaces sampling, elicitation, and roots with a resumable input_required result. Here is how to port a real server, what requestState has to carry, and how to sign it so the round trip is safe.",
     "tags": [
-      "MCP",
-      "Developer Tools",
-      "Architecture",
-      "Guides"
+      "Building Servers"
     ],
     "faq": [
       {
@@ -470,10 +431,7 @@
     "date": "2026-08-31",
     "excerpt": "Sampling lets an MCP server ask the client for LLM reasoning. Elicitation is the other half — a server pausing mid-tool-call to ask the human for a missing value, a confirmation, or a choice. Here is how elicitation/create works, with current TypeScript and Python code.",
     "tags": [
-      "MCP",
-      "Developer Tools",
-      "Architecture",
-      "Guides"
+      "Building Servers"
     ],
     "faq": [
       {
@@ -506,10 +464,7 @@
     "date": "2026-08-26",
     "excerpt": "Long-running MCP tools often fail silently or hit hard client timeouts in Claude and Cursor. Here is how to implement JSON-RPC progress tokens, resource subscriptions, logging levels, and cancellation in TypeScript and Python.",
     "tags": [
-      "MCP",
-      "Developer Tools",
-      "Architecture",
-      "Guides"
+      "Building Servers"
     ],
     "faq": [
       {
@@ -542,10 +497,7 @@
     "date": "2026-08-24",
     "excerpt": "MCP servers don't have to be dumb pipes. With MCP sampling, your server can request LLM reasoning directly through the host client — without bundling API keys, managing token billing, or leaking secrets. Here is how sampling works with TypeScript and Python implementations.",
     "tags": [
-      "MCP",
-      "Developer Tools",
-      "Architecture",
-      "Guides"
+      "Building Servers"
     ],
     "faq": [
       {
@@ -578,9 +530,7 @@
     "date": "2026-08-21",
     "excerpt": "Tools get all the attention, but MCP defines two other primitives — resources and prompts — with a completely different control model. Here's what they actually do, real TypeScript and Python code, and why most servers never implement them.",
     "tags": [
-      "MCP",
-      "Developer Tools",
-      "Guides"
+      "Building Servers"
     ],
     "faq": [
       {
@@ -609,9 +559,7 @@
     "date": "2026-08-18",
     "excerpt": "Skills and MCP servers both extend what Claude can do, and both ship from Anthropic, which is exactly why they get conflated. Here's the actual distinction — procedural knowledge vs live connections — and a practical framework for which one a given problem needs.",
     "tags": [
-      "MCP",
-      "Claude",
-      "Guides"
+      "Using MCP"
     ],
     "faq": [
       {
@@ -640,9 +588,8 @@
     "date": "2026-08-16",
     "excerpt": "The official MCP registry, third-party directories, and in-client marketplaces are three different things doing three different jobs. Here's how they fit together, how to publish your server to the official registry with server.json, and where a curated directory listing still matters.",
     "tags": [
-      "MCP",
-      "Directory",
-      "Guides"
+      "Directory & News",
+      "Building Servers"
     ],
     "faq": [
       {
@@ -671,9 +618,7 @@
     "date": "2026-08-13",
     "excerpt": "Every MCP server you connect adds its full tool list to every request, whether you use it or not. A practical guide to measuring the cost, spotting overload, and trimming your setup without losing capability.",
     "tags": [
-      "MCP",
-      "Developer Tools",
-      "Guides"
+      "Using MCP"
     ],
     "faq": [
       {
@@ -702,9 +647,7 @@
     "date": "2026-08-12",
     "excerpt": "A practical decision framework for picking a browser automation MCP server — what Playwright, Puppeteer, browser-use, and Selenium wrappers actually differ on, plus the headless, auth, and security tradeoffs that matter once an agent is driving a real browser.",
     "tags": [
-      "MCP",
-      "Browser Automation",
-      "Guides"
+      "Using MCP"
     ],
     "faq": [
       {
@@ -733,9 +676,7 @@
     "date": "2026-08-08",
     "excerpt": "The model never reads your code — only your tool's name, description, and schema. A practical guide to writing MCP tool descriptions that get selected correctly, with the arguments filled in right, every time.",
     "tags": [
-      "MCP",
-      "Developer Tools",
-      "Guides"
+      "Building Servers"
     ],
     "faq": [
       {
@@ -764,9 +705,7 @@
     "date": "2026-08-07",
     "excerpt": "A practical guide to testing Model Context Protocol servers before you ship — the Inspector, unit-testing tool handlers, integration harnesses, structured logging, and a pre-publish checklist.",
     "tags": [
-      "MCP",
-      "Developer Tools",
-      "Guides"
+      "Building Servers"
     ],
     "faq": [
       {
@@ -795,9 +734,7 @@
     "date": "2026-08-05",
     "excerpt": "A complete guide to deploying remote Model Context Protocol (MCP) servers to production on Cloudflare Workers, Docker, Fly.io, and AWS with SSE transports, CORS, SSL, and secrets management.",
     "tags": [
-      "MCP",
-      "Architecture",
-      "Guides"
+      "Deployment"
     ],
     "faq": [
       {
@@ -826,8 +763,7 @@
     "date": "2026-08-04",
     "excerpt": "What MCP servers actually do, how the 3,000+ available servers break down by category, and how to choose the right Model Context Protocol server for your AI agent.",
     "tags": [
-      "MCP",
-      "Guides"
+      "Using MCP"
     ],
     "faq": [
       {
@@ -856,9 +792,8 @@
     "date": "2026-08-02",
     "excerpt": "A complete guide to authenticating and securing remote Model Context Protocol (MCP) servers over HTTP and SSE, featuring OAuth 2.0 PKCE, JWT bearer validation, multi-tenant token propagation, and prompt injection defense.",
     "tags": [
-      "MCP",
       "Security",
-      "Architecture"
+      "Deployment"
     ],
     "faq": [
       {
@@ -887,8 +822,7 @@
     "date": "2026-08-02",
     "excerpt": "Claim your listing, verify your product site, and place a dofollow AllMCPs badge — reciprocal SEO that helps your product and the directory.",
     "tags": [
-      "SEO",
-      "Directory"
+      "Directory & News"
     ],
     "faq": [
       {
@@ -913,9 +847,8 @@
     "date": "2026-08-01",
     "excerpt": "A practical framework for evaluating Model Context Protocol servers — tools, install path, health, and side-by-side comparisons on AllMCPs.",
     "tags": [
-      "MCP",
-      "Guides",
-      "Directory"
+      "Directory & News",
+      "Using MCP"
     ],
     "faq": [
       {
@@ -940,8 +873,7 @@
     "date": "2026-07-31",
     "excerpt": "One reference guide to installing Model Context Protocol servers across every major client — the universal config shape, exact file locations, and how to verify your tools loaded.",
     "tags": [
-      "MCP",
-      "Guides"
+      "Using MCP"
     ],
     "faq": [
       {
@@ -970,8 +902,7 @@
     "date": "2026-07-29",
     "excerpt": "The most common reasons an MCP server fails to connect, shows zero tools, or crashes on startup — and exactly how to fix each one, across Claude Desktop, Claude Code, Cursor, and other MCP clients.",
     "tags": [
-      "MCP",
-      "Guides"
+      "Using MCP"
     ],
     "faq": [
       {
@@ -1000,8 +931,7 @@
     "date": "2026-07-28",
     "excerpt": "A practical engineering guide to building secure, performant Model Context Protocol (MCP) servers with robust transports, token-optimized schemas, and defense-in-depth authorization.",
     "tags": [
-      "MCP",
-      "Architecture",
+      "Building Servers",
       "Security"
     ],
     "faq": [
@@ -1031,8 +961,7 @@
     "date": "2026-07-27",
     "excerpt": "Why MCP server discovery is broken, how AllMCPs fixes it, and a practical guide to evaluating, installing, and claiming servers in the directory.",
     "tags": [
-      "MCP",
-      "Announcements"
+      "Directory & News"
     ],
     "faq": [
       {

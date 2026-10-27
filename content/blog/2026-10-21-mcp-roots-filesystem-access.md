@@ -1,7 +1,7 @@
 ---
 title: "MCP Roots: How Clients Scope Server Filesystem Access"
 excerpt: "MCP roots let clients announce approved filesystem locations to servers. Learn the roots capability, roots/list requests, change notifications, and safe boundaries."
-tags: ["MCP", "Security", "Architecture", "Guides"]
+tags: ["Security", "Building Servers"]
 faq:
   - q: "Are MCP roots an access control mechanism?"
     a: "MCP roots are a client-provided scope signal, not a complete access control mechanism. A server must enforce the announced directories in its own file operations, while also applying path canonicalization, symlink checks, permissions, and any deployment-level sandboxing. If a client does not provide roots, the server should fail closed or require an explicit configuration rather than assume unrestricted filesystem access."

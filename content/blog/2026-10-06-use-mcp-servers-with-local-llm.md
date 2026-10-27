@@ -1,7 +1,7 @@
 ---
 title: "Use MCP Servers With a Local LLM: Ollama, Clients, and Tools"
 excerpt: "Learn how to use MCP servers with a local LLM using Ollama, LM Studio, Cline, and Continue, with setup steps, tool-calling tests, and limits."
-tags: ["Guides", "MCP", "Developer Tools", "Architecture"]
+tags: ["Using MCP"]
 faq:
   - q: "Can Ollama connect to MCP servers by itself?"
     a: "Ollama does not generally act as a complete MCP client by itself. It serves local models through APIs, including tool-calling interfaces for compatible models, while an MCP-capable application or bridge must discover tools, provide schemas, execute calls, and return results. Projects such as Cline, Continue, and community Ollama bridges can provide that missing client-side agent loop."

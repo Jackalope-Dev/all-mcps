@@ -155,7 +155,7 @@ describe('draft validation', () => {
     excerpt:
       'How MCP servers should report failures: protocol errors, isError tool results, and messages a model can recover from.',
     primaryKeyword: 'mcp server error handling',
-    tags: ['MCP', 'Guides'],
+    tags: ['Building Servers'],
     faq: [
       {
         q: 'What is isError?',
@@ -198,6 +198,19 @@ describe('draft validation', () => {
     expect(joined).toMatch(/plain text/);
     expect(joined).toMatch(/level-1/);
     expect(joined).toMatch(/words/);
+  });
+
+  it('flags tags outside the fixed topic list and too many topics', () => {
+    const offList = validateDraft({ ...draft, tags: ['MCP', 'Guides'] }, (p) =>
+      known.has(p),
+    );
+    expect(offList.issues.join('\n')).toMatch(/not MCP, Guides/);
+
+    const tooMany = validateDraft(
+      { ...draft, tags: ['Building Servers', 'Security', 'Deployment'] },
+      (p) => known.has(p),
+    );
+    expect(tooMany.issues.join('\n')).toMatch(/Use 1-2 tags/);
   });
 
   it('strips unknown internal links but keeps anchor text', () => {

@@ -1,7 +1,7 @@
 ---
 title: "MCP Servers for Data Analysis: Database to Chart"
 excerpt: "Learn how MCP servers for data analysis connect a database, file server, and code sandbox to turn a question into a validated chart."
-tags: ["MCP", "Guides", "Developer Tools", "Security"]
+tags: ["Using MCP"]
 faq:
   - q: "Can MCP query a database and create a chart?"
     a: "Yes, an MCP host can coordinate separate client connections to a read-only database server, a file server, and a code-execution server. The database can return source rows, the file server can provide mappings or calendar definitions, and the code server can calculate metrics and save a chart. Tool names, approval flows, and output formats vary by client and server, so inspect their advertised schemas."

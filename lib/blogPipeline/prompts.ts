@@ -4,6 +4,8 @@
  * the orchestration so they can be tuned without touching control flow.
  */
 
+import { BLOG_TOPICS, MAX_POST_TOPICS } from '../blogTopics';
+
 export type LinkCandidate = { url: string; title: string };
 
 export type WriterBrief = {
@@ -17,7 +19,6 @@ export type WriterBrief = {
   linkCandidates: LinkCandidate[];
   /** Directory listings relevant to the topic, as /mcp/<id> links. */
   listings: LinkCandidate[];
-  existingTags: string[];
   today: string;
 };
 
@@ -45,7 +46,7 @@ Return ONLY JSON with keys:
 "slug" (lowercase-hyphenated, 3-8 words, contains the primary keyword's main terms),
 "excerpt" (120-180 chars, a meta description that answers the query),
 "primaryKeyword" (the target keyword, echoed or lightly normalized),
-"tags" (2-5; reuse existing tags where they fit),
+"tags" (1-${MAX_POST_TOPICS} topics, main topic first, only from: ${BLOG_TOPICS.join(', ')}),
 "faq" (3-5 objects {"q","a"}: questions phrased the way developers search, answers 40-90 words, first sentence is the direct answer, no overlap with body headings),
 "content" (the markdown body, 1300-2200 words).`;
 }
@@ -64,7 +65,6 @@ export function writerUserPrompt(brief: WriterBrief): string {
     `Closely related existing pages (link to each, do not duplicate):\n${formatLinks(brief.neighbours)}`,
     `Other internal pages you may link to:\n${formatLinks(brief.linkCandidates)}`,
     `Relevant MCP server listings in the directory (link where you mention one):\n${formatLinks(brief.listings)}`,
-    `Existing blog tags: ${brief.existingTags.join(', ')}`,
   ].join('\n\n');
 }
 

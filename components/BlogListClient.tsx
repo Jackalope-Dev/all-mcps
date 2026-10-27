@@ -30,22 +30,10 @@ export function BlogListClient({
   tags,
 }: {
   posts: BlogPost[];
-  tags: string[];
+  tags: { tag: string; count: number }[];
 }) {
   const [query, setQuery] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
-
-  // Most-used tags first: the filter row reads as "topics", not an alphabet.
-  const tagCounts = useMemo(
-    () =>
-      tags
-        .map((tag) => ({
-          tag,
-          count: posts.filter((p) => p.tags.includes(tag)).length,
-        }))
-        .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag)),
-    [posts, tags],
-  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -95,41 +83,37 @@ export function BlogListClient({
           ) : null}
         </label>
 
-        {tagCounts.length > 0 ? (
-          <div className="fade-x blog-tags">
-            <div
-              className="topic-chips scroll-x"
-              role="toolbar"
-              aria-label="Filter by tag"
+        {tags.length > 0 ? (
+          <div
+            className="topic-chips blog-tags"
+            role="toolbar"
+            aria-label="Filter by tag"
+          >
+            <button
+              type="button"
+              className="chip"
+              aria-pressed={activeTag === null}
+              onClick={() => setActiveTag(null)}
             >
+              All <span className="chip-count">{posts.length}</span>
+            </button>
+            {tags.map(({ tag, count }) => (
               <button
+                key={tag}
                 type="button"
                 className="chip"
-                aria-pressed={activeTag === null}
-                onClick={() => setActiveTag(null)}
+                aria-pressed={activeTag === tag}
+                onClick={() =>
+                  setActiveTag((cur) => (cur === tag ? null : tag))
+                }
               >
-                All <span className="chip-count">{posts.length}</span>
+                <span
+                  className={`topic-dot ${blogTagHueClass(tag)}`}
+                  aria-hidden="true"
+                />
+                {tag} <span className="chip-count">{count}</span>
               </button>
-              {tagCounts.map(({ tag, count }) => (
-                <button
-                  key={tag}
-                  type="button"
-                  className="chip"
-                  aria-pressed={activeTag === tag}
-                  onClick={() =>
-                    setActiveTag((cur) => (cur === tag ? null : tag))
-                  }
-                >
-                  {blogTagHueClass(tag) ? (
-                    <span
-                      className={`topic-dot ${blogTagHueClass(tag)}`}
-                      aria-hidden="true"
-                    />
-                  ) : null}
-                  {tag} <span className="chip-count">{count}</span>
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
         ) : null}
       </div>
@@ -182,14 +166,11 @@ export function BlogListClient({
                   <h2 className="blog-item-title">{post.title}</h2>
                   <p className="blog-item-excerpt">{post.excerpt}</p>
                   <span className="blog-item-tags">
-                    {post.tags
-                      .filter((t) => t !== 'MCP')
-                      .slice(0, 3)
-                      .map((tag) => (
-                        <span key={tag} className={blogTagClass(tag)}>
-                          {tag}
-                        </span>
-                      ))}
+                    {post.tags.map((tag) => (
+                      <span key={tag} className={blogTagClass(tag)}>
+                        {tag}
+                      </span>
+                    ))}
                   </span>
                 </Link>
               </li>

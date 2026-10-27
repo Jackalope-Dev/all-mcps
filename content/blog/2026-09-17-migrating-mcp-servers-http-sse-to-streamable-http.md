@@ -1,7 +1,7 @@
 ---
 title: "Migrating MCP Servers from HTTP+SSE to Streamable HTTP"
 excerpt: "The HTTP+SSE transport is deprecated and the dual-endpoint session model is the reason. Here is what Streamable HTTP actually changes, how to run both transports from one handler during the window, and the proxy and infrastructure settings that quietly break the migration."
-tags: ["MCP", "Guides", "Architecture", "Developer Tools"]
+tags: ["Deployment", "Building Servers"]
 faq:
   - q: "Is the HTTP+SSE transport removed from MCP?"
     a: "Not removed, deprecated. A server that still exposes GET /sse and POST /message keeps working during the deprecation window, which MCP's feature lifecycle policy sets at a minimum of twelve months. What changed is that new servers should not build on it, and clients are expected to try Streamable HTTP first and fall back to HTTP+SSE only when the modern request fails. Treat it the way you would treat any deprecated API you still ship: keep it answering, stop adding to it, and put every new capability on the modern path."
