@@ -33,7 +33,11 @@ import {
   refreshListingPages,
 } from '../../../../lib/listingPageRefresh';
 import { callMcpEndpoint } from '../../../../lib/mcpIntrospect';
-import { npmPackageFor } from '../../../../lib/packageRegistry';
+import {
+  npmPackageFor,
+  packageOwnership,
+} from '../../../../lib/packageRegistry';
+import { githubRepoSlug } from '../../../../lib/repoUrl';
 import type { ToolDefinition } from '../../../../lib/securityProfile';
 import { storeSecurityProfile } from '../../../../lib/securityProfileStore';
 import { upsertSignals } from '../../../../lib/signalStore';
@@ -52,8 +56,15 @@ import { websiteHasReciprocalBadge } from '../../../../lib/verification';
  * in `package`; the aggregate response omits it, so checking that field rejects it. The
  * ceiling below is a second backstop against any other npm response shape carrying an
  * implausible count — no real single package sees anywhere near that volume.
+ *
+ * 'missing' (not a package, or npm 404s it) is a definite answer and clears the stored
+ * count; null is a hiccup and keeps it. Treating both as a hiccup kept counts borrowed
+ * from a previous, wrong install package forever (shadcn's 46M on listings that had
+ * since moved to their own package).
  */
-async function fetchNpmDownloads(pkg: string): Promise<number | null> {
+async function fetchNpmDownloads(
+  pkg: string,
+): Promise<number | 'missing' | null> {
   const name = pkg.trim();
   if (
     !name ||
@@ -61,7 +72,7 @@ async function fetchNpmDownloads(pkg: string): Promise<number | null> {
     /\s/.test(name) ||
     name.includes('://')
   )
-    return null;
+    return 'missing';
   try {
     const res = await fetch(
       `https://api.npmjs.org/downloads/point/last-month/${encodeURIComponent(name)}`,
@@ -70,6 +81,7 @@ async function fetchNpmDownloads(pkg: string): Promise<number | null> {
         signal: AbortSignal.timeout(8000),
       },
     );
+    if (res.status === 404) return 'missing';
     if (!res.ok) return null;
     const data = (await res.json()) as { downloads?: number; package?: string };
     if (typeof data.downloads !== 'number' || data.package !== name)
@@ -80,6 +92,38 @@ async function fetchNpmDownloads(pkg: string): Promise<number | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Monthly downloads at which a count is checked against the package's own
+ * metadata. Below it a wrong attribution barely moves rankings, and skipping
+ * the check keeps registry calls to the few listings it matters for.
+ */
+const NPM_OWNERSHIP_CHECK_MIN = 10_000;
+
+/**
+ * The listing's npm downloads, or null. Only a real npm install has them: a
+ * non-npm listing keeps null rather than borrowing a same-named package's
+ * count. A large count must also belong to the listing: many installs run a
+ * generic tool (`npx shadcn@latest add …`, `npx playwright-core install`), and
+ * crediting that tool's downloads gave UI kits 46M and a test runner 490M.
+ */
+async function resolveNpmDownloads(server: HealthRow): Promise<number | null> {
+  const npmName = npmPackageFor(server);
+  if (!npmName) return null;
+  const fetched = await fetchNpmDownloads(npmName);
+  if (fetched === 'missing') return null;
+  if (fetched === null) return server.npmDownloads ?? null;
+  // Only a GitHub listing can be matched against the package's source repo.
+  if (fetched < NPM_OWNERSHIP_CHECK_MIN || !githubRepoSlug(server.url))
+    return fetched;
+  const owned = await packageOwnership(
+    server.installCommand,
+    server.installPackage,
+    server.url,
+  );
+  if (owned === null) return server.npmDownloads ?? null;
+  return owned ? fetched : null;
 }
 
 /** README text at `path` on the default branch, or null (missing, or a catalog README). */
@@ -207,12 +251,7 @@ async function checkListing(
   let remoteEndpointCheckedAt: Date | null =
     server.remoteEndpointCheckedAt ?? null;
 
-  // Only a real npm install has npm downloads. A non-npm listing keeps null
-  // rather than borrowing a same-named package's count.
-  const npmName = npmPackageFor(server);
-  const npmDownloads = npmName
-    ? ((await fetchNpmDownloads(npmName)) ?? server.npmDownloads ?? null)
-    : null;
+  const npmDownloads = await resolveNpmDownloads(server);
 
   let readmeText: string | null = null;
 

@@ -5,6 +5,7 @@ import {
   npmPackageFor,
   npmStatusFromDoc,
   packageBelongsElsewhere,
+  packageOwnership,
   pypiStatusFromDoc,
   registryFor,
   sourceReposFromDoc,
@@ -180,6 +181,47 @@ describe('packageBelongsElsewhere', () => {
       await packageBelongsElsewhere('npx', 'x', 'https://example.com'),
     ).toBe(false);
     expect(await packageBelongsElsewhere('docker', 'x', LISTING)).toBe(false);
+  });
+});
+
+describe('packageOwnership', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const registryReturns = (status: number, doc: unknown = {}) =>
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify(doc), { status })),
+    );
+  const LISTING = 'https://github.com/acme/brainscanner-ui';
+
+  it('rejects a generic tool the listing installs through', async () => {
+    registryReturns(200, {
+      repository: 'git+https://github.com/toolco/ui.git',
+    });
+    expect(await packageOwnership('npx', 'toolco@latest', LISTING)).toBe(false);
+  });
+
+  it("accepts the listing's own package", async () => {
+    registryReturns(200, { repository: 'github:acme/brainscanner-ui' });
+    expect(
+      await packageOwnership('npx', '@acme/brainscanner-ui', LISTING),
+    ).toBe(true);
+    registryReturns(200, { name: 'brainscanner-ui' });
+    expect(await packageOwnership('npx', 'brainscanner-ui', LISTING)).toBe(
+      true,
+    );
+  });
+
+  it('rejects an unrelated package with no source metadata', async () => {
+    registryReturns(200, { name: 'has' });
+    expect(await packageOwnership('npx', 'has', LISTING)).toBe(false);
+  });
+
+  it("answers null when it can't tell", async () => {
+    registryReturns(503);
+    expect(await packageOwnership('npx', 'x', LISTING)).toBeNull();
+    expect(
+      await packageOwnership('npx', 'x', 'https://brainscanner.dev'),
+    ).toBeNull();
   });
 });
 

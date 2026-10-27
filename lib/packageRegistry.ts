@@ -207,8 +207,26 @@ export async function packageOwnedByListing(
   installPackage: string | null | undefined,
   listingUrl: string | null | undefined,
 ): Promise<boolean> {
+  return (
+    (await packageOwnership(installCommand, installPackage, listingUrl)) ===
+    true
+  );
+}
+
+/**
+ * packageOwnedByListing's rule, but null when the registry couldn't be asked
+ * (no registry, non-GitHub listing, or a registry hiccup) instead of false —
+ * for callers that should keep what they have rather than treat a timeout as
+ * "not theirs".
+ */
+export async function packageOwnership(
+  installCommand: string | null | undefined,
+  installPackage: string | null | undefined,
+  listingUrl: string | null | undefined,
+): Promise<boolean | null> {
   const facts = await registryFacts(installCommand, installPackage, listingUrl);
-  if (!facts || facts.missing) return false;
+  if (!facts) return null;
+  if (facts.missing) return false;
   return facts.sourceMatch || (facts.nameMatch && !facts.hasSource);
 }
 
