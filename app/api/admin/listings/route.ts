@@ -70,7 +70,11 @@ export async function GET(req: Request) {
     }
     if (search) {
       conditions.push(
-        or(like(servers.name, `%${search}%`), like(servers.url, `%${search}%`)),
+        or(
+          like(servers.name, `%${search}%`),
+          like(servers.url, `%${search}%`),
+          like(servers.id, `%${search}%`),
+        ),
       );
     }
     if (premium === 'true' || premium === 'false') {
