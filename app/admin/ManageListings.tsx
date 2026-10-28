@@ -541,7 +541,7 @@ export default function ManageListings({
               className="form-input"
               type="search"
               aria-label="Search listings"
-              placeholder="Search by listing name or repository URL…"
+              placeholder="Search by listing name, ID or repository URL…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
