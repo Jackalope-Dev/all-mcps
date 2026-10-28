@@ -331,6 +331,15 @@ const JUNK_NAME_RE =
   /(^|[^a-z0-9])(test|tests|testing|demo|example|examples|sample|template|boilerplate|starter|hello-?world|playground|tutorial|my-?first)([^a-z0-9]|$)/i;
 
 /**
+ * The boilerplate of one operator's templated lead-gen network: hundreds of
+ * calculator and quote microsites, each published to the official registry as
+ * `<reversed-domain>/site` with this phrase in its description. Removed as
+ * spam on 2026-10-28; new domains keep appearing, so the URL dedupe alone
+ * cannot keep them out.
+ */
+const SITE_NETWORK_RE = /\bthe site's own MCP server\b/i;
+
+/**
  * Why a candidate is not worth ingesting, or null when it clears the floor.
  * Applies to every source; the per-source traction floors (npm downloads,
  * topic stars) sit in the converters above.
@@ -340,6 +349,7 @@ export function ingestRejectReason(c: IngestCandidate): string | null {
   if (!c.description.trim()) return 'no description';
   if (c.archived) return 'archived repo';
   if (c.fork && (c.githubStars ?? 0) === 0) return 'fork with no stars';
+  if (SITE_NETWORK_RE.test(c.description)) return 'templated site network';
   const repoName = c.url.match(/github\.com\/[^/]+\/([^/#?]+)/i)?.[1] ?? '';
   if (JUNK_NAME_RE.test(c.name) || JUNK_NAME_RE.test(repoName))
     return 'scaffold or demo name';
