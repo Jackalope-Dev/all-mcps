@@ -214,6 +214,25 @@ describe('ingestRejectReason', () => {
     ).toBeNull();
   });
 
+  it("rejects the templated network's site boilerplate", () => {
+    expect(
+      ingestRejectReason({
+        ...base,
+        name: 'Site',
+        url: 'https://brainscanner.dev',
+        description:
+          "Brainscanner: the site's own MCP server — calculator, enquiry (enquiry = a human handoff, not a purchase)",
+        source: 'official-registry',
+      }),
+    ).toBe('templated site network');
+    expect(
+      ingestRejectReason({
+        ...base,
+        description: 'Search the docs site and its own MCP server changelog',
+      }),
+    ).toBeNull();
+  });
+
   it('rejects scaffold names as whole words only', () => {
     for (const name of [
       'mcp-test',

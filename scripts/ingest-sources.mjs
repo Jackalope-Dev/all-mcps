@@ -631,6 +631,9 @@ async function fetchOfficialRegistryEntries() {
 
       const name = deriveOfficialRegistryName(server, primaryUrl);
       const desc = server.description || '';
+      // Templated lead-gen site network; same rule as SITE_NETWORK_RE in
+      // lib/ingest/sources.ts.
+      if (/\bthe site's own MCP server\b/i.test(desc)) continue;
       entries.push({
         name,
         url: primaryUrl,
