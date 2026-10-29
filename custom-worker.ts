@@ -27,6 +27,7 @@ import { WorkerEntrypoint } from 'cloudflare:workers';
 // biome-ignore lint/suspicious/noTsIgnore: the strict directive is exactly what breaks here — see above
 // @ts-ignore
 import { default as handler } from './.open-next/worker.js';
+import { bufferForCrawler, isVerifiedCrawler } from './lib/crawlerBuffer';
 import {
   type CronJob,
   isOffloadedCronPath,
@@ -171,7 +172,10 @@ export default {
       await withRelayedSecrets(env),
       request,
     );
-    return handler.fetch(request, requestEnv, ctx);
+    const response = await handler.fetch(request, requestEnv, ctx);
+    return isVerifiedCrawler(request)
+      ? bufferForCrawler(request, response)
+      : response;
   },
 
   async scheduled(
