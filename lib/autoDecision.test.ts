@@ -16,6 +16,7 @@ const strong: GateEvidence = {
   sandboxStatus: null,
   packageAlive: false,
   liveEndpoint: false,
+  adultContent: false,
 };
 
 /** A hosted product submitted by its homepage: no repo, stars or package. */
@@ -32,6 +33,16 @@ const hosted: GateEvidence = {
 describe('decideSubmission', () => {
   it('approves only when every bar is met', () => {
     expect(decideSubmission(strong)?.decision).toBe('approve');
+  });
+
+  it('holds adult content for a human however strong the evidence', () => {
+    const adult = { ...strong, adultContent: true, liveEndpoint: true };
+    expect(decideSubmission(adult)?.decision).toBe('hold');
+    expect(decideIngestPromote(adult)?.decision).toBe('hold');
+    // Even before triage has run.
+    expect(decideSubmission({ ...adult, triageVerdict: null })?.decision).toBe(
+      'hold',
+    );
   });
 
   it('waits for triage and a repo check before deciding', () => {

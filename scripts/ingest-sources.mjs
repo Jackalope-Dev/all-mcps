@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { isAdultContent } from './contentPolicy.mjs';
 import { findRepoIdentityMismatch } from './repoIdentity.mjs';
 
 function stripHtml(input) {
@@ -940,6 +941,8 @@ async function main() {
   const seenPackageKeys = new Map();
   for (const e of allEntries) {
     if (!isSafeSubmissionUrl(e.url)) continue;
+    // Not listed at any quality; same rule as ingestRejectReason.
+    if (isAdultContent(e.name, e.description, e.url, e.websiteUrl)) continue;
     const key = normalizeUrlKey(e.url);
     if (byUrlKey.has(key)) continue;
 

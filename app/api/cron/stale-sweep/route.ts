@@ -870,7 +870,6 @@ export async function POST(req: Request) {
         .select({
           ...GATE_EVIDENCE_COLUMNS,
           id: servers.id,
-          name: servers.name,
           triageReason: listingSignals.triageReason,
         })
         .from(servers)

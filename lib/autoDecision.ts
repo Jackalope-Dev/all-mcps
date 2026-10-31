@@ -7,6 +7,7 @@ import {
   servers,
   stdioVerifications,
 } from '../db/schema';
+import { isAdultContent } from './contentPolicy';
 import { isRepoGoneConfirmed, type RepoStatus } from './repoCheck';
 
 /**
@@ -72,6 +73,11 @@ export type GateEvidence = {
    * package or stars, so without this "no sign of real use" held every one.
    */
   liveEndpoint: boolean;
+  /**
+   * The listing's own text says it serves adult content, which isn't listed
+   * (lib/contentPolicy.ts). Never auto-approved, however strong the rest is.
+   */
+  adultContent: boolean;
 };
 
 export type GateResult = { decision: AutoDecision; reasons: string[] };
@@ -123,6 +129,11 @@ function proofOfUse(e: GateEvidence, minStars: number): string | null {
   return null;
 }
 
+const ADULT_HOLD: GateResult = {
+  decision: 'hold',
+  reasons: ['adult content (not listed, see /terms)'],
+};
+
 function pct(n: number | null): string {
   return n === null ? '?' : `${Math.round(n * 100)}%`;
 }
@@ -137,6 +148,7 @@ function pct(n: number | null): string {
  * evidence than either, and a hosted product's root URL often 404s.
  */
 export function decideSubmission(e: GateEvidence): GateResult | null {
+  if (e.adultContent) return ADULT_HOLD;
   const proven = provenRunning(e);
   if (e.repoGoneConfirmed && !proven) {
     return {
@@ -185,6 +197,7 @@ export function decideSubmission(e: GateEvidence): GateResult | null {
 }
 
 export function decideIngestPromote(e: GateEvidence): GateResult | null {
+  if (e.adultContent) return ADULT_HOLD;
   if (!evidenceReady(e)) return null;
 
   const missing: string[] = [];
@@ -221,6 +234,10 @@ export function decideIngestPromote(e: GateEvidence): GateResult | null {
 
 /** The columns gateEvidenceFromRow reads — see GATE_EVIDENCE_COLUMNS. */
 export type GateEvidenceRow = {
+  name: string;
+  description: string | null;
+  url: string;
+  websiteUrl: string | null;
   reviewFlagged: boolean;
   githubStars: number | null;
   triageVerdict: string | null;
@@ -266,10 +283,20 @@ export function gateEvidenceFromRow(
       !row.packageDeprecated,
     liveEndpoint:
       Boolean(row.remoteEndpointUrl) && row.remoteEndpointHealthy === true,
+    adultContent: isAdultContent(
+      row.name,
+      row.description,
+      row.url,
+      row.websiteUrl,
+    ),
   };
 }
 
 export const GATE_EVIDENCE_COLUMNS = {
+  name: servers.name,
+  description: servers.description,
+  url: servers.url,
+  websiteUrl: servers.websiteUrl,
   reviewFlagged: servers.reviewFlagged,
   githubStars: servers.githubStars,
   triageVerdict: listingSignals.triageVerdict,

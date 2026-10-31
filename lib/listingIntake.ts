@@ -1,6 +1,7 @@
 import type { drizzle } from 'drizzle-orm/d1';
 import { DEFAULT_SUBMIT_CATEGORY, normalizeCategory } from './categories';
 import { classifyCategory } from './categoryClassifier';
+import { isAdultContent } from './contentPolicy';
 import { getGithubToken, githubApiHeaders } from './githubAuth';
 import { alignListings, reviewColumns, reviewListing } from './listingReview';
 import { isRepositoryUrl } from './repoUrl';
@@ -319,9 +320,12 @@ export async function prepareListingIntake(
   if (endpoint) remoteEndpointUrl = endpoint.url;
   // A live endpoint answering the MCP handshake outranks a text guess that
   // this isn't an MCP server.
+  // Adult content isn't listed (/terms); flagging sorts it to the top of the
+  // admin queue, and the automation gate holds it for a human.
   const reviewFlagged =
     (review.reviewed && review.isMcpServer === false && !endpoint) ||
-    (review.qualityScore !== null && review.qualityScore < 2);
+    (review.qualityScore !== null && review.qualityScore < 2) ||
+    isAdultContent(name, description, url, websiteUrl);
 
   return {
     ok: true,

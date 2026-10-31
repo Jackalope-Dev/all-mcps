@@ -214,6 +214,18 @@ describe('ingestRejectReason', () => {
     ).toBeNull();
   });
 
+  it('rejects adult content at any quality', () => {
+    expect(
+      ingestRejectReason({
+        ...base,
+        name: 'Acme Clips',
+        url: 'https://brainscanner.dev/mcp',
+        description: 'Search adult short-form video: clips and creators.',
+        source: 'official-registry',
+      }),
+    ).toBe('adult content');
+  });
+
   it("rejects the templated network's site boilerplate", () => {
     expect(
       ingestRejectReason({

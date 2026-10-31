@@ -66,7 +66,7 @@ export default function TermsPage() {
         />
         <LegalDoc
           title="Terms of Service"
-          effective="July 28, 2026"
+          effective="October 31, 2026"
           toc={[
             {
               id: 'description-of-the-service',
@@ -165,6 +165,14 @@ export default function TermsPage() {
             decline, delay, or remove any submission or listing at our sole
             discretion, at any time, without notice and without liability to
             you.
+          </p>
+          <p>
+            AllMCPs does not list adult or sexually explicit services, however
+            well the server works. This includes pornography and adult video
+            search, escort, cam, and other sex-work directories, NSFW or
+            uncensored image and video generation, and 18+ AI companions. We
+            decline submissions in this category and remove existing listings
+            that fall into it.
           </p>
 
           <h2 id="prohibited-conduct">5. Prohibited Conduct</h2>

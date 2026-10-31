@@ -86,10 +86,6 @@ export async function GET(req: Request) {
       .select({
         ...GATE_EVIDENCE_COLUMNS,
         id: servers.id,
-        name: servers.name,
-        url: servers.url,
-        websiteUrl: servers.websiteUrl,
-        description: servers.description,
         aiSummary: servers.aiSummary,
         category: servers.category,
         status: servers.status,

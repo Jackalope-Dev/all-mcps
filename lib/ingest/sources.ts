@@ -8,6 +8,7 @@
  * Network fetchers live in ./fetchSources.ts; dedupe and insert in ./run.ts.
  */
 
+import { isAdultContent } from '../contentPolicy';
 import { isGithubUrl } from '../listingEnrich';
 
 /** listing_signals.discovered_via values. */
@@ -350,6 +351,8 @@ export function ingestRejectReason(c: IngestCandidate): string | null {
   if (c.archived) return 'archived repo';
   if (c.fork && (c.githubStars ?? 0) === 0) return 'fork with no stars';
   if (SITE_NETWORK_RE.test(c.description)) return 'templated site network';
+  if (isAdultContent(c.name, c.description, c.url, c.websiteUrl))
+    return 'adult content';
   const repoName = c.url.match(/github\.com\/[^/]+\/([^/#?]+)/i)?.[1] ?? '';
   if (JUNK_NAME_RE.test(c.name) || JUNK_NAME_RE.test(repoName))
     return 'scaffold or demo name';
