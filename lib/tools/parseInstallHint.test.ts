@@ -283,3 +283,24 @@ describe('placeholder hosts are not endpoints', () => {
     );
   });
 });
+
+describe('self-hosted addresses are not remote endpoints', () => {
+  it('rejects loopback and private-network hosts', () => {
+    for (const url of [
+      'http://localhost:8000/mcp',
+      'http://127.0.0.1:3000/mcp',
+      'http://0.0.0.0:8080/sse',
+      'http://192.168.1.20:8000/mcp',
+      'http://[::1]:8000/mcp',
+      'http://acme.local/mcp',
+    ]) {
+      expect(looksLikeMcpEndpointUrl(url), url).toBe(false);
+    }
+  });
+
+  it('still accepts a public host that only mentions localhost', () => {
+    expect(looksLikeMcpEndpointUrl('https://localhost-tools.dev/mcp')).toBe(
+      true,
+    );
+  });
+});

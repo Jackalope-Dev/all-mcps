@@ -10,7 +10,12 @@ function isPrivateOrReservedIpv4(a: number, b: number): boolean {
   return false;
 }
 
-function isPrivateOrReservedHost(hostname: string): boolean {
+/**
+ * Loopback, private-network, link-local and `.local` hosts. Nothing public can
+ * reach these, so they are never safe to fetch server-side and never a
+ * connectable endpoint for anyone but the person running the server.
+ */
+export function isPrivateOrReservedHost(hostname: string): boolean {
   // A trailing dot is a valid fully-qualified spelling ("localhost.") that
   // would otherwise slip past the exact-match checks below.
   const host = hostname.toLowerCase().replace(/\.$/, '');

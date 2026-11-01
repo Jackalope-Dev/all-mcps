@@ -7,8 +7,8 @@
  *
  * Matches any host with an `example` label (example.com, api.example.org,
  * host.example.cn, lib.example.edu) or one of the reserved-for-testing TLDs.
- * `localhost` is deliberately not here: a self-hosted server's README config
- * really is `http://localhost:8000/mcp`, and that is a separate question.
+ * `localhost` is deliberately not here: it is a real host, just not a public
+ * one. The endpoint check rejects it separately (`isPrivateOrReservedHost`).
  */
 
 const RESERVED_TLDS = new Set(['example', 'invalid', 'test']);

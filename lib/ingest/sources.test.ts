@@ -303,3 +303,20 @@ describe('placeholder URLs from sample configs', () => {
     ).toBeNull();
   });
 });
+
+describe('self-hosted registry remotes', () => {
+  it('does not store a localhost remote as the endpoint', () => {
+    const c = registryEntryToCandidate({
+      server: {
+        name: 'io.github.acme/brain-scanner',
+        description: 'Scans brains.',
+        repository: { url: 'https://github.com/acme/brain-scanner' },
+        remotes: [
+          { type: 'streamable-http', url: 'http://localhost:8000/mcp' },
+        ],
+      },
+    });
+    expect(c?.url).toBe('https://github.com/acme/brain-scanner');
+    expect(c?.remoteEndpointUrl).toBeUndefined();
+  });
+});

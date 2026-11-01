@@ -11,6 +11,7 @@
 import { isAdultContent } from '../contentPolicy';
 import { isGithubUrl } from '../listingEnrich';
 import { isPlaceholderUrl } from '../placeholderUrl';
+import { isSafeSubmissionUrl } from '../urlSafety';
 
 /** listing_signals.discovered_via values. */
 type DiscoveredVia =
@@ -234,7 +235,8 @@ export function registryEntryToCandidate(
     try {
       if (
         !PROXY_ENDPOINT_HOSTS.test(new URL(remote.url).hostname) &&
-        !isPlaceholderUrl(remote.url)
+        !isPlaceholderUrl(remote.url) &&
+        isSafeSubmissionUrl(remote.url)
       ) {
         candidate.remoteEndpointUrl = remote.url;
       }

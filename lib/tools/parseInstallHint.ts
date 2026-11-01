@@ -1,4 +1,5 @@
 import { isPlaceholderHost } from '../placeholderUrl';
+import { isPrivateOrReservedHost } from '../urlSafety';
 
 export interface InstallHint {
   command: string;
@@ -89,6 +90,10 @@ export function looksLikeMcpEndpointUrl(raw: string): boolean {
     if (isNonEndpointHost(u.hostname)) return false;
     // `https://mcp.example.com:8443/mcp` is a README's sample config, not this server.
     if (isPlaceholderHost(u.hostname)) return false;
+    // `http://localhost:8000/mcp` is real, but only once you run the server yourself.
+    // Presented as a remote install it reads like a hosted endpoint and fails for
+    // everyone who hasn't started it; the listing's local install covers that case.
+    if (isPrivateOrReservedHost(u.hostname)) return false;
     // A .well-known document *describes* a server (e.g. /.well-known/mcp/server-card.json);
     // it is not a transport a client can speak MCP over. It sits under an /mcp/ path on an
     // mcp.* host, so it clears every other bar here while being the one URL on the page
