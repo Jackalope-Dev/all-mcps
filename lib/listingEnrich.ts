@@ -10,6 +10,7 @@ import {
   resolveInstallFromText,
   toCachedInstallFields,
 } from './installConfig';
+import { isPlaceholderHost, isPlaceholderUrl } from './placeholderUrl';
 import { parseGithubUrl } from './repoUrl';
 import { isSafeSubmissionUrl } from './urlSafety';
 
@@ -86,17 +87,24 @@ export function pickWebsiteUrl(
   current: string | null | undefined,
   homepage: string | null | undefined,
 ): string | null {
-  if (current && isSafeSubmissionUrl(current) && !isGithubUrl(current)) {
-    return current;
-  }
+  // A placeholder (`https://example.com`) is no website at all: replace it.
+  const usable =
+    current &&
+    isSafeSubmissionUrl(current) &&
+    !isGithubUrl(current) &&
+    !isPlaceholderUrl(current)
+      ? current
+      : null;
+  if (usable) return usable;
+  const fallback = current && !isPlaceholderUrl(current) ? current : null;
   const h = (homepage || '').trim();
-  if (!h) return current || null;
+  if (!h) return fallback;
   // Normalize protocol-relative / bare domains
   let candidate = h;
   if (candidate.startsWith('//')) candidate = `https:${candidate}`;
   if (!/^https?:\/\//i.test(candidate)) candidate = `https://${candidate}`;
-  if (!isSafeSubmissionUrl(candidate)) return current || null;
-  if (isGithubUrl(candidate)) return current || null;
+  if (!isSafeSubmissionUrl(candidate)) return fallback;
+  if (isGithubUrl(candidate) || isPlaceholderUrl(candidate)) return fallback;
   return candidate;
 }
 
@@ -393,6 +401,7 @@ export function extractCandidateWebsitesFromReadme(
     }
 
     if (
+      isPlaceholderHost(host) ||
       EXCLUDED_DOMAINS_FOR_WEBSITE.some(
         (d) => host === d || host.endsWith(`.${d}`),
       )

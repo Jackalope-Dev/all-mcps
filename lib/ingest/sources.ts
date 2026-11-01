@@ -10,6 +10,7 @@
 
 import { isAdultContent } from '../contentPolicy';
 import { isGithubUrl } from '../listingEnrich';
+import { isPlaceholderUrl } from '../placeholderUrl';
 
 /** listing_signals.discovered_via values. */
 type DiscoveredVia =
@@ -193,7 +194,12 @@ export function registryEntryToCandidate(
   if (official?.isLatest === false) return null;
   if (official?.status && official.status !== 'active') return null;
 
-  const primaryUrl = server.repository?.url || server.websiteUrl;
+  // Publishers paste their sample config into the registry: a websiteUrl of
+  // `https://mcp.example.com:8443/mcp` is nobody's site.
+  const websiteUrl = isPlaceholderUrl(server.websiteUrl)
+    ? undefined
+    : server.websiteUrl;
+  const primaryUrl = server.repository?.url || websiteUrl;
   if (!primaryUrl) return null;
   const name = deriveRegistryName(server, primaryUrl);
   if (!name) return null;
@@ -204,8 +210,8 @@ export function registryEntryToCandidate(
     description: server.description || '',
     source: 'official-registry',
   };
-  if (server.websiteUrl && server.websiteUrl !== primaryUrl) {
-    candidate.websiteUrl = server.websiteUrl;
+  if (websiteUrl && websiteUrl !== primaryUrl) {
+    candidate.websiteUrl = websiteUrl;
   }
 
   // The publisher's own package declaration is better evidence than any
@@ -226,7 +232,10 @@ export function registryEntryToCandidate(
   );
   if (remote?.url) {
     try {
-      if (!PROXY_ENDPOINT_HOSTS.test(new URL(remote.url).hostname)) {
+      if (
+        !PROXY_ENDPOINT_HOSTS.test(new URL(remote.url).hostname) &&
+        !isPlaceholderUrl(remote.url)
+      ) {
         candidate.remoteEndpointUrl = remote.url;
       }
     } catch {
@@ -278,7 +287,10 @@ export function npmObjectToCandidate(
     name: pkg.name,
     url,
     description: pkg.description || '',
-    websiteUrl: homepage && !isGithubUrl(homepage) ? homepage : undefined,
+    websiteUrl:
+      homepage && !isGithubUrl(homepage) && !isPlaceholderUrl(homepage)
+        ? homepage
+        : undefined,
     source: 'npm',
     installCommand: 'npx',
     installPackage: pkg.name,
@@ -312,7 +324,10 @@ export function githubRepoToCandidate(
     url: repo.html_url,
     description: repo.description || '',
     websiteUrl:
-      homepage && /^https?:\/\//i.test(homepage) && !isGithubUrl(homepage)
+      homepage &&
+      /^https?:\/\//i.test(homepage) &&
+      !isGithubUrl(homepage) &&
+      !isPlaceholderUrl(homepage)
         ? homepage
         : undefined,
     source: 'github-topic',

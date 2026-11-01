@@ -269,3 +269,17 @@ describe('"inspector" in a name is not the same as the Inspector', () => {
     }
   });
 });
+
+describe('placeholder hosts are not endpoints', () => {
+  it("rejects a README's sample endpoint", () => {
+    expect(looksLikeMcpEndpointUrl('https://mcp.example.com:8443/mcp')).toBe(
+      false,
+    );
+    expect(looksLikeMcpEndpointUrl('https://your-worker.example/mcp')).toBe(
+      false,
+    );
+    expect(looksLikeMcpEndpointUrl('https://mcp.brainscanner.dev/mcp')).toBe(
+      true,
+    );
+  });
+});

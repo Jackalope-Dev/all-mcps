@@ -61,3 +61,24 @@ describe('normalizePackageKey', () => {
     expect(normalizePackageKey('npm', 'https://example.com')).toBeNull();
   });
 });
+
+describe('normalizeNameSiteKey', () => {
+  it('ignores a shared platform console given as the website', () => {
+    // Two unrelated community Gmail servers both list the Google Cloud Console.
+    expect(
+      normalizeNameSiteKey('Gmail', 'https://console.cloud.google.com/'),
+    ).toBe('');
+  });
+
+  it('ignores a placeholder website copied from a sample config', () => {
+    expect(
+      normalizeNameSiteKey('Brain Scanner', 'https://mcp.example.com:8443/mcp'),
+    ).toBe('');
+  });
+
+  it("still keys on a project's own site", () => {
+    expect(
+      normalizeNameSiteKey('Brain Scanner', 'https://www.brainscanner.dev/'),
+    ).toBe('brain scanner|brainscanner.dev');
+  });
+});

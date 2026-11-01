@@ -80,7 +80,7 @@ describe('endpointCandidates', () => {
     });
     expect(c.slice(0, 2)).toEqual([
       { url: 'https://connect.brainscanner.dev/mcp', source: 'stated' },
-      { url: 'https://app.brainscanner.dev/mcp', source: 'stated' },
+      { url: 'https://app.brainscanner.dev/mcp', source: 'linked' },
     ]);
   });
 
@@ -96,7 +96,7 @@ describe('endpointCandidates', () => {
     });
     expect(c[0]).toEqual({
       url: 'https://brainscanner.dev/mcp',
-      source: 'stated',
+      source: 'linked',
     });
   });
 
@@ -252,6 +252,97 @@ describe('discoverRemoteEndpoint', () => {
       authType: 'oauth',
       source: 'guessed',
     });
+  });
+
+  it('skips a guessed endpoint another listing already owns for the next one', async () => {
+    // acme.dev hosts two products: its flagship answers at /mcp, and this
+    // listing's own server answers at mcp.acme.dev.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (!init?.method) {
+          return new Response('<html>Welcome</html>', {
+            headers: { 'content-type': 'text/html' },
+          });
+        }
+        if (
+          url === 'https://acme.dev/mcp' ||
+          url === 'https://mcp.acme.dev/mcp'
+        ) {
+          return new Response(handshake, {
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+        return new Response('<html>Not found</html>', {
+          status: 404,
+          headers: { 'content-type': 'text/html' },
+        });
+      }),
+    );
+    const asked: string[] = [];
+    const isClaimedElsewhere = async (url: string) => {
+      asked.push(url);
+      return url === 'https://acme.dev/mcp';
+    };
+    await expect(
+      discoverRemoteEndpoint({
+        url: 'https://acme.dev/provider-trust',
+        isClaimedElsewhere,
+      }),
+    ).resolves.toEqual({
+      url: 'https://mcp.acme.dev/mcp',
+      authType: 'none',
+      source: 'guessed',
+    });
+    expect(asked).toContain('https://acme.dev/mcp');
+  });
+
+  it('keeps an owned endpoint the description names outright', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init?: RequestInit) =>
+        init?.method
+          ? new Response(handshake, {
+              headers: { 'content-type': 'application/json' },
+            })
+          : new Response('<html>Welcome</html>', {
+              headers: { 'content-type': 'text/html' },
+            }),
+      ),
+    );
+    const isClaimedElsewhere = vi.fn(async () => true);
+    await expect(
+      discoverRemoteEndpoint({
+        url: 'https://acme.dev/',
+        description: 'Connect at https://gateway.acme.dev/mcp',
+        isClaimedElsewhere,
+      }),
+    ).resolves.toMatchObject({
+      url: 'https://gateway.acme.dev/mcp',
+      source: 'stated',
+    });
+    expect(isClaimedElsewhere).not.toHaveBeenCalled();
+  });
+
+  it('returns null when every answering endpoint belongs to another listing', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init?: RequestInit) =>
+        init?.method
+          ? new Response(handshake, {
+              headers: { 'content-type': 'application/json' },
+            })
+          : new Response('<html>Welcome</html>', {
+              headers: { 'content-type': 'text/html' },
+            }),
+      ),
+    );
+    await expect(
+      discoverRemoteEndpoint({
+        url: 'https://acme.dev/',
+        isClaimedElsewhere: async () => true,
+      }),
+    ).resolves.toBeNull();
   });
 
   it('returns null when nothing answers, including on network errors', async () => {

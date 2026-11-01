@@ -2,8 +2,10 @@ import type { drizzle } from 'drizzle-orm/d1';
 import { DEFAULT_SUBMIT_CATEGORY, normalizeCategory } from './categories';
 import { classifyCategory } from './categoryClassifier';
 import { isAdultContent } from './contentPolicy';
+import { endpointClaimedElsewhere } from './endpointOwnership';
 import { getGithubToken, githubApiHeaders } from './githubAuth';
 import { alignListings, reviewColumns, reviewListing } from './listingReview';
+import { isPlaceholderUrl } from './placeholderUrl';
 import { isRepositoryUrl } from './repoUrl';
 import { isWithdrawn } from './servability';
 import {
@@ -131,7 +133,12 @@ export async function enrichFromGitHub(
       if (!description && data.description) {
         description = String(data.description);
       }
-      if (!websiteUrl && data.homepage && isSafeSubmissionUrl(data.homepage)) {
+      if (
+        !websiteUrl &&
+        data.homepage &&
+        isSafeSubmissionUrl(data.homepage) &&
+        !isPlaceholderUrl(data.homepage)
+      ) {
         websiteUrl = String(data.homepage);
       }
     }
@@ -166,6 +173,8 @@ export async function prepareListingIntake(
 
   let url = normalizeUrl(input.url || '');
   let websiteUrl = normalizeUrl(input.websiteUrl || '');
+  // A sample-config host (`https://example.com`) is no website; drop it.
+  if (isPlaceholderUrl(websiteUrl)) websiteUrl = '';
 
   // Website-only submissions promote the website to the primary url; a primary
   // url that is not a repo doubles as the website so the listing still renders
@@ -215,7 +224,11 @@ export async function prepareListingIntake(
   let supportUrl = normalizeUrl(input.supportUrl || '');
   if (supportUrl && !isSafeSubmissionUrl(supportUrl)) supportUrl = '';
   let remoteEndpointUrl = normalizeUrl(input.remoteEndpointUrl || '');
-  if (remoteEndpointUrl && !isSafeSubmissionUrl(remoteEndpointUrl)) {
+  if (
+    remoteEndpointUrl &&
+    (!isSafeSubmissionUrl(remoteEndpointUrl) ||
+      isPlaceholderUrl(remoteEndpointUrl))
+  ) {
     remoteEndpointUrl = '';
   }
 
@@ -315,7 +328,12 @@ export async function prepareListingIntake(
       ? checkEndpoint(submittedEndpoint).then((c) =>
           c.live ? { url: submittedEndpoint, authType: c.authType } : null,
         )
-      : discoverRemoteEndpoint({ url, websiteUrl, description }),
+      : discoverRemoteEndpoint({
+          url,
+          websiteUrl,
+          description,
+          isClaimedElsewhere: endpointClaimedElsewhere(db),
+        }),
   ]);
   if (endpoint) remoteEndpointUrl = endpoint.url;
   // A live endpoint answering the MCP handshake outranks a text guess that

@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { jobCursors, servers } from '../../../../db/schema';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
+import { endpointClaimedElsewhere } from '../../../../lib/endpointOwnership';
 import { discoverRemoteEndpoint } from '../../../../lib/tools/discoverRemoteEndpoint';
 
 /**
@@ -139,7 +140,12 @@ export async function POST(req: Request) {
     for (let i = 0; i < rows.length; i += CONCURRENCY) {
       const wave = rows.slice(i, i + CONCURRENCY);
       const results = await Promise.all(
-        wave.map((row) => discoverRemoteEndpoint(row)),
+        wave.map((row) =>
+          discoverRemoteEndpoint({
+            ...row,
+            isClaimedElsewhere: endpointClaimedElsewhere(db, row.id),
+          }),
+        ),
       );
       for (let k = 0; k < wave.length; k++) {
         const hit = results[k];

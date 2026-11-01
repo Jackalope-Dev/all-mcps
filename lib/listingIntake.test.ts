@@ -52,7 +52,7 @@ describe('enrichFromGitHub', () => {
         json: async () => ({
           name: 'from-github',
           description: 'from-github-desc',
-          homepage: 'https://example.com',
+          homepage: 'https://brainscanner.dev',
         }),
       }),
     );
@@ -63,7 +63,7 @@ describe('enrichFromGitHub', () => {
     );
     expect(result.name).toBe('Submitter Name');
     expect(result.description).toBe('from-github-desc');
-    expect(result.websiteUrl).toBe('https://example.com');
+    expect(result.websiteUrl).toBe('https://brainscanner.dev');
     vi.unstubAllGlobals();
   });
 

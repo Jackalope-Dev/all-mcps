@@ -38,8 +38,8 @@ assert(logoSourcePriority(null) === 0, 'null priority should be 0');
 const readmeContent = `
 # My Cool MCP Server
 
-[Official Website](https://cool-mcp.example.com)
-Check out our [Documentation](https://docs.cool-mcp.example.com)!
+[Official Website](https://cool-mcp.brainscanner.dev)
+Check out our [Documentation](https://docs.cool-mcp.brainscanner.dev)!
 
 Badges:
 [![Build](https://img.shields.io/github/actions/workflow/status/owner/repo/ci.yml)](https://github.com/owner/repo)
@@ -53,11 +53,11 @@ const candidateWebsites = extractCandidateWebsitesFromReadme(
 );
 const websiteSet = new Set(candidateWebsites);
 assert(
-  websiteSet.has('https://cool-mcp.example.com'),
+  websiteSet.has('https://cool-mcp.brainscanner.dev'),
   'Should extract official website',
 );
 assert(
-  websiteSet.has('https://docs.cool-mcp.example.com'),
+  websiteSet.has('https://docs.cool-mcp.brainscanner.dev'),
   'Should extract docs website',
 );
 assert(

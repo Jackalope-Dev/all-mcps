@@ -91,7 +91,7 @@ describe('registryEntryToCandidate', () => {
         title: 'Weather',
         description: 'Forecasts',
         repository: { url: 'https://github.com/a/weather' },
-        websiteUrl: 'https://weather.example',
+        websiteUrl: 'https://weather.brainscanner.dev',
         packages: [
           {
             registryType: 'pypi',
@@ -100,7 +100,10 @@ describe('registryEntryToCandidate', () => {
           },
         ],
         remotes: [
-          { type: 'streamable-http', url: 'https://weather.example/mcp' },
+          {
+            type: 'streamable-http',
+            url: 'https://weather.brainscanner.dev/mcp',
+          },
         ],
       },
     });
@@ -108,8 +111,8 @@ describe('registryEntryToCandidate', () => {
       name: 'Weather',
       installCommand: 'uvx',
       installPackage: 'weather-mcp',
-      remoteEndpointUrl: 'https://weather.example/mcp',
-      websiteUrl: 'https://weather.example',
+      remoteEndpointUrl: 'https://weather.brainscanner.dev/mcp',
+      websiteUrl: 'https://weather.brainscanner.dev',
     });
   });
 
@@ -173,7 +176,7 @@ describe('githubRepoToCandidate', () => {
       name: 'weather-mcp',
       html_url: 'https://github.com/a/weather-mcp',
       description: 'Forecasts',
-      homepage: 'https://weather.example',
+      homepage: 'https://weather.brainscanner.dev',
       stargazers_count: 12,
       archived: true,
     };
@@ -181,7 +184,7 @@ describe('githubRepoToCandidate', () => {
     expect(githubRepoToCandidate(repo)).toMatchObject({
       archived: true,
       githubStars: 12,
-      websiteUrl: 'https://weather.example',
+      websiteUrl: 'https://weather.brainscanner.dev',
       source: 'github-topic',
     });
   });
@@ -267,5 +270,36 @@ describe('ingestRejectReason', () => {
     ]) {
       expect(ingestRejectReason({ ...base, name }), name).toBeNull();
     }
+  });
+});
+
+describe('placeholder URLs from sample configs', () => {
+  it('drops a registry websiteUrl and remote that are documentation hosts', () => {
+    const c = registryEntryToCandidate({
+      server: {
+        name: 'io.github.acme/brain-scanner',
+        description: 'Scans brains.',
+        repository: { url: 'https://github.com/acme/brain-scanner' },
+        websiteUrl: 'https://mcp.example.com:8443/mcp',
+        remotes: [
+          { type: 'streamable-http', url: 'https://mcp.example.com:8443/mcp' },
+        ],
+      },
+    });
+    expect(c?.url).toBe('https://github.com/acme/brain-scanner');
+    expect(c?.websiteUrl).toBeUndefined();
+    expect(c?.remoteEndpointUrl).toBeUndefined();
+  });
+
+  it('skips a website-only registry entry whose website is a placeholder', () => {
+    expect(
+      registryEntryToCandidate({
+        server: {
+          name: 'io.example/thing',
+          description: 'x',
+          websiteUrl: 'https://your-server.example.com',
+        },
+      }),
+    ).toBeNull();
   });
 });

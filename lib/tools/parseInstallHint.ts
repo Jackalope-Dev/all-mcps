@@ -1,3 +1,5 @@
+import { isPlaceholderHost } from '../placeholderUrl';
+
 export interface InstallHint {
   command: string;
   args: string[];
@@ -85,6 +87,8 @@ export function looksLikeMcpEndpointUrl(raw: string): boolean {
     const u = new URL(raw);
     if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
     if (isNonEndpointHost(u.hostname)) return false;
+    // `https://mcp.example.com:8443/mcp` is a README's sample config, not this server.
+    if (isPlaceholderHost(u.hostname)) return false;
     // A .well-known document *describes* a server (e.g. /.well-known/mcp/server-card.json);
     // it is not a transport a client can speak MCP over. It sits under an /mcp/ path on an
     // mcp.* host, so it clears every other bar here while being the one URL on the page

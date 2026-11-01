@@ -17,7 +17,7 @@ import {
  * any client could connect to.
  *
  * Two bars, because a guessed URL is weaker evidence than one the listing names:
- *  - stated (in the description, or linked from the listing's own site): the same
+ *  - stated (in the description) or linked (from the listing's own site): the same
  *    'alive' verdict the health cron trusts, which counts any 401 + WWW-Authenticate.
  *  - guessed: a real JSON-RPC answer, or an RFC 9728 `resource_metadata` challenge.
  *    A plain Bearer 401 on a guessed /api/mcp is just as likely a product API that
@@ -26,6 +26,12 @@ import {
  * Only ever guesses on the listing's own site. A directory or registry host answering
  * /mcp is *that* directory's server, and a community wrapper whose website is the
  * vendor's would pick up the vendor's official endpoint.
+ *
+ * A vendor with several servers on one domain has the same problem one level down:
+ * the site's /mcp (or the endpoint its homepage links) is usually its flagship, and
+ * every sibling listing on that domain would inherit the flagship's endpoint and
+ * tools. Callers pass `isClaimedElsewhere` so a linked or guessed endpoint already
+ * belonging to another listing is skipped; only the description naming it outranks that.
  */
 
 export type DiscoveredAuth = 'none' | 'oauth' | 'api_key';
@@ -34,10 +40,14 @@ export type DiscoveredEndpoint = {
   url: string;
   /** Null when the response doesn't say (e.g. a bare SSE stream). */
   authType: DiscoveredAuth | null;
-  source: 'stated' | 'guessed';
+  source: Candidate['source'];
 };
 
-type Candidate = { url: string; source: 'stated' | 'guessed' };
+/**
+ * stated: named in the listing's own description. linked: linked from the
+ * listing's site. guessed: a conventional path on that site.
+ */
+type Candidate = { url: string; source: 'stated' | 'linked' | 'guessed' };
 
 const MAX_CANDIDATES = 8;
 const PAGE_TIMEOUT_MS = 8000;
@@ -237,7 +247,7 @@ export function endpointCandidates(input: {
         looksLikeMcpEndpointUrl(u)
       );
     });
-    for (const u of byDepth(linked)) add(u, 'stated');
+    for (const u of byDepth(linked)) add(u, 'linked');
   }
 
   for (const site of sites) {
@@ -321,6 +331,8 @@ export async function discoverRemoteEndpoint(input: {
   url: string;
   websiteUrl?: string | null;
   description?: string | null;
+  /** Does another listing already own this endpoint? Asked only for a linked or guessed answer. */
+  isClaimedElsewhere?: (url: string) => Promise<boolean>;
 }): Promise<DiscoveredEndpoint | null> {
   const sites = ownSites(input.url, input.websiteUrl);
   const pages = (
@@ -339,13 +351,19 @@ export async function discoverRemoteEndpoint(input: {
       }
     }),
   );
-  const best = candidates.findIndex((_, i) => verdicts[i].match);
-  if (best === -1) return null;
-  return {
-    url: candidates[best].url,
-    authType: verdicts[best].authType,
-    source: candidates[best].source,
-  };
+  for (let i = 0; i < candidates.length; i++) {
+    if (!verdicts[i].match) continue;
+    const c = candidates[i];
+    if (
+      c.source !== 'stated' &&
+      input.isClaimedElsewhere &&
+      (await input.isClaimedElsewhere(c.url).catch(() => false))
+    ) {
+      continue;
+    }
+    return { url: c.url, authType: verdicts[i].authType, source: c.source };
+  }
+  return null;
 }
 
 /**

@@ -1,6 +1,7 @@
 import { type AnyColumn, and, or, type SQL, sql } from 'drizzle-orm';
 import type { drizzle } from 'drizzle-orm/d1';
 import { servers } from '../db/schema';
+import { isPlaceholderHost } from './placeholderUrl';
 
 /**
  * Same normalization as scripts/ingest-sources.mjs's normalizeUrlKey — kept in
@@ -136,10 +137,39 @@ export async function findExistingListingByUrl(
 }
 
 /**
+ * Sites that many unrelated projects give as their "website" because they are
+ * the console or docs of the API being wrapped, not the project's own home.
+ * Every community Gmail server points at the Google Cloud Console, so a shared
+ * name plus one of these says nothing about being the same project.
+ */
+const SHARED_PLATFORM_HOSTS = [
+  'console.cloud.google.com',
+  'cloud.google.com',
+  'developers.google.com',
+  'console.developers.google.com',
+  'console.aws.amazon.com',
+  'aws.amazon.com',
+  'portal.azure.com',
+  'learn.microsoft.com',
+  'developer.microsoft.com',
+  'modelcontextprotocol.io',
+];
+
+function isSharedPlatformSite(site: string): boolean {
+  const host = site.split(/[/:?#]/)[0];
+  return (
+    isPlaceholderHost(host) ||
+    SHARED_PLATFORM_HOSTS.some((h) => host === h || host.endsWith(`.${h}`))
+  );
+}
+
+/**
  * Identity key for "same project, different URL" — the gap normalizeUrlKey
  * misses when one project is resubmitted under a different GitHub org or a
  * marketing URL. Only meaningful when a website is given; returns '' otherwise
  * so the caller skips the check rather than matching every website-less row.
+ * A placeholder or shared platform site (see SHARED_PLATFORM_HOSTS) counts as
+ * no website.
  */
 export function normalizeNameSiteKey(
   name: string | null | undefined,
@@ -151,7 +181,7 @@ export function normalizeNameSiteKey(
     .replace(/^https?:\/\//, '')
     .replace(/^www\./, '')
     .replace(/\/+$/, '');
-  if (!site) return '';
+  if (!site || isSharedPlatformSite(site)) return '';
   const n = (name ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
   if (!n) return '';
   return `${n}|${site}`;

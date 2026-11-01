@@ -26,9 +26,9 @@ describe('resolveInstallConfig endpoint heuristics', () => {
     for (const url of [
       'https://brainscanner.dev/mcp',
       'https://brainscanner.dev/mcp/v2',
-      'https://example.com/sse',
-      'https://api.example.com/v1',
-      'https://mcp.example.com/',
+      'https://brainscanner.dev/sse',
+      'https://api.brainscanner.dev/v1',
+      'https://mcp.brainscanner.dev/',
     ]) {
       const install = resolveInstallConfig({ ...base, url });
       expect(install.kind, url).toBe('remote');
