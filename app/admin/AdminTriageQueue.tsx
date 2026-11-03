@@ -190,7 +190,9 @@ export function AdminTriageQueue() {
           res = await fetch('/api/admin/action', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: item.id, action }),
+            // Logged in moderation_decisions without a reason code; the
+            // listing snapshot and the gate's call still land there.
+            body: JSON.stringify({ id: item.id, action, source: 'triage' }),
           });
         }
         const json = (await res.json()) as { error?: string };

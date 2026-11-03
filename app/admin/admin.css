@@ -2333,3 +2333,28 @@
     min-width: 0;
   }
 }
+
+/* Reject/unpublish reason chips (ModerationReasonPicker) */
+.adm-reason-picker fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.adm-reason-picker .adm-toggle[aria-pressed="true"] {
+  --tint: var(--hue-red);
+}
+
+/* Reason breakdown in the automation panel */
+.adm-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.adm-reasons ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

@@ -3,7 +3,7 @@ import { and, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { autoDecisions, servers } from '@/db/schema';
+import { autoDecisions, moderationDecisions, servers } from '@/db/schema';
 import { getAuthorizedAdminEmail } from '@/lib/adminAuth';
 import {
   GATE_COPY,
@@ -16,6 +16,7 @@ import {
   setGateMode,
 } from '@/lib/autoDecision';
 import { refreshListingPageInBackground } from '@/lib/listingPageRefresh';
+import { getReasonStats } from '@/lib/moderationLog';
 
 /**
  * Admin control for the automation gates (lib/autoDecision.ts): their modes,
@@ -60,7 +61,27 @@ export async function GET() {
         .where(inArray(servers.id, ids.slice(i, i + 90)));
       for (const r of rows) names.set(r.id, { name: r.name, status: r.status });
     }
+    // Rejected rows are gone from servers; their name survives in the
+    // moderation snapshot.
+    const missing = ids.filter((id) => !names.has(id));
+    for (let i = 0; i < missing.length; i += 90) {
+      const rows = await db
+        .select({
+          id: moderationDecisions.serverId,
+          snapshot: moderationDecisions.snapshot,
+        })
+        .from(moderationDecisions)
+        .where(inArray(moderationDecisions.serverId, missing.slice(i, i + 90)));
+      for (const r of rows) {
+        try {
+          const name = (JSON.parse(r.snapshot) as { name?: string }).name;
+          if (name) names.set(r.id, { name, status: 'deleted' });
+        } catch {}
+      }
+    }
+    const reasons = await getReasonStats(db);
     return NextResponse.json({
+      reasons,
       gates: GATES.map((g) => ({
         gate: g,
         ...GATE_COPY[g],

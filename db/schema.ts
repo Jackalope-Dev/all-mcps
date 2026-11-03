@@ -803,6 +803,40 @@ export const autoDecisions = sqliteTable(
 );
 
 /**
+ * Every admin reject (pending submission) and unpublish (live listing), with
+ * the reason codes from lib/moderationReasons.ts and a snapshot of the
+ * listing. A rejected row is deleted from `servers`, so this is the only
+ * record of what it was — the labels the automation gates are tuned against.
+ */
+export const moderationDecisions = sqliteTable(
+  'moderation_decisions',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    serverId: text('server_id').notNull(),
+    /** reject | unpublish */
+    action: text('action').notNull(),
+    /** JSON array of ModerationReason codes; empty when none was given (bulk triage). */
+    reasons: text('reasons').notNull(),
+    /** Free text for 'other', or any extra context. */
+    note: text('note'),
+    /** Where the decision was made: modal | triage | listings. */
+    source: text('source').notNull(),
+    /** JSON: name, description, urls, category, submitter, tool names. */
+    snapshot: text('snapshot').notNull(),
+    /** What the automation gate had decided, if it had: approve | reject | hold. */
+    gateDecision: text('gate_decision'),
+    decidedBy: text('decided_by'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    createdIdx: index('idx_moderation_decisions_created').on(table.createdAt),
+    serverIdx: index('idx_moderation_decisions_server').on(table.serverId),
+  }),
+);
+
+/**
  * Bounded per-listing health-check history — the health cron's existing
  * healthy/unhealthy verdict (primary URL reachability), persisted per pass
  * instead of only overwriting servers.healthStatus/isVerifiedActive. Lets the

@@ -3,6 +3,10 @@
 import { Bot, ChevronDown, ChevronRight, Undo2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from '../../components/ui/Toast';
+import {
+  MODERATION_REASON_LABEL,
+  type ModerationReason,
+} from '../../lib/moderationReasons';
 import { AdminSectionHead } from './AdminUi';
 
 type Mode = 'off' | 'shadow' | 'live';
@@ -40,6 +44,14 @@ type GateView = {
   }[];
 };
 
+type ReasonStatsView = {
+  days: number;
+  total: number;
+  unlabeled: number;
+  byReason: { reason: ModerationReason; count: number }[];
+  gateMissed: { reason: ModerationReason; count: number }[];
+};
+
 /** Agreement needed before the panel suggests going live, and the sample it needs. */
 const SUGGEST_LIVE_AGREEMENT = 0.95;
 const SUGGEST_LIVE_MIN_COMPARED = 30;
@@ -62,15 +74,21 @@ function pct(n: number): string {
  */
 export function AdminAutomationPanel() {
   const [gates, setGates] = useState<GateView[] | null>(null);
+  const [reasons, setReasons] = useState<ReasonStatsView | null>(null);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/automation');
-      const json = (await res.json()) as { gates?: GateView[]; error?: string };
+      const json = (await res.json()) as {
+        gates?: GateView[];
+        reasons?: ReasonStatsView;
+        error?: string;
+      };
       if (!res.ok || !json.gates) throw new Error(json.error || 'Failed');
       setGates(json.gates);
+      setReasons(json.reasons ?? null);
     } catch (e: any) {
       toast.error(`Automation: ${e.message}`);
     }
@@ -131,6 +149,34 @@ export function AdminAutomationPanel() {
         }
         description="Shadow records what a gate would do and compares it with what you did on the same listing. Turn a gate live once its agreement is high enough — live decisions send the same emails as your clicks, and approvals can be undone below."
       />
+
+      {reasons && reasons.total > 0 && (
+        <div className="adm-card adm-reasons">
+          <strong>
+            Why you rejected or unpublished ({reasons.total} in the last{' '}
+            {reasons.days} days)
+          </strong>
+          <ul className="adm-chip-row" aria-label="Reasons">
+            {reasons.byReason.map((r) => (
+              <li key={r.reason} className="adm-tag">
+                {MODERATION_REASON_LABEL[r.reason]} · {r.count}
+              </li>
+            ))}
+            {reasons.unlabeled > 0 && (
+              <li className="adm-tag">No reason given · {reasons.unlabeled}</li>
+            )}
+          </ul>
+          {reasons.gateMissed.length > 0 && (
+            <p className="adm-note">
+              The gate had said approve on:{' '}
+              {reasons.gateMissed
+                .map((r) => `${MODERATION_REASON_LABEL[r.reason]} (${r.count})`)
+                .join(', ')}
+              . These are what its checks still miss.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="adm-stack-sm">
         {gates.map((g) => {

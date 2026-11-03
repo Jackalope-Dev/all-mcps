@@ -38,7 +38,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from '../../components/ui/Toast';
 import { notifyAdminStatsChanged } from '../../lib/adminStatsRefresh';
 import { DIRECTORY_CATEGORIES } from '../../lib/categories';
+import type { ModerationReason } from '../../lib/moderationReasons';
 import { AdminEmpty, AdminModal, AdminSkeletonList } from './AdminUi';
+import {
+  ModerationReasonPicker,
+  reasonsComplete,
+} from './ModerationReasonPicker';
 
 export type ListingFilters = {
   status?: string;
@@ -189,6 +194,10 @@ export default function ManageListings({
     Boolean(maintenanceStatusFilter);
 
   const [inspectListing, setInspectListing] = useState<Listing | null>(null);
+  // Unpublish asks why, so removals feed the same reason log as rejects.
+  const [unpublishing, setUnpublishing] = useState<Listing | null>(null);
+  const [unpublishCodes, setUnpublishCodes] = useState<ModerationReason[]>([]);
+  const [unpublishNote, setUnpublishNote] = useState('');
   const [boostModalListing, setBoostModalListing] = useState<Listing | null>(
     null,
   );
@@ -295,7 +304,13 @@ export default function ManageListings({
       | 'toggle_official'
       | 'toggle_reciprocal_badge'
       | 'check_health',
-    extra?: { fields?: Partial<EditFields>; days?: number },
+    extra?: {
+      fields?: Partial<EditFields>;
+      days?: number;
+      reasons?: ModerationReason[];
+      reasonNote?: string;
+      source?: 'listings';
+    },
   ) => {
     setLoadingId(id);
     try {
@@ -1119,7 +1134,11 @@ export default function ManageListings({
                           </button>
                           <button
                             type="button"
-                            onClick={() => runAction(listing.id, 'unpublish')}
+                            onClick={() => {
+                              setUnpublishCodes([]);
+                              setUnpublishNote('');
+                              setUnpublishing(listing);
+                            }}
                             disabled={rowLoading}
                             className="btn btn-sm adm-btn-tint hue-amber"
                           >
@@ -1257,6 +1276,53 @@ export default function ManageListings({
               </button>
             ))}
           </div>
+        </AdminModal>
+      )}
+
+      {/* Unpublish reason modal */}
+      {unpublishing && (
+        <AdminModal
+          title="Unpublish listing"
+          subtitle={unpublishing.name}
+          icon={EyeOff}
+          hue="hue-amber"
+          onClose={() => setUnpublishing(null)}
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={() => setUnpublishing(null)}
+                className="btn btn-sm btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!reasonsComplete(unpublishCodes, unpublishNote)}
+                onClick={() => {
+                  void runAction(unpublishing.id, 'unpublish', {
+                    reasons: unpublishCodes,
+                    reasonNote: unpublishNote.trim() || undefined,
+                    source: 'listings',
+                  });
+                  setUnpublishing(null);
+                }}
+                className="btn btn-sm adm-btn-tint hue-amber"
+              >
+                Unpublish
+              </button>
+            </>
+          }
+        >
+          <p className="adm-dialog-text">
+            Hides the listing (status removed). Republish brings it back.
+          </p>
+          <ModerationReasonPicker
+            value={unpublishCodes}
+            onChange={setUnpublishCodes}
+            note={unpublishNote}
+            onNoteChange={setUnpublishNote}
+          />
         </AdminModal>
       )}
 

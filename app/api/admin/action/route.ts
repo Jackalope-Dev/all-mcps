@@ -34,6 +34,8 @@ import {
 } from '../../../../lib/listingEnrich';
 import { refreshListingPageInBackground } from '../../../../lib/listingPageRefresh';
 import { resolveCanonicalMergeTarget } from '../../../../lib/listingRedirect';
+import { recordModeration } from '../../../../lib/moderationLog';
+import { MODERATION_REASONS } from '../../../../lib/moderationReasons';
 import { sendNotificationEmail } from '../../../../lib/notify';
 import {
   parsePendingRevision,
@@ -92,6 +94,11 @@ const actionSchema = z.object({
     .optional(),
   days: z.number().int().min(1).max(365).optional(),
   reason: z.string().trim().max(2000).optional(),
+  /** Reject/unpublish reason codes, recorded for gate tuning (lib/moderationLog.ts). */
+  reasons: z.array(z.enum(MODERATION_REASONS)).max(6).optional(),
+  reasonNote: z.string().trim().max(500).optional(),
+  /** Which admin screen sent a reject/unpublish. */
+  source: z.enum(['modal', 'triage', 'listings']).optional(),
 });
 
 /** Actions whose `id` is a reviews/reports row, not a listing. */
@@ -138,7 +145,8 @@ const MESSAGES: Record<string, string> = {
 
 export async function POST(req: Request) {
   try {
-    if (!(await getAuthorizedAdminEmail())) {
+    const adminEmail = await getAuthorizedAdminEmail();
+    if (!adminEmail) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
 
@@ -154,7 +162,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: message }, { status: 400 });
     }
 
-    const { id, action, fields, days, reason } = result.data;
+    const { id, action, fields, days, reason, reasons, reasonNote, source } =
+      result.data;
 
     let env: CloudflareEnv | undefined;
     try {
@@ -230,6 +239,14 @@ export async function POST(req: Request) {
         );
       }
       await recordHumanDecision(db, id, 'reject');
+      await recordModeration(db, {
+        row: rejected,
+        action: 'reject',
+        reasons: reasons ?? [],
+        note: reasonNote,
+        source: source ?? 'modal',
+        decidedBy: adminEmail,
+      });
     } else if (action === 'set_premium' || action === 'unset_premium') {
       const updateResult = await db
         .update(servers)
@@ -323,6 +340,17 @@ export async function POST(req: Request) {
           { error: `Server not found or not currently ${fromStatus}.` },
           { status: 400 },
         );
+      }
+
+      if (action === 'unpublish') {
+        await recordModeration(db, {
+          row: updateResult[0],
+          action: 'unpublish',
+          reasons: reasons ?? [],
+          note: reasonNote,
+          source: source ?? 'listings',
+          decidedBy: adminEmail,
+        });
       }
 
       // Republished listing should re-enter search indexes promptly.

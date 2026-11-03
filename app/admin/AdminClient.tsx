@@ -21,6 +21,10 @@ import { useState } from 'react';
 import type { AdminStats } from '@/lib/adminStats';
 import { toast } from '../../components/ui/Toast';
 import { notifyAdminStatsChanged } from '../../lib/adminStatsRefresh';
+import {
+  MODERATION_REASON_FEEDBACK,
+  type ModerationReason,
+} from '../../lib/moderationReasons';
 import { hueClass } from '../../lib/palette';
 import { parsePendingRevision } from '../../lib/pendingRevision';
 import { AdminAdsControl } from './AdminAdsControl';
@@ -31,6 +35,10 @@ import { AdminToolsControl } from './AdminCronsControl';
 import { AdminTriageQueue } from './AdminTriageQueue';
 import { AdminEmpty, AdminModal, AdminSectionHead } from './AdminUi';
 import ManageListings, { type ListingFilters } from './ManageListings';
+import {
+  ModerationReasonPicker,
+  reasonsComplete,
+} from './ModerationReasonPicker';
 import { type KpiCardSelection, StatsBar } from './StatsBar';
 
 type Server = {
@@ -166,6 +174,11 @@ export default function AdminClient({
     submitterEmail?: string | null;
   } | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  // Reason codes for a listing reject (lib/moderationReasons.ts). The email
+  // text follows the first code picked until the admin edits it by hand.
+  const [rejectionCodes, setRejectionCodes] = useState<ModerationReason[]>([]);
+  const [rejectionNote, setRejectionNote] = useState('');
+  const [feedbackEdited, setFeedbackEdited] = useState(false);
 
   // Rows with no submitterEmail came from ingest (/api/cron/ingest), never a
   // human /api/submit — those self-resolve via the 4-hourly /api/cron/auto-promote
@@ -230,6 +243,9 @@ export default function AdminClient({
     submitterEmail?: string | null,
   ) => {
     setRejectingItem({ id, name, action, submitterEmail });
+    setRejectionCodes([]);
+    setRejectionNote('');
+    setFeedbackEdited(false);
     setRejectionReason(
       action === 'reject_review_comment'
         ? "Your written comment wasn't approved for public display. Your star rating still counts as-is — only the comment text was affected."
@@ -256,7 +272,12 @@ export default function AdminClient({
       | 'approve_review_comment'
       | 'reject_review_comment'
       | 'delete_review',
-    extra?: { reason?: string },
+    extra?: {
+      reason?: string;
+      reasons?: ModerationReason[];
+      reasonNote?: string;
+      source?: 'modal';
+    },
   ) => {
     setLoadingId(id);
 
@@ -760,12 +781,25 @@ export default function AdminClient({
               <button
                 type="button"
                 onClick={() => {
-                  handleAction(rejectingItem.id, rejectingItem.action, {
-                    reason: rejectionReason.trim(),
-                  });
+                  handleAction(
+                    rejectingItem.id,
+                    rejectingItem.action,
+                    rejectingItem.action === 'reject'
+                      ? {
+                          reason: rejectionReason.trim(),
+                          reasons: rejectionCodes,
+                          reasonNote: rejectionNote.trim() || undefined,
+                          source: 'modal',
+                        }
+                      : { reason: rejectionReason.trim() },
+                  );
                   setRejectingItem(null);
                 }}
-                disabled={loadingId === rejectingItem.id}
+                disabled={
+                  loadingId === rejectingItem.id ||
+                  (rejectingItem.action === 'reject' &&
+                    !reasonsComplete(rejectionCodes, rejectionNote))
+                }
                 className="btn btn-sm adm-btn-danger-solid"
               >
                 Confirm rejection & send email
@@ -784,6 +818,18 @@ export default function AdminClient({
               <span>No submitter email attached (anonymous submission).</span>
             )}
           </p>
+          {rejectingItem.action === 'reject' && (
+            <ModerationReasonPicker
+              value={rejectionCodes}
+              onChange={(next) => {
+                setRejectionCodes(next);
+                if (!feedbackEdited && next.length > 0)
+                  setRejectionReason(MODERATION_REASON_FEEDBACK[next[0]]);
+              }}
+              note={rejectionNote}
+              onNoteChange={setRejectionNote}
+            />
+          )}
           <div className="adm-field">
             <label htmlFor="admin-rejection-reason">
               Rejection reason / feedback to submitter
@@ -793,7 +839,10 @@ export default function AdminClient({
               className="form-input adm-textarea"
               rows={5}
               value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
+              onChange={(e) => {
+                setRejectionReason(e.target.value);
+                setFeedbackEdited(true);
+              }}
               placeholder="Enter rejection reason or instructions..."
             />
           </div>
