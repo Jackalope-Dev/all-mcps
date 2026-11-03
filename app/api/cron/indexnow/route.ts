@@ -7,14 +7,15 @@ import { getAllPosts } from '../../../../lib/blog';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
 import { submitIndexNowUrls } from '../../../../lib/indexnow';
 import { indexableListingSql } from '../../../../lib/listingIndexability';
-import { INDEXNOW_CORE_PATHS } from '../../../../lib/sitemapHelpers';
+import { STATIC_PAGE_LASTMOD } from '../../../../lib/sitemapHelpers';
 
 /**
  * Change-scoped IndexNow safety net. IndexNow is a "this URL just changed"
  * signal, so this cron only submits URLs that genuinely changed in the lookback
  * window: indexable listings that were approved or got their writeup in the
- * last 3 days, and blog posts published in the last 14 days. When new content lands it also re-pings the aggregate hubs that
- * content changed (browse/categories/sitemap, via INDEXNOW_CORE_PATHS); when
+ * last 3 days, blog posts published in the last 3 days, and static pages whose
+ * STATIC_PAGE_LASTMOD falls in the last 3 days. It also pings the hubs that
+ * content shows up on (home and /browse for listings, /blog for posts); when
  * nothing changed it submits nothing.
  *
  * We deliberately do NOT re-ping static hubs or "top engagement" authority
@@ -32,7 +33,6 @@ import { INDEXNOW_CORE_PATHS } from '../../../../lib/sitemapHelpers';
  * (Google ignores IndexNow either way.)
  */
 const LOOKBACK_MS = 3 * 24 * 60 * 60 * 1000;
-const BLOG_LOOKBACK_MS = 14 * 24 * 60 * 60 * 1000;
 const MAX_URLS = 100;
 const HOST = 'https://allmcps.com';
 
@@ -75,21 +75,25 @@ export async function POST(req: Request) {
       .limit(40);
     const listingUrls = recent.map((s) => `${HOST}/mcp/${s.id}`);
 
-    // 2) Blog posts published in the last 14 days (by filename date)
-    const blogCutoff = new Date(Date.now() - BLOG_LOOKBACK_MS)
-      .toISOString()
-      .slice(0, 10);
+    // 2) Blog posts published, and static pages shipped, in the window (by
+    // YYYY-MM-DD date). Same window as listings: each changed URL is pinged on
+    // the few daily runs that cover it, not for two weeks.
+    const dayCutoff = since.toISOString().slice(0, 10);
     let blogUrls: string[] = [];
     try {
       blogUrls = getAllPosts()
-        .filter((p) => p.date >= blogCutoff)
+        .filter((p) => p.date >= dayCutoff)
         .slice(0, 10)
         .map((p) => `${HOST}/blog/${p.slug}`);
     } catch {
       /* blog optional at runtime */
     }
 
-    const changedUrls = [...listingUrls, ...blogUrls];
+    const staticUrls = Object.entries(STATIC_PAGE_LASTMOD)
+      .filter(([, date]) => date >= dayCutoff)
+      .map(([p]) => (p === '/' ? HOST : `${HOST}${p}`));
+
+    const changedUrls = [...listingUrls, ...blogUrls, ...staticUrls];
 
     // Nothing changed → submit nothing. IndexNow is a change signal, not a
     // sitemap resubmission; a quiet day should be quiet.
@@ -99,21 +103,26 @@ export async function POST(req: Request) {
         submitted: 0,
         core: 0,
         blog: 0,
+        static: 0,
         recentListings: 0,
         windowDays: 3,
       });
     }
 
-    // 3) New content changed the aggregate hubs (browse/categories/sitemap),
-    // so re-ping those — but only because something actually changed.
-    const coreUrls = INDEXNOW_CORE_PATHS.map((p) =>
-      p === '/' ? HOST : `${HOST}${p}`,
-    );
+    // 3) Hubs the new content appears on — only these, not every core page:
+    // re-pinging ~30 unchanged guides daily is the batch-mode resubmission
+    // described above.
+    const corePaths = [
+      ...(listingUrls.length > 0 ? ['/', '/browse'] : []),
+      ...(blogUrls.length > 0 ? ['/blog'] : []),
+    ];
+    const coreUrls = corePaths.map((p) => (p === '/' ? HOST : `${HOST}${p}`));
 
-    // Priority order: core hubs → changed listings → new blog (dedupe by URL)
+    // Priority order: hubs → changed static pages → new blog → changed
+    // listings (dedupe by URL)
     const seen = new Set<string>();
     const urls: string[] = [];
-    for (const u of [...coreUrls, ...listingUrls, ...blogUrls]) {
+    for (const u of [...coreUrls, ...staticUrls, ...blogUrls, ...listingUrls]) {
       if (seen.has(u)) continue;
       seen.add(u);
       urls.push(u);
@@ -127,6 +136,7 @@ export async function POST(req: Request) {
       submitted: urls.length,
       core: coreUrls.length,
       blog: blogUrls.length,
+      static: staticUrls.length,
       recentListings: recent.length,
       windowDays: 3,
     });

@@ -29,7 +29,7 @@ const INDEXNOW_KEY = 'c7fa82e1d09b4f658a2e3f4b5c6d7e8f';
 const KEY_LOCATION = `${BASE_URL}/${INDEXNOW_KEY}.txt`;
 const INDEXNOW_ENDPOINT = 'https://api.indexnow.org/indexnow';
 
-/** Mirrors lib/sitemapHelpers INDEXNOW_CORE_PATHS + extra static hubs. */
+/** Core static hubs for the one-time full-site submission. */
 const CORE_STATIC = [
   '',
   '/browse',

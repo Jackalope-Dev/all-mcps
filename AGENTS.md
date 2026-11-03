@@ -20,7 +20,7 @@ Ship dates live in [`lib/sitemapHelpers.ts`](./lib/sitemapHelpers.ts) as `STATIC
 **When you must bump the date (use today's date in `YYYY-MM-DD`):**
 
 - You change meaningful body copy, FAQ answers, or step-by-step instructions on a page listed in `STATIC_PAGE_LASTMOD`.
-- You add a **new** static route that should appear in the core sitemap (guides, tools, client pages, trust, pricing, etc.): add a `STATIC_PAGE_LASTMOD` entry **and** a matching `staticEntry(...)` in [`app/sitemap.ts`](./app/sitemap.ts) core shard (if the page is not already generated from blog/categories/listings).
+- You add a **new** static route that should appear in the core sitemap (guides, tools, client pages, trust, pricing, etc.): add a `STATIC_PAGE_LASTMOD` entry **and** a matching `staticEntry(...)` in the core shard of [`lib/sitemapShards.ts`](./lib/sitemapShards.ts) (if the page is not already generated from blog/categories/listings).
 - You rename or retarget a path: remove the old key, add the new one.
 
 **Do not bump for:**
@@ -41,7 +41,8 @@ Ship dates live in [`lib/sitemapHelpers.ts`](./lib/sitemapHelpers.ts) as `STATIC
 
 1. `STATIC_PAGE_LASTMOD` + core sitemap entry (if applicable).
 2. [`app/guides/page.tsx`](./app/guides/page.tsx) if it belongs on the Guides hub.
-3. Footer / homepage chips / `INDEXNOW_CORE_PATHS` in `lib/sitemapHelpers.ts` for high-priority discovery pages.
+3. Footer / homepage chips for high-priority discovery pages. (The daily IndexNow
+   cron pings a static page on its own once its `STATIC_PAGE_LASTMOD` date changes.)
 4. Optionally [`app/llms.txt/route.ts`](./app/llms.txt/route.ts) under Useful Links.
 
 # Blog Posts

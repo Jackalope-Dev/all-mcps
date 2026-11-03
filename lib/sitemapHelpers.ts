@@ -446,37 +446,3 @@ export function listingLastMod(server: SitemapServer): string {
   }
   return safeDateISO(server.createdAt || server.created_at);
 }
-
-/** High-value core paths to submit first via IndexNow (priority crawl targets). */
-export const INDEXNOW_CORE_PATHS = [
-  '/',
-  '/browse',
-  '/categories',
-  '/best',
-  '/clients',
-  '/guides',
-  '/what-is-mcp',
-  '/guide',
-  '/build-mcp-server',
-  '/mcp-security',
-  '/deploy-mcp-server',
-  '/mcp-troubleshooting',
-  '/mcp-protocol-versioning',
-  '/mcp-transports',
-  '/state-of-mcp',
-  '/tools',
-  '/blog',
-  '/trust',
-  '/docs/api',
-  '/prompts',
-  '/pricing',
-  '/submit',
-  '/mcp-for-cursor',
-  '/mcp-for-claude-desktop',
-  '/mcp-for-windsurf',
-  '/mcp-for-cline',
-  '/mcp-for-seo',
-  '/best/seo',
-  '/lucky',
-  '/advertise',
-] as const;
