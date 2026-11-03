@@ -22,8 +22,8 @@ import type { AdminStats } from '@/lib/adminStats';
 import { toast } from '../../components/ui/Toast';
 import { notifyAdminStatsChanged } from '../../lib/adminStatsRefresh';
 import {
-  MODERATION_REASON_FEEDBACK,
   type ModerationReason,
+  rejectionEmail,
 } from '../../lib/moderationReasons';
 import { hueClass } from '../../lib/palette';
 import { parsePendingRevision } from '../../lib/pendingRevision';
@@ -824,12 +824,19 @@ export default function AdminClient({
               onChange={(next) => {
                 setRejectionCodes(next);
                 if (!feedbackEdited && next.length > 0)
-                  setRejectionReason(MODERATION_REASON_FEEDBACK[next[0]]);
+                  setRejectionReason(rejectionEmail(next).feedback ?? '');
               }}
               note={rejectionNote}
               onNoteChange={setRejectionNote}
             />
           )}
+          {rejectingItem.action === 'reject' &&
+            rejectionCodes.length > 0 &&
+            !rejectionEmail(rejectionCodes).canResubmit && (
+              <p className="adm-note">
+                Not fixable, so the email won't invite them to submit again.
+              </p>
+            )}
           <div className="adm-field">
             <label htmlFor="admin-rejection-reason">
               Rejection reason / feedback to submitter

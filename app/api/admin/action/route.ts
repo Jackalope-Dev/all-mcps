@@ -35,7 +35,10 @@ import {
 import { refreshListingPageInBackground } from '../../../../lib/listingPageRefresh';
 import { resolveCanonicalMergeTarget } from '../../../../lib/listingRedirect';
 import { recordModeration } from '../../../../lib/moderationLog';
-import { MODERATION_REASONS } from '../../../../lib/moderationReasons';
+import {
+  MODERATION_REASONS,
+  rejectionEmail,
+} from '../../../../lib/moderationReasons';
 import { sendNotificationEmail } from '../../../../lib/notify';
 import {
   parsePendingRevision,
@@ -231,7 +234,15 @@ export async function POST(req: Request) {
       });
     } else if (action === 'reject') {
       await snapshotGateDecision(db, id);
-      const rejected = await rejectPendingListing(db, id, reason);
+      // The reason codes pick the email copy when the admin left the text
+      // empty, and decide whether it invites a resubmission.
+      const email = rejectionEmail(reasons ?? []);
+      const rejected = await rejectPendingListing(
+        db,
+        id,
+        reason || email.feedback,
+        email.canResubmit,
+      );
       if (!rejected) {
         return NextResponse.json(
           { error: 'Server not found or not in pending state.' },

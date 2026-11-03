@@ -118,6 +118,8 @@ export async function sendListingStatusEmail(params: {
   listingUrl: string;
   claimUrl?: string;
   feedback?: string;
+  /** Rejected only: false hides the "Submit again" invite (see ListingStatusEmail). */
+  canResubmit?: boolean;
 }): Promise<void> {
   const env = await getEmailEnv();
   if (!env.apiKey) {
@@ -129,7 +131,9 @@ export async function sendListingStatusEmail(params: {
   const subject =
     params.status === 'approved'
       ? `Your MCP is live: ${params.mcpName}`
-      : `Update needed: ${params.mcpName}`;
+      : params.canResubmit === false
+        ? `About your submission: ${params.mcpName}`
+        : `Update needed: ${params.mcpName}`;
 
   const { error } = await resend.emails.send({
     from: env.fromEmail,
@@ -141,6 +145,7 @@ export async function sendListingStatusEmail(params: {
       listingUrl: params.listingUrl,
       claimUrl: params.claimUrl || `${params.listingUrl}/claim`,
       feedback: params.feedback,
+      canResubmit: params.canResubmit,
     }) as React.ReactElement,
   });
 

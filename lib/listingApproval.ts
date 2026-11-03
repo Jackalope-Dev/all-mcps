@@ -55,6 +55,8 @@ export async function rejectPendingListing(
   db: Db,
   id: string,
   feedback?: string | null,
+  /** False when no fix can get it listed (adult, spam, …): the email then drops the resubmit invite. */
+  canResubmit = true,
 ): Promise<ServerRow | null> {
   const [rejected] = await db
     .delete(servers)
@@ -74,6 +76,7 @@ export async function rejectPendingListing(
         status: 'rejected',
         listingUrl: `${getAppUrl()}/submit`,
         feedback: feedback || DEFAULT_REJECTION_FEEDBACK,
+        canResubmit,
       });
     } catch (e) {
       console.error('Failed to notify submitter on rejection:', e);

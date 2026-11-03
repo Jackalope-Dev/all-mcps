@@ -13,6 +13,12 @@ interface ListingStatusEmailProps {
   listingUrl?: string;
   /** Claim / verify URL — used on approval to drive free dofollow backlinks (DR growth). */
   claimUrl?: string;
+  /**
+   * Rejected only: whether fixing it and submitting again can work. False
+   * for reasons like adult content or spam (lib/moderationReasons.ts), which
+   * then get no "Submit again" button.
+   */
+  canResubmit?: boolean;
 }
 
 export const ListingStatusEmail = ({
@@ -21,6 +27,7 @@ export const ListingStatusEmail = ({
   feedback = '',
   listingUrl = 'https://allmcps.com/mcp/awesome-mcp-server',
   claimUrl = 'https://allmcps.com/mcp/awesome-mcp-server/claim',
+  canResubmit = true,
 }: ListingStatusEmailProps) => {
   const isApproved = status === 'approved';
 
@@ -29,9 +36,17 @@ export const ListingStatusEmail = ({
       previewText={
         isApproved
           ? `Your MCP listing is live — claim it for a free dofollow backlink`
-          : `Your MCP listing needs updates`
+          : canResubmit
+            ? `Your MCP listing needs a few changes`
+            : `About your MCP listing submission`
       }
-      heading={isApproved ? 'Listing Approved! 🎉' : 'Listing Update Required'}
+      heading={
+        isApproved
+          ? 'Listing Approved! 🎉'
+          : canResubmit
+            ? 'Listing Update Required'
+            : 'Submission Not Approved'
+      }
     >
       <Text style={textStyle}>Hello,</Text>
       <Text style={textStyle}>
@@ -89,17 +104,42 @@ export const ListingStatusEmail = ({
       ) : (
         <>
           <Text style={textStyle}>
-            We cannot approve your listing in its current state. Please review
-            the feedback below and update your submission.
+            {canResubmit
+              ? "Thanks for submitting! We couldn't approve it as it is, but it should be fixable. Here's what we found:"
+              : "Thanks for submitting. We weren't able to approve it, and here's why:"}
           </Text>
           {feedback && (
             <div style={feedbackContainer}>
-              <Text style={feedbackText}>{feedback}</Text>
+              {feedback.split(/\n{2,}/).map((para, i) => (
+                <Text
+                  // biome-ignore lint/suspicious/noArrayIndexKey: static paragraphs, never reordered
+                  key={i}
+                  style={{ ...feedbackText, marginTop: i > 0 ? '12px' : 0 }}
+                >
+                  {para}
+                </Text>
+              ))}
             </div>
           )}
-          <Button href="https://allmcps.com/dashboard" style={buttonStyle}>
-            Update submission
-          </Button>
+          {canResubmit ? (
+            <>
+              <Text style={textStyle}>
+                A rejected submission is removed, so once it's fixed please
+                submit it again as a new listing.
+              </Text>
+              <Button href={listingUrl} style={buttonStyle}>
+                Submit again
+              </Button>
+            </>
+          ) : (
+            <Text style={{ ...textStyle, fontSize: '13px', color: '#94a3b8' }}>
+              If you think we got this wrong, let us know through{' '}
+              <Link href="https://allmcps.com/contact" style={linkStyle}>
+                our contact page
+              </Link>{' '}
+              and we'll take another look.
+            </Text>
+          )}
         </>
       )}
     </BaseLayout>
