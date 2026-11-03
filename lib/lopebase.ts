@@ -20,6 +20,7 @@ import {
 } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import { servers, users } from '../db/schema';
+import { acquisitionForLopebase, loadConversions } from './conversions';
 import { PAID_PRODUCTS } from './pricing';
 
 /**
@@ -45,7 +46,45 @@ export interface LopebaseStore {
   getUser(id: string): Promise<Row | null>;
   listListings(args: ListArgs): Promise<Page<Row>>;
   getListing(id: string): Promise<Row | null>;
+  /** Last-28-day acquisition aggregates (see acquisitionForLopebase). */
+  acquisition(): Promise<Acquisition>;
 }
+
+type Acquisition = ReturnType<typeof acquisitionForLopebase>;
+
+/** In-memory pagination for small aggregate lists; the cursor is an offset. */
+function pageOf(
+  rows: Row[],
+  { limit, cursor }: { limit?: number; cursor?: string },
+): Page<Row> {
+  const start = Math.max(0, Number(cursor) || 0);
+  const size = clampLimit(limit);
+  const kept = rows.slice(start, start + size);
+  return start + size < rows.length
+    ? { rows: kept, nextCursor: String(start + size) }
+    : { rows: kept };
+}
+
+const AMOUNT_FIELDS = [
+  {
+    name: 'conversions',
+    label: 'Conversions (28d)',
+    type: 'number',
+    inList: true,
+  },
+  {
+    name: 'paid_conversions',
+    label: 'Paid (28d)',
+    type: 'number',
+    inList: true,
+  },
+  {
+    name: 'revenue_usd',
+    label: 'Revenue USD (28d)',
+    type: 'number',
+    inList: true,
+  },
+] as const;
 
 const PREMIUM_MONTHLY_USD = PAID_PRODUCTS.premium_monthly.unitAmount / 100;
 
@@ -117,6 +156,37 @@ export function createLopebaseAdapter(opts: {
         list: ({ limit, cursor, search }) =>
           store.listListings({ limit: clampLimit(limit), cursor, search }),
         get: (id) => store.getListing(id),
+      },
+      // LopeBase's standard acquisition resources: aggregates of submissions
+      // and paid orders by where the visitor came from. No personal data.
+      {
+        name: 'acquisition_sources',
+        label: 'Acquisition sources',
+        readCapability: 'system.read',
+        fields: [
+          { name: 'id', label: 'ID', type: 'string' },
+          { name: 'channel', label: 'Channel', type: 'string', inList: true },
+          { name: 'source', label: 'Source', type: 'string', inList: true },
+          ...AMOUNT_FIELDS,
+        ],
+        list: async (args) => pageOf((await store.acquisition()).sources, args),
+        get: async (id) =>
+          (await store.acquisition()).sources.find((r) => r.id === id) ?? null,
+      },
+      {
+        name: 'acquisition_landing_pages',
+        label: 'Acquisition landing pages',
+        readCapability: 'system.read',
+        fields: [
+          { name: 'id', label: 'ID', type: 'string' },
+          { name: 'path', label: 'Landing page', type: 'string', inList: true },
+          ...AMOUNT_FIELDS,
+        ],
+        list: async (args) =>
+          pageOf((await store.acquisition()).landingPages, args),
+        get: async (id) =>
+          (await store.acquisition()).landingPages.find((r) => r.id === id) ??
+          null,
       },
     ],
   });
@@ -248,7 +318,11 @@ const userColumns = {
 };
 
 export function d1LopebaseStore(db: DrizzleD1Database): LopebaseStore {
+  const acquisition = async () =>
+    acquisitionForLopebase(await loadConversions(db, 28));
   return {
+    acquisition,
+
     async stats() {
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       const [
@@ -257,6 +331,7 @@ export function d1LopebaseStore(db: DrizzleD1Database): LopebaseStore {
         [liveCount],
         [newListings],
         [paying],
+        acquired,
       ] = await Promise.all([
         db.select({ n: count() }).from(users),
         db.select({ n: count() }).from(servers),
@@ -272,6 +347,12 @@ export function d1LopebaseStore(db: DrizzleD1Database): LopebaseStore {
           .select({ n: countDistinct(servers.stripeSubscriptionId) })
           .from(servers)
           .where(eq(servers.premiumStatus, 'active')),
+        // Optional extra: if the conversions table is missing (deploy before
+        // migration) the core stats must still load.
+        acquisition().catch((err) => {
+          console.error('[lopebase] acquisition stats failed:', err);
+          return null;
+        }),
       ]);
       return {
         users: userCount.n,
@@ -282,6 +363,7 @@ export function d1LopebaseStore(db: DrizzleD1Database): LopebaseStore {
         listings_submitted_7d: newListings.n,
         paying_customers: paying.n,
         mrr_usd: paying.n * PREMIUM_MONTHLY_USD,
+        ...acquired?.stats,
       };
     },
 

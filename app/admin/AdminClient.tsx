@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock,
+  Compass,
   FileText,
   List,
   Mail,
@@ -27,6 +28,7 @@ import {
 } from '../../lib/moderationReasons';
 import { hueClass } from '../../lib/palette';
 import { parsePendingRevision } from '../../lib/pendingRevision';
+import { AdminAcquisitionView } from './AdminAcquisitionView';
 import { AdminAdsControl } from './AdminAdsControl';
 import { AdminAnalyticsView } from './AdminAnalyticsView';
 import { AdminAutomationPanel } from './AdminAutomationPanel';
@@ -204,6 +206,7 @@ export default function AdminClient({
     | 'triage'
     | 'ads'
     | 'blog'
+    | 'acquisition'
     | 'analytics'
     | 'crons'
     | 'tools'
@@ -390,6 +393,7 @@ export default function AdminClient({
       badge: blogReadyCount > 0 ? blogReadyCount : undefined,
       badgeHue: 'hue-green',
     },
+    { id: 'acquisition', label: 'Acquisition', icon: Compass },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'tools', label: 'Tools', icon: Wrench },
   ];
@@ -736,6 +740,17 @@ export default function AdminClient({
             description="Posts written and self-reviewed by the blog pipeline. Read one, then approve to commit it to main and deploy."
           />
           <AdminBlogDrafts onCountChange={setBlogReadyCount} />
+        </section>
+      )}
+
+      {/* TAB: ACQUISITION */}
+      {activeTab === 'acquisition' && (
+        <section className="adm-section">
+          <AdminSectionHead
+            title="Acquisition"
+            description="Where submissions and paying customers come from: channels, sources, landing pages and what people tell us."
+          />
+          <AdminAcquisitionView />
         </section>
       )}
 

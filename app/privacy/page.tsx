@@ -66,7 +66,7 @@ export default function PrivacyPage() {
         />
         <LegalDoc
           title="Privacy Policy"
-          effective="August 1, 2026"
+          effective="November 3, 2026"
           toc={[
             { id: 'information-we-collect', label: 'Information We Collect' },
             { id: 'how-we-use-information', label: 'How We Use Information' },
@@ -108,10 +108,10 @@ export default function PrivacyPage() {
             <li>
               <strong>MCP server submissions.</strong> If you submit a listing
               through our submission form, we collect the server URL, name,
-              description, and category you provide. This information describes
-              the tool being submitted, not you personally &mdash; we do not
-              require your name, email, or any other personal information to
-              submit a listing.
+              description, and category you provide, plus a contact email
+              address so we can tell you about the review and send your claim
+              link. The form also asks, optionally, how you heard about AllMCPs;
+              your answer is stored with the submission.
             </li>
             <li>
               <strong>Account &amp; sign-in.</strong> If you create an account
@@ -130,7 +130,9 @@ export default function PrivacyPage() {
               transaction; we do not receive or store your full card number. We
               retain a record of the purchase (such as the plan, amount, and the
               listing it applies to) to provide the feature and for our
-              accounting records.
+              accounting records. If you allowed analytics cookies, we also note
+              how you found us with the purchase, as described under &ldquo;How
+              you found us&rdquo; below.
             </li>
           </ul>
 
@@ -182,6 +184,29 @@ export default function PrivacyPage() {
               PostHog&rsquo;s Privacy Policy
             </a>
             .
+          </p>
+
+          <h3>How you found us</h3>
+          <p>
+            To learn which channels bring people who submit listings or buy paid
+            features, we set our own first-party cookie,{' '}
+            <code>allmcps_src</code>, that records how you first arrived: the
+            domain of the referring site (not the full address), any campaign
+            tags in the link (<code>utm_source</code>, <code>utm_medium</code>,{' '}
+            <code>utm_campaign</code>, or an ad click indicator), the first page
+            you landed on, and when. It does not contain your IP address or any
+            identifier, and it expires after 90 days. It is an analytics cookie,
+            so it follows the same consent controls as Google Analytics and
+            PostHog described in the &ldquo;Cookies&rdquo; section, and it is
+            deleted if you decline.
+          </p>
+          <p>
+            When you submit a listing, buy a paid listing feature, or pay for a
+            sponsor campaign, we save that information with the record (and pass
+            it through Stripe checkout so it reaches us when the payment
+            completes). We use it only in aggregate, to decide where to focus
+            our marketing and which pages to improve. We do not sell it, share
+            it with advertisers, or use it to target you.
           </p>
 
           <h3>Aggregate usage metrics</h3>
@@ -303,15 +328,17 @@ export default function PrivacyPage() {
 
           <h2 id="cookies">4. Cookies</h2>
           <p>
-            We use analytics cookies (such as Google Analytics and PostHog
-            cookies) to measure site traffic, page usage, and performance. For
+            We use analytics cookies (Google Analytics and PostHog cookies, and
+            our own <code>allmcps_src</code> cookie described under &ldquo;How
+            you found us&rdquo;) to measure site traffic, page usage,
+            performance, and which channels bring submissions and customers. For
             visitors located in the European Union (EU), European Economic Area
             (EEA), and the United Kingdom (UK), we display a consent banner
             allowing you to accept or decline analytics cookies. Non-essential
-            analytics cookies &mdash; including both Google Analytics and
-            PostHog &mdash; are only enabled for EU/EEA/UK visitors after
-            explicit consent is granted. You can also control or block cookies
-            at any time through your web browser settings.
+            analytics cookies &mdash; including Google Analytics, PostHog, and{' '}
+            <code>allmcps_src</code> &mdash; are only enabled for EU/EEA/UK
+            visitors after explicit consent is granted. You can also control or
+            block cookies at any time through your web browser settings.
           </p>
           <p>
             If you sign in to an account, we set an essential authentication
@@ -331,10 +358,12 @@ export default function PrivacyPage() {
           <p>
             We retain submitted listing information for as long as the listing
             remains part of the directory, or as needed to maintain our records
-            of reviewed submissions. Contact form messages are retained as long
-            as reasonably necessary to address your inquiry and for our records.
-            We may retain information longer where required by law or for
-            legitimate business purposes such as security and fraud prevention.
+            of reviewed submissions. How-you-found-us details saved with a
+            submission or purchase are kept with that record. Contact form
+            messages are retained as long as reasonably necessary to address
+            your inquiry and for our records. We may retain information longer
+            where required by law or for legitimate business purposes such as
+            security and fraud prevention.
           </p>
 
           <h2 id="data-security">6. Data Security</h2>

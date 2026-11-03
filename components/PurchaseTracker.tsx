@@ -20,6 +20,7 @@ export function PurchaseTracker() {
       (paidParam === 'priority_review' ||
         paidParam === 'priority' ||
         paidParam === 'featured_7d' ||
+        paidParam === 'category_sponsor_7d' ||
         paidParam === 'premium_monthly')
     ) {
       const normalizedSku: PaidSku =

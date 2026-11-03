@@ -104,7 +104,7 @@ export const STATIC_PAGE_LASTMOD: Record<string, string> = {
   '/contact': '2026-10-14',
   '/submit': '2026-10-14',
   '/terms': '2026-10-31',
-  '/privacy': '2026-07-27',
+  '/privacy': '2026-11-03',
   '/guides': '2026-10-14',
   '/what-is-mcp': '2026-08-04',
   '/guide': '2026-08-04',

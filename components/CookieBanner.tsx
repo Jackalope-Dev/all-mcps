@@ -3,6 +3,11 @@
 import { Cookie } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import {
+  clearLandingTouch,
+  persistLandingTouch,
+  snapshotLandingTouch,
+} from '../lib/attributionClient';
 import { isUserInEU } from '../lib/consentRegion';
 
 declare global {
@@ -17,8 +22,12 @@ declare global {
   }
 }
 
-/** Grant analytics consent to both Google Analytics and PostHog. */
+/**
+ * Grant analytics consent to Google Analytics, PostHog and our own first-party
+ * acquisition cookie (lib/attributionClient.ts).
+ */
 function grantAnalyticsConsent() {
+  persistLandingTouch();
   if (typeof window.gtag === 'function') {
     window.gtag('consent', 'update', { analytics_storage: 'granted' });
   }
@@ -62,6 +71,10 @@ export function CookieBanner({ country }: { country?: string }) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    // Remember where this visit came from before any client-side navigation,
+    // in case consent is only granted a few pages in.
+    snapshotLandingTouch();
+
     const savedConsent = getStoredConsent();
 
     if (savedConsent === 'granted') {
@@ -93,6 +106,9 @@ export function CookieBanner({ country }: { country?: string }) {
   const handleDecline = () => {
     setStoredConsent('denied');
     denyAnalyticsConsent();
+    // Only on the explicit click: the cookie is never written without
+    // consent, so there is nothing to clear on later page loads.
+    clearLandingTouch();
     setShowBanner(false);
   };
 

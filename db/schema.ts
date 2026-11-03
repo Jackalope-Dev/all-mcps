@@ -1241,3 +1241,52 @@ export const blogDrafts = sqliteTable(
     statusIdx: index('idx_blog_drafts_status').on(table.status),
   }),
 );
+
+/**
+ * One row per conversion (listing submission, paid listing upgrade, paid ad
+ * campaign) with where that visitor came from — the admin Acquisition view and
+ * the LopeBase adapter aggregate this. Attribution comes from the first-party
+ * `allmcps_src` cookie (lib/attribution.ts), written only after analytics
+ * consent; `heardFrom` is the optional self-reported answer on the submit form.
+ * No email or IP is stored here.
+ */
+export const conversions = sqliteTable(
+  'conversions',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    /** 'submission' | 'purchase' | 'ad_purchase' */
+    kind: text('kind').notNull(),
+    serverId: text('server_id'),
+    adId: text('ad_id'),
+    /** PaidSku for purchases; 'sponsor_ad' for ad campaigns. */
+    sku: text('sku'),
+    amountCents: integer('amount_cents').notNull().default(0),
+    /** paid | search | ai | social | email | referral | directory | direct | unknown (lib/attribution.ts classifyChannel). */
+    channel: text('channel').notNull().default('unknown'),
+    refHost: text('ref_host'),
+    utmSource: text('utm_source'),
+    utmMedium: text('utm_medium'),
+    utmCampaign: text('utm_campaign'),
+    landingPath: text('landing_path'),
+    /** When the attributed visit happened (cookie timestamp). */
+    firstSeenAt: integer('first_seen_at', { mode: 'timestamp' }),
+    /** Self-reported "How did you hear about us?" key (HEARD_FROM_OPTIONS). */
+    heardFrom: text('heard_from'),
+    /** Stripe Checkout session id; unique so webhook retries don't double count. */
+    stripeSessionId: text('stripe_session_id'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    createdIdx: index('idx_conversions_created').on(table.createdAt),
+    kindCreatedIdx: index('idx_conversions_kind_created').on(
+      table.kind,
+      table.createdAt,
+    ),
+    serverIdx: index('idx_conversions_server').on(table.serverId),
+    stripeSessionIdx: uniqueIndex('idx_conversions_stripe_session').on(
+      table.stripeSessionId,
+    ),
+  }),
+);

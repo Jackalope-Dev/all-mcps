@@ -5,6 +5,11 @@ import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 import { servers, sponsorAds } from '../../../../db/schema';
 import { formatUsdAmount } from '../../../../lib/ads';
+import { attributionFromStripeMetadata } from '../../../../lib/attribution';
+import {
+  recordConversion,
+  submissionTouchFor,
+} from '../../../../lib/conversions';
 import { sendReceiptEmail } from '../../../../lib/notify';
 import type { PaidSku } from '../../../../lib/pricing';
 import { syncSequenzySubscriber } from '../../../../lib/sequenzy';
@@ -62,6 +67,15 @@ async function applyCheckoutCompleted(
         ...(invoiceUrl ? { stripeInvoiceUrl: invoiceUrl } : {}),
       })
       .where(eq(sponsorAds.id, adId));
+
+    await recordConversion(db, {
+      kind: 'ad_purchase',
+      adId,
+      sku: 'sponsor_ad',
+      amountCents: session.amount_total,
+      attribution: attributionFromStripeMetadata(session.metadata),
+      stripeSessionId: session.id,
+    });
 
     console.log(
       `[stripe webhook] Sponsor ad ${adId} payment verified: $${((session.amount_total || 0) / 100).toFixed(2)}`,
@@ -187,6 +201,25 @@ async function applyCheckoutCompleted(
       })
       .where(eq(servers.id, serverId));
   }
+
+  // Checkouts started without the attribution cookie (agent API, cleared
+  // cookies, consent declined) fall back to the listing's submission touch:
+  // the buyer is nearly always the author who submitted it.
+  const submissionTouch = await submissionTouchFor(db, serverId).catch(
+    () => null,
+  );
+  await recordConversion(db, {
+    kind: 'purchase',
+    serverId,
+    sku,
+    amountCents: session.amount_total,
+    attribution:
+      attributionFromStripeMetadata(session.metadata) ??
+      submissionTouch?.attribution ??
+      null,
+    heardFrom: submissionTouch?.heardFrom ?? null,
+    stripeSessionId: session.id,
+  });
 
   const email =
     session.customer_details?.email || current?.submitterEmail || null;

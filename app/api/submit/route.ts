@@ -2,6 +2,11 @@ import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { servers } from '../../../db/schema';
+import {
+  attributionFromRequest,
+  normalizeHeardFrom,
+} from '../../../lib/attribution';
+import { recordConversion } from '../../../lib/conversions';
 import { prepareListingIntake } from '../../../lib/listingIntake';
 import { getEmailEnv, sendNotificationEmail } from '../../../lib/notify';
 import {
@@ -51,6 +56,8 @@ const submitSchema = z.object({
   // Checkbox on the submit form, pre-checked by default; absent (e.g. older
   // clients/the agent API) is treated the same as checked.
   newsletterOptIn: z.boolean().optional(),
+  /** Optional "How did you hear about us?" answer (HEARD_FROM_OPTIONS). */
+  heardFrom: z.string().optional(),
 });
 
 export async function POST(req: Request) {
@@ -150,6 +157,13 @@ export async function POST(req: Request) {
         console.error('Failed to store intake review:', e),
       );
     }
+
+    await recordConversion(db, {
+      kind: 'submission',
+      serverId: id,
+      attribution: attributionFromRequest(req),
+      heardFrom: normalizeHeardFrom(result.data.heardFrom),
+    });
 
     const newsletterOptIn = result.data.newsletterOptIn !== false;
     await syncSequenzySubscriber({

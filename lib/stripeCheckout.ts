@@ -9,6 +9,7 @@ import {
   tieredUnitPrice,
 } from '@/lib/pricing';
 import { getAppUrl, getStripe } from '@/lib/stripe';
+import { type Attribution, attributionToStripeMetadata } from './attribution';
 
 export type CreateCheckoutParams = {
   serverId: string;
@@ -17,6 +18,8 @@ export type CreateCheckoutParams = {
   coupon?: string;
   /** Weeks to purchase — only applied for volume-tiered SKUs (featured_7d, category_sponsor_7d). */
   weeks?: number;
+  /** Visitor's acquisition touch, carried through Stripe metadata to the webhook. */
+  attribution?: Attribution | null;
   env?: any;
 };
 
@@ -223,6 +226,7 @@ export async function createStripeCheckoutSession(
       serverId,
       sku,
       ...(isWeeklyTiered ? { weeks: String(initialWeeks) } : {}),
+      ...attributionToStripeMetadata(params.attribution ?? null),
     },
     client_reference_id: serverId,
     allow_promotion_codes: true,

@@ -3,6 +3,10 @@ import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { sponsorAds } from '@/db/schema';
+import {
+  attributionFromRequest,
+  attributionToStripeMetadata,
+} from '@/lib/attribution';
 import { isStripeConfigured } from '@/lib/pricing';
 import { getAppUrl, getStripe } from '@/lib/stripe';
 
@@ -15,7 +19,7 @@ export const dynamic = 'force-dynamic';
  * session — every visit gets a live link, however long after the email was sent.
  */
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
@@ -72,6 +76,7 @@ export async function GET(
         placement: ad.placement,
         impressions: String(ad.totalImpressionsPurchased),
         bidCpm: String(ad.bidCpm),
+        ...attributionToStripeMetadata(attributionFromRequest(req)),
       },
       invoice_creation: { enabled: true },
       success_url: `${appUrl}/advertise/campaign/${ad.id}?payment=success`,

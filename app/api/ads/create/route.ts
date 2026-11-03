@@ -7,6 +7,10 @@ import {
   calculateAdCostCents,
   validateAdPayload,
 } from '@/lib/ads';
+import {
+  attributionFromRequest,
+  attributionToStripeMetadata,
+} from '@/lib/attribution';
 import { auth } from '@/lib/auth';
 import { isStripeConfigured } from '@/lib/pricing';
 import { getAppUrl, getStripe } from '@/lib/stripe';
@@ -96,6 +100,7 @@ export async function POST(request: Request) {
             placement,
             impressions: String(impressions),
             bidCpm: String(bidCpm),
+            ...attributionToStripeMetadata(attributionFromRequest(request)),
           },
           invoice_creation: { enabled: true },
           success_url: `${appUrl}/advertise/campaign/${adId}?payment=success`,

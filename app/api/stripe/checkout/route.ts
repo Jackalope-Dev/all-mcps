@@ -1,6 +1,7 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { attributionFromRequest } from '@/lib/attribution';
 import { formatZodError } from '@/lib/zodError';
 import type { PaidSku } from '../../../../lib/pricing';
 import { createStripeCheckoutSession } from '../../../../lib/stripeCheckout';
@@ -56,6 +57,7 @@ export async function POST(req: Request) {
       email,
       coupon,
       weeks,
+      attribution: attributionFromRequest(req),
       env,
     });
 

@@ -46,6 +46,28 @@ const store: LopebaseStore = {
   getUser: async (id) => USERS.find((u) => u.id === id) ?? null,
   listListings: list(LISTINGS),
   getListing: async (id) => LISTINGS.find((l) => l.id === id) ?? null,
+  acquisition: async () => ({
+    sources: [
+      {
+        id: 'github|github.com',
+        channel: 'github',
+        source: 'github.com',
+        conversions: 3,
+        paid_conversions: 1,
+        revenue_usd: 49,
+      },
+    ],
+    landingPages: [
+      {
+        id: '/submit',
+        path: '/submit',
+        conversions: 3,
+        paid_conversions: 1,
+        revenue_usd: 49,
+      },
+    ],
+    stats: { conversions_28d: 3, paid_conversions_28d: 1, revenue_28d_usd: 49 },
+  }),
 };
 
 describe('LopeBase adapter conformance', () => {
@@ -55,6 +77,18 @@ describe('LopeBase adapter conformance', () => {
     secret: SECRET,
     basePath: '/api/lopebase',
     sampleResource: 'listings',
+  })) {
+    it(c.name, c.run);
+  }
+});
+
+describe('LopeBase acquisition resource conformance', () => {
+  const adapter = createLopebaseAdapter({ secrets: [SECRET], store });
+  for (const c of conformanceChecks({
+    adapter,
+    secret: SECRET,
+    basePath: '/api/lopebase',
+    sampleResource: 'acquisition_sources',
   })) {
     it(c.name, c.run);
   }

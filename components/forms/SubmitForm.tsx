@@ -14,6 +14,7 @@ import {
 import Link from 'next/link';
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { HEARD_FROM_OPTIONS } from '../../lib/attribution';
 import {
   DEFAULT_SUBMIT_CATEGORY,
   DIRECTORY_CATEGORIES,
@@ -772,6 +773,27 @@ export function SubmitForm() {
                   )
                 }
               />
+            </div>
+
+            <div className="form-field">
+              <label htmlFor="submit-heard-from" className="form-label">
+                How did you hear about AllMCPs? (optional)
+              </label>
+              <div className="acct-select">
+                <select
+                  id="submit-heard-from"
+                  name="heardFrom"
+                  className="form-input"
+                  defaultValue=""
+                >
+                  <option value="">Prefer not to say</option>
+                  {HEARD_FROM_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <label className="form-checkbox-row">
