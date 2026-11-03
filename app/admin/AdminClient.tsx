@@ -8,6 +8,7 @@ import {
   Clock,
   Compass,
   FileText,
+  History,
   List,
   Mail,
   MailX,
@@ -28,6 +29,7 @@ import {
 } from '../../lib/moderationReasons';
 import { hueClass } from '../../lib/palette';
 import { parsePendingRevision } from '../../lib/pendingRevision';
+import type { SubmitterHistory } from '../../lib/submitterHistory';
 import { AdminAcquisitionView } from './AdminAcquisitionView';
 import { AdminAdsControl } from './AdminAdsControl';
 import { AdminAnalyticsView } from './AdminAnalyticsView';
@@ -57,6 +59,8 @@ type Server = {
   reviewFlagged?: boolean;
   status?: string;
   pendingRevision?: string | null;
+  /** Pending submissions only: lib/submitterHistory.ts. */
+  history?: SubmitterHistory | null;
   pendingClaimUserId?: string | null;
   pendingClaimWebsiteUrl?: string | null;
   pendingLogoKey?: string | null;
@@ -847,9 +851,11 @@ export default function AdminClient({
           )}
           {rejectingItem.action === 'reject' &&
             rejectionCodes.length > 0 &&
-            !rejectionEmail(rejectionCodes).canResubmit && (
+            rejectingItem.submitterEmail && (
               <p className="adm-note">
-                Not fixable, so the email won't invite them to submit again.
+                {rejectionEmail(rejectionCodes).canResubmit
+                  ? 'Fixable: the submission is kept and they can edit and resubmit it from their dashboard (up to 3 reviews).'
+                  : "Not fixable: the submission is deleted and the email won't invite them to resubmit."}
               </p>
             )}
           <div className="adm-field">
@@ -870,6 +876,35 @@ export default function AdminClient({
           </div>
         </AdminModal>
       )}
+    </div>
+  );
+}
+
+/**
+ * A submitter's past rejections and approvals by email and by domain. Turns
+ * red once rejections outnumber approvals three to nothing or worse.
+ */
+function HistoryLine({ h }: { h: SubmitterHistory }) {
+  const email = h.emailRejected + h.emailApproved;
+  const domain = h.domainRejected + h.domainApproved;
+  if (email === 0 && domain === 0) return null;
+  const bad =
+    (h.emailRejected >= 3 && h.emailApproved === 0) ||
+    (h.domainRejected >= 3 && h.domainApproved === 0);
+  const parts: string[] = [];
+  if (email > 0)
+    parts.push(
+      `this email: ${h.emailRejected} rejected, ${h.emailApproved} approved`,
+    );
+  if (domain > 0 && h.domain)
+    parts.push(
+      `${h.domain}: ${h.domainRejected} rejected, ${h.domainApproved} approved`,
+    );
+  return (
+    <div className={`adm-meta-line${bad ? ' tint-text hue-red' : ''}`}>
+      <History size={13} aria-hidden="true" />
+      <span>History:</span>
+      <span>{parts.join(' · ')}</span>
     </div>
   );
 }
@@ -1065,6 +1100,9 @@ function ServerTable({
                       {server.reviewFlagged && (
                         <span className="adm-tag hue-red">Needs a look</span>
                       )}
+                      {server.history?.resubmitted && (
+                        <span className="adm-tag hue-blue">Resubmitted</span>
+                      )}
                       {server.isPremium && (
                         <span className="adm-tag hue-violet">Premium</span>
                       )}
@@ -1086,6 +1124,7 @@ function ServerTable({
                         <span className="adm-anon">Anonymous</span>
                       )}
                     </div>
+                    {server.history && <HistoryLine h={server.history} />}
 
                     <div className="adm-desc">{server.description}</div>
 

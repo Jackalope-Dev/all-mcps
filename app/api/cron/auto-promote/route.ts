@@ -18,6 +18,7 @@ import {
   shouldHoldFromAutoPromotion,
 } from '../../../../lib/listingReview';
 import { upsertSignals } from '../../../../lib/signalStore';
+import { expireRejectedSubmissions } from '../../../../lib/submissions';
 import { isSafeSubmissionUrl } from '../../../../lib/urlSafety';
 
 /**
@@ -212,6 +213,12 @@ export async function POST(req: Request) {
         .limit(BATCH_SIZE)
     ).map((row) => row.servers);
 
+    // Rejected submissions their submitter never fixed (lib/submissions.ts).
+    const expiredRejected = await expireRejectedSubmissions(db).catch((e) => {
+      console.error('expireRejectedSubmissions failed:', e);
+      return 0;
+    });
+
     let promoted = 0;
     let removedCount = 0;
     let stillPending = 0;
@@ -323,6 +330,7 @@ export async function POST(req: Request) {
       removed: removedCount,
       stillPending,
       heldForReview,
+      expiredRejected,
     });
   } catch (error) {
     console.error('[auto-promote] failed', error);

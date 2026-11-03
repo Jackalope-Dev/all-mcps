@@ -9,7 +9,9 @@ import {
   getServerAnalyticsBatch,
 } from '@/lib/analytics';
 import { auth } from '@/lib/auth';
+import { getMySubmissions, type MySubmission } from '@/lib/submissions';
 import DashboardClient from './DashboardClient';
+import { SubmissionsPanel } from './SubmissionsPanel';
 
 export type OwnedAd = {
   id: string;
@@ -200,6 +202,21 @@ async function getOwnedServers(userId: string): Promise<{
   return { servers: [], analytics: {}, categoryRanks: {}, isPremium: false };
 }
 
+/** Pending and rejected submissions made with this email (lib/submissions.ts). */
+async function getSubmissions(
+  email: string | null | undefined,
+): Promise<MySubmission[]> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (!ctx?.env || !(ctx.env as any).DB) return [];
+    return await getMySubmissions(drizzle((ctx.env as any).DB), email);
+  } catch (e) {
+    console.error('Failed to load submissions:', e);
+    return [];
+  }
+}
+
 async function getOwnedAds(
   userId: string,
   email: string | null | undefined,
@@ -259,9 +276,11 @@ export default async function DashboardPage({
   const [
     { servers: ownedServers, analytics, categoryRanks, isPremium },
     ownedAds,
+    submissions,
   ] = await Promise.all([
     getOwnedServers(session.user.id),
     getOwnedAds(session.user.id, session.user.email),
+    getSubmissions(session.user.email),
   ]);
   const { edit } = await searchParams;
 
@@ -286,6 +305,7 @@ export default async function DashboardPage({
             </a>
           </div>
         </header>
+        <SubmissionsPanel initial={submissions} />
         <DashboardClient
           initialServers={ownedServers as any}
           initialAnalytics={analytics}

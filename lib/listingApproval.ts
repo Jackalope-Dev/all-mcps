@@ -1,9 +1,12 @@
-import { and, eq } from 'drizzle-orm';
+import { and, count, eq, isNotNull } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
-import { servers } from '../db/schema';
+import { moderationDecisions, servers } from '../db/schema';
 import { notifyListingIndexed } from './indexnow';
 import { notifyListingApproved } from './listingApprovalNotify';
+import { recordModeration } from './moderationLog';
+import { type ModerationReason, rejectionEmail } from './moderationReasons';
 import { sendListingStatusEmail } from './notify';
+import { REJECTED_STATUS } from './servability';
 import { getAppUrl } from './stripe';
 
 /**
@@ -48,21 +51,89 @@ export async function approvePendingListing(
 }
 
 /**
- * Deletes the pending row (so the submitter can resubmit under the same slug)
- * and emails them. Null when the row is gone or no longer pending.
+ * How many times one submission may be rejected before it is deleted instead
+ * of kept for another edit, so a submitter can't loop it forever.
+ */
+export const MAX_SUBMISSION_REJECTIONS = 3;
+
+/**
+ * Rejects a pending listing, records why (moderation_decisions) and emails
+ * the submitter.
+ *
+ * A fixable rejection of a human submission keeps the row as 'rejected',
+ * hidden from every public surface, so the submitter can edit it from their
+ * dashboard and send it back (app/api/dashboard/resubmit). Anything else is
+ * deleted: reasons no edit can fix (adult, spam, duplicate, …), imported
+ * listings nobody can edit, and a submission on its last allowed rejection.
+ * The email matches: an edit-and-resubmit invite only when the row was kept.
+ *
+ * Null when the row is gone or no longer pending.
  */
 export async function rejectPendingListing(
   db: Db,
   id: string,
-  feedback?: string | null,
-  /** False when no fix can get it listed (adult, spam, …): the email then drops the resubmit invite. */
-  canResubmit = true,
-): Promise<ServerRow | null> {
-  const [rejected] = await db
-    .delete(servers)
-    .where(and(eq(servers.id, id), eq(servers.status, 'pending')))
-    .returning();
+  opts: {
+    /** Text for the submitter; defaults to the copy for `reasons`. */
+    feedback?: string | null;
+    reasons?: ModerationReason[];
+    note?: string | null;
+    source: 'modal' | 'triage' | 'gate';
+    decidedBy: string | null;
+  },
+): Promise<{ row: ServerRow; kept: boolean } | null> {
+  const reasons = opts.reasons ?? [];
+  const copy = rejectionEmail(reasons);
+  const feedback = opts.feedback || copy.feedback || DEFAULT_REJECTION_FEEDBACK;
+
+  let earlier = 0;
+  try {
+    const [r] = await db
+      .select({ n: count() })
+      .from(moderationDecisions)
+      .where(
+        and(
+          eq(moderationDecisions.serverId, id),
+          eq(moderationDecisions.action, 'reject'),
+        ),
+      );
+    earlier = r?.n ?? 0;
+  } catch {
+    // Without the history, allow the edit; the resubmit route rechecks.
+  }
+  const keep = copy.canResubmit && earlier + 1 < MAX_SUBMISSION_REJECTIONS;
+
+  const [kept] = keep
+    ? await db
+        .update(servers)
+        .set({ status: REJECTED_STATUS })
+        .where(
+          and(
+            eq(servers.id, id),
+            eq(servers.status, 'pending'),
+            isNotNull(servers.submitterEmail),
+          ),
+        )
+        .returning()
+    : [];
+  const rejected =
+    kept ??
+    (
+      await db
+        .delete(servers)
+        .where(and(eq(servers.id, id), eq(servers.status, 'pending')))
+        .returning()
+    )[0];
   if (!rejected) return null;
+
+  await recordModeration(db, {
+    row: rejected,
+    action: 'reject',
+    reasons,
+    note: opts.note,
+    feedback,
+    source: opts.source,
+    decidedBy: opts.decidedBy,
+  });
 
   const to =
     typeof rejected.submitterEmail === 'string'
@@ -74,13 +145,13 @@ export async function rejectPendingListing(
         to,
         mcpName: rejected.name,
         status: 'rejected',
-        listingUrl: `${getAppUrl()}/submit`,
-        feedback: feedback || DEFAULT_REJECTION_FEEDBACK,
-        canResubmit,
+        listingUrl: `${getAppUrl()}/dashboard`,
+        feedback,
+        canResubmit: Boolean(kept),
       });
     } catch (e) {
       console.error('Failed to notify submitter on rejection:', e);
     }
   }
-  return rejected;
+  return { row: rejected, kept: Boolean(kept) };
 }

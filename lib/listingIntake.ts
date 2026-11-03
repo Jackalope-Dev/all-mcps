@@ -7,7 +7,7 @@ import { policyFlags } from './listingPolicy';
 import { alignListings, reviewColumns, reviewListing } from './listingReview';
 import { isPlaceholderUrl } from './placeholderUrl';
 import { isRepositoryUrl } from './repoUrl';
-import { isWithdrawn } from './servability';
+import { isWithdrawn, REJECTED_STATUS } from './servability';
 import {
   isAuthType,
   isMaintenanceStatus,
@@ -243,7 +243,9 @@ export async function prepareListingIntake(
       body: {
         error: isWithdrawn(existingByUrl)
           ? `"${existingByUrl.name}" was withdrawn from the directory at its owner's request and can't be listed again.`
-          : `This server is already listed as "${existingByUrl.name}" (${existingByUrl.status}). Visit /mcp/${existingByUrl.id} to view or claim it instead of submitting a duplicate.`,
+          : existingByUrl.status === REJECTED_STATUS
+            ? `"${existingByUrl.name}" was submitted before and needs changes. If you submitted it, sign in at /dashboard with the same email to edit and resubmit it.`
+            : `This server is already listed as "${existingByUrl.name}" (${existingByUrl.status}). Visit /mcp/${existingByUrl.id} to view or claim it instead of submitting a duplicate.`,
         duplicate: true,
         existing: existingByUrl,
       },

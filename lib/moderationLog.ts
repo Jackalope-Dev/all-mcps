@@ -57,7 +57,9 @@ export async function recordModeration(
     action: 'reject' | 'unpublish';
     reasons: ModerationReason[];
     note?: string | null;
-    source: 'modal' | 'triage' | 'listings';
+    /** Reject only: the text emailed to the submitter. */
+    feedback?: string | null;
+    source: 'modal' | 'triage' | 'listings' | 'gate';
     decidedBy: string | null;
   },
 ): Promise<void> {
@@ -73,6 +75,7 @@ export async function recordModeration(
       action: input.action,
       reasons: JSON.stringify([...new Set(input.reasons)]),
       note: input.note?.trim() || null,
+      feedback: input.feedback ?? null,
       source: input.source,
       snapshot: JSON.stringify(listingSnapshot(input.row)),
       gateDecision: gate?.decision ?? null,

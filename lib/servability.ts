@@ -39,6 +39,18 @@ export function isWithdrawn(s: ServabilityInput): boolean {
   return s.status === WITHDRAWN_STATUS;
 }
 
+/**
+ * A submission an admin rejected for a fixable reason, kept so its submitter
+ * can edit and resubmit it from the dashboard (lib/listingApproval.ts). Never
+ * public: like 'withdrawn', every public URL 404s.
+ */
+export const REJECTED_STATUS = 'rejected';
+
+/** No public surface may serve it: withdrawn by its owner, or a rejected submission. */
+export function isPubliclyHidden(s: ServabilityInput): boolean {
+  return s.status === WITHDRAWN_STATUS || s.status === REJECTED_STATUS;
+}
+
 /** The same rule as raw SQL, for hand-written queries over `servers` (optionally aliased). */
 export function servableSql(alias?: string): string {
   const c = alias ? `${alias}.` : '';

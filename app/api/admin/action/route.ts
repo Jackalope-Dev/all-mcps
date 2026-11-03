@@ -35,10 +35,7 @@ import {
 import { refreshListingPageInBackground } from '../../../../lib/listingPageRefresh';
 import { resolveCanonicalMergeTarget } from '../../../../lib/listingRedirect';
 import { recordModeration } from '../../../../lib/moderationLog';
-import {
-  MODERATION_REASONS,
-  rejectionEmail,
-} from '../../../../lib/moderationReasons';
+import { MODERATION_REASONS } from '../../../../lib/moderationReasons';
 import { sendNotificationEmail } from '../../../../lib/notify';
 import {
   parsePendingRevision,
@@ -235,14 +232,14 @@ export async function POST(req: Request) {
     } else if (action === 'reject') {
       await snapshotGateDecision(db, id);
       // The reason codes pick the email copy when the admin left the text
-      // empty, and decide whether it invites a resubmission.
-      const email = rejectionEmail(reasons ?? []);
-      const rejected = await rejectPendingListing(
-        db,
-        id,
-        reason || email.feedback,
-        email.canResubmit,
-      );
+      // empty, and decide whether the submission is kept for an edit.
+      const rejected = await rejectPendingListing(db, id, {
+        feedback: reason,
+        reasons,
+        note: reasonNote,
+        source: source === 'triage' ? 'triage' : 'modal',
+        decidedBy: adminEmail,
+      });
       if (!rejected) {
         return NextResponse.json(
           { error: 'Server not found or not in pending state.' },
@@ -250,14 +247,6 @@ export async function POST(req: Request) {
         );
       }
       await recordHumanDecision(db, id, 'reject');
-      await recordModeration(db, {
-        row: rejected,
-        action: 'reject',
-        reasons: reasons ?? [],
-        note: reasonNote,
-        source: source ?? 'modal',
-        decidedBy: adminEmail,
-      });
     } else if (action === 'set_premium' || action === 'unset_premium') {
       const updateResult = await db
         .update(servers)

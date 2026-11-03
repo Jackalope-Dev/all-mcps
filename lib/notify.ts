@@ -118,7 +118,7 @@ export async function sendListingStatusEmail(params: {
   listingUrl: string;
   claimUrl?: string;
   feedback?: string;
-  /** Rejected only: false hides the "Submit again" invite (see ListingStatusEmail). */
+  /** Rejected only: false hides the edit-and-resubmit invite (see ListingStatusEmail). */
   canResubmit?: boolean;
 }): Promise<void> {
   const env = await getEmailEnv();

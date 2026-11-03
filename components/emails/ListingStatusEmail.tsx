@@ -14,9 +14,9 @@ interface ListingStatusEmailProps {
   /** Claim / verify URL — used on approval to drive free dofollow backlinks (DR growth). */
   claimUrl?: string;
   /**
-   * Rejected only: whether fixing it and submitting again can work. False
-   * for reasons like adult content or spam (lib/moderationReasons.ts), which
-   * then get no "Submit again" button.
+   * Rejected only: whether the submission was kept for the submitter to edit
+   * and resubmit from their dashboard (`listingUrl`). False for reasons no
+   * edit can fix (lib/moderationReasons.ts), which get no button.
    */
   canResubmit?: boolean;
 }
@@ -124,11 +124,11 @@ export const ListingStatusEmail = ({
           {canResubmit ? (
             <>
               <Text style={textStyle}>
-                A rejected submission is removed, so once it's fixed please
-                submit it again as a new listing.
+                We&apos;ve kept your submission. Sign in to your dashboard with
+                this email address to edit it and send it back for review.
               </Text>
               <Button href={listingUrl} style={buttonStyle}>
-                Submit again
+                Edit and resubmit
               </Button>
             </>
           ) : (

@@ -15,6 +15,7 @@ import {
 } from '../../db/schema';
 import { type AdminStats, getAdminStats } from '../../lib/adminStats';
 import { auth } from '../../lib/auth';
+import { getSubmitterHistory } from '../../lib/submitterHistory';
 import AdminClient from './AdminClient';
 
 export const dynamic = 'force-dynamic';
@@ -92,6 +93,14 @@ async function getAdminData() {
           desc(servers.createdAt),
         )
         .limit(QUEUE_LIMIT);
+      // Track record per submitter email and domain, plus whether this is a
+      // resubmission (lib/submitterHistory.ts). Never blocks the page.
+      const history = await getSubmitterHistory(db, pendingServers).catch(
+        (e) => {
+          console.error('submitter history failed:', e);
+          return new Map();
+        },
+      );
       const pendingEdits = await db
         .select()
         .from(servers)
@@ -207,7 +216,10 @@ async function getAdminData() {
       });
 
       return {
-        pending: pendingServers.map(map),
+        pending: pendingServers.map((s) => ({
+          ...map(s),
+          history: history.get(s.id) ?? null,
+        })),
         pendingEdits: pendingEdits.map(map),
         pendingClaims: pendingClaims.map(map),
         pendingLogos: pendingLogos.map(map),

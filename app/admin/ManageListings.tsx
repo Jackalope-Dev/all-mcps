@@ -601,6 +601,7 @@ export default function ManageListings({
             <option value="active">Active</option>
             <option value="pending">Pending</option>
             <option value="removed">Removed</option>
+            <option value="rejected">Rejected (awaiting edit)</option>
           </select>
           <select
             className="form-input"

@@ -819,7 +819,9 @@ export const moderationDecisions = sqliteTable(
     reasons: text('reasons').notNull(),
     /** Free text for 'other', or any extra context. */
     note: text('note'),
-    /** Where the decision was made: modal | triage | listings. */
+    /** Reject only: the text the submitter was emailed (and sees on their dashboard). */
+    feedback: text('feedback'),
+    /** Where the decision was made: modal | triage | listings | gate | audit. */
     source: text('source').notNull(),
     /** JSON: name, description, urls, category, submitter, tool names. */
     snapshot: text('snapshot').notNull(),

@@ -933,11 +933,12 @@ export async function POST(req: Request) {
         const done =
           result.decision === 'approve'
             ? await approvePendingListing(db, row.id)
-            : await rejectPendingListing(
-                db,
-                row.id,
-                `We couldn't reach the source for ${row.name} — ${result.reasons.join('; ')}. If the repository has moved or was private, you're welcome to submit again with a public link.`,
-              );
+            : await rejectPendingListing(db, row.id, {
+                feedback: `We couldn't reach the source for ${row.name} — ${result.reasons.join('; ')}. If the repository has moved or was private, you're welcome to update the link and resubmit.`,
+                reasons: ['broken'],
+                source: 'gate',
+                decidedBy: null,
+              });
         if (done) {
           counts.acted++;
           await markActed(db, gate, row.id);

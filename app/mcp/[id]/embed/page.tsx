@@ -10,7 +10,7 @@ import serversData from '../../../../data/mcp-servers.json';
 import { servers as serversTable } from '../../../../db/schema';
 import { parseServerName } from '../../../../lib/displayName';
 import { redirectIfListingMoved } from '../../../../lib/listingRedirect';
-import { isWithdrawn } from '../../../../lib/servability';
+import { isPubliclyHidden } from '../../../../lib/servability';
 import { PUBLIC_SERVER_COLUMNS } from '../../../../lib/servers';
 
 type Server = {
@@ -37,7 +37,7 @@ async function getServer(id: string): Promise<Server | undefined> {
         .where(eq(serversTable.id, id))
         .limit(1);
       if (dbServers.length > 0) {
-        if (!isWithdrawn(dbServers[0])) {
+        if (!isPubliclyHidden(dbServers[0])) {
           return dbServers[0] as unknown as Server;
         }
         withdrawn = true;

@@ -49,19 +49,19 @@ export const MODERATION_REASON_LABEL: Record<ModerationReason, string> = {
  */
 export const MODERATION_REASON_FEEDBACK: Record<ModerationReason, string> = {
   not_mcp:
-    "We couldn't find an MCP server in this submission. AllMCPs lists projects that ship an MCP server or a hosted MCP endpoint. If yours does, submit again with the repository or endpoint URL that shows it, and mention the MCP tools in the description.",
+    "We couldn't find an MCP server in this submission. AllMCPs lists projects that ship an MCP server or a hosted MCP endpoint. If yours does, update it with the repository or endpoint URL that shows it, mention the MCP tools in the description, and resubmit.",
   directory_or_list:
-    "The link points at a directory, list or registry page rather than an MCP server itself. Submit the server's own repository or hosted endpoint instead and we'll take another look.",
+    "The link points at a directory, list or registry page rather than an MCP server itself. Change it to the server's own repository or hosted endpoint and resubmit, and we'll take another look.",
   brochure:
-    "The server's tools only describe your own company (profile, services, contact, FAQ), so it isn't useful to developers on its own. If you add tools that do real work for users, you're welcome to submit it again.",
+    "The server's tools only describe your own company (profile, services, contact, FAQ), so it isn't useful to developers on its own. If you add tools that do real work for users, you're welcome to resubmit it.",
   low_value:
-    "It doesn't yet do enough for developers to find it useful in the directory. Once it does more, you're welcome to submit it again with a description of what it can do.",
+    "It doesn't yet do enough for developers to find it useful in the directory. Once it does more, you're welcome to resubmit it with a description of what it can do.",
   duplicate:
     "This server is already listed on AllMCPs, so we didn't add a second copy. If it's yours, you can claim the existing listing to edit it, add a logo and manage it.",
   broken:
-    "We couldn't reach the repository, package or endpoint for this submission. Please check it is public and working, then submit it again.",
+    "We couldn't reach the repository, package or endpoint for this submission. Please check it is public and working, update the links if they changed, and resubmit.",
   incomplete:
-    "Some of the details were missing or didn't match what we found (name, description, links or install steps). Please update them and submit again. A clear description of what the server does and how to connect to it is the main thing we look for.",
+    "Some of the details were missing or didn't match what we found (name, description, links or install steps). Please update them and resubmit. A clear description of what the server does and how to connect to it is the main thing we look for.",
   spam: "This submission reads as promotion for a business rather than an MCP server for developers, so we don't list it.",
   malicious:
     "We don't list this submission because it raised security concerns during review.",
@@ -70,12 +70,12 @@ export const MODERATION_REASON_FEEDBACK: Record<ModerationReason, string> = {
   prohibited:
     "This submission falls in a category AllMCPs doesn't list (see our terms at https://allmcps.com/terms), so we can't approve it.",
   other:
-    'Your submission was not approved this time. You are welcome to update it and submit again.',
+    'Your submission was not approved this time. You are welcome to update it and resubmit.',
 };
 
 /**
  * Whether the submitter can fix this and submit again. A rejection is only
- * shown a "Submit again" button when every picked reason is fixable.
+ * kept for an edit-and-resubmit when every picked reason is fixable.
  */
 const MODERATION_REASON_FIXABLE: Record<ModerationReason, boolean> = {
   not_mcp: true,

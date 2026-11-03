@@ -2,6 +2,7 @@ import { type AnyColumn, and, or, type SQL, sql } from 'drizzle-orm';
 import type { drizzle } from 'drizzle-orm/d1';
 import { servers } from '../db/schema';
 import { isPlaceholderHost } from './placeholderUrl';
+import { REJECTED_STATUS } from './servability';
 
 /**
  * Same normalization as scripts/ingest-sources.mjs's normalizeUrlKey — kept in
@@ -289,6 +290,9 @@ export async function findNearDuplicateCandidates(
   const push = (row: (typeof rows)[number]) => {
     if (seen.has(row.id)) return;
     if (normalizeUrlKey(row.url) === urlKey) return;
+    // A rejected submission isn't listed and can't be viewed or claimed, so
+    // it's no reason to turn a new submission away.
+    if (row.status === REJECTED_STATUS) return;
     seen.add(row.id);
     out.push(toMatch(row));
   };
