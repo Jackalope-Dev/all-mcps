@@ -1,7 +1,7 @@
 ---
 title: "MCP Server Logging Observability: Protocol Logs and Alerts"
 excerpt: "Learn how to implement MCP server logging observability with protocol messages, stderr, structured tool traces, and production alerts for remote servers."
-tags: ["Guides", "MCP", "Architecture", "Developer Tools"]
+tags: ["Building Servers", "Deployment"]
 faq:
   - q: "Should MCP servers log to stderr or use notifications/message?"
     a: "Use stderr for process diagnostics when the server runs over stdio, and use MCP logging notifications when the client needs protocol-level log records. They serve different audiences: stderr is an operational stream outside JSON-RPC, while notifications/message are MCP messages that a capable client can receive and display. Remote servers should send operational logs to their logging system rather than assuming stderr is visible."
