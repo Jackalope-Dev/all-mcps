@@ -201,6 +201,7 @@ export const PUBLIC_SERVER_COLUMNS = {
   remoteEndpointUrl: serversTable.remoteEndpointUrl,
   remoteEndpointHealthy: serversTable.remoteEndpointHealthy,
   remoteEndpointCheckedAt: serversTable.remoteEndpointCheckedAt,
+  remoteEndpointHealthyAt: serversTable.remoteEndpointHealthyAt,
   aiSummary: serversTable.aiSummary,
   aiOverview: serversTable.aiOverview,
   aiUseCases: serversTable.aiUseCases,
@@ -285,6 +286,8 @@ export type Server = {
   /** Live health of remoteEndpointUrl specifically, from the health cron's handshake. Separate from healthStatus/isVerifiedActive, which track the primary url. Null = never checked. */
   remoteEndpointHealthy?: boolean | null;
   remoteEndpointCheckedAt?: string | Date | null;
+  /** Last successful remote handshake; feeds listing indexability (lib/listingIndexability.ts). */
+  remoteEndpointHealthyAt?: string | Date | null;
   /**
    * Combined "we actually observed this server working" signal for the
    * quality score's availability component — max of the rolling

@@ -156,6 +156,7 @@ export async function POST(req: Request) {
             remoteEndpointUrl: hit.url,
             remoteEndpointHealthy: true,
             remoteEndpointCheckedAt: now,
+            remoteEndpointHealthyAt: now,
             authType: sql`COALESCE(${servers.authType}, ${hit.authType})`,
           })
           .where(

@@ -44,6 +44,31 @@ describe('isListingIndexable', () => {
     ).toBe(true);
   });
 
+  it('keeps a remote endpoint seen healthy in the last 14 days through a blip', () => {
+    const day = 24 * 60 * 60 * 1000;
+    const failedNow = { ...base, githubStars: 100, remoteEndpointHealthy: 0 };
+    expect(
+      isListingIndexable({
+        ...failedNow,
+        remoteEndpointHealthyAt: new Date(Date.now() - 3 * day),
+      }),
+    ).toBe(true);
+    // Raw D1 rows carry epoch seconds.
+    expect(
+      isListingIndexable({
+        ...failedNow,
+        remoteEndpointHealthyAt: Math.floor((Date.now() - 3 * day) / 1000),
+      }),
+    ).toBe(true);
+    expect(
+      isListingIndexable({
+        ...failedNow,
+        remoteEndpointHealthyAt: new Date(Date.now() - 15 * day),
+      }),
+    ).toBe(false);
+    expect(isListingIndexable(failedNow)).toBe(false);
+  });
+
   it('indexes clearly popular servers without a verified run', () => {
     expect(isListingIndexable({ ...base, githubStars: 999 })).toBe(false);
     expect(isListingIndexable({ ...base, githubStars: 1000 })).toBe(true);

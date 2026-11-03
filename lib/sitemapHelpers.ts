@@ -186,6 +186,7 @@ export type SitemapServer = {
   toolsSource?: string | null;
   installNeedsConfig?: Date | string | number | null;
   remoteEndpointHealthy?: boolean | number | null;
+  remoteEndpointHealthyAt?: Date | string | number | null;
   staleFlagged?: number | boolean | null;
 };
 
@@ -213,6 +214,7 @@ const SITEMAP_SERVER_COLUMNS = {
   toolsSource: serversTable.toolsSource,
   installNeedsConfig: serversTable.installNeedsConfig,
   remoteEndpointHealthy: serversTable.remoteEndpointHealthy,
+  remoteEndpointHealthyAt: serversTable.remoteEndpointHealthyAt,
   staleFlagged: sql<number>`${serversTable.staleFlaggedAt} IS NOT NULL`,
 };
 
@@ -274,6 +276,7 @@ export function createSitemapSummarizer() {
             toolsSource: s.toolsSource,
             installNeedsConfig: s.installNeedsConfig,
             remoteEndpointHealthy: s.remoteEndpointHealthy,
+            remoteEndpointHealthyAt: s.remoteEndpointHealthyAt,
             githubStars: s.githubStars ?? s.stars,
             npmDownloads: s.npmDownloads ?? s.downloads,
             staleFlagged: Boolean(s.staleFlagged),

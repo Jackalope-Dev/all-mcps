@@ -650,6 +650,9 @@ async function checkListing(
         toolsSource,
         remoteEndpointHealthy,
         remoteEndpointCheckedAt,
+        ...(remoteEndpointHealthy === true
+          ? { remoteEndpointHealthyAt: now }
+          : {}),
         ...(shouldUnpublish ? { status: 'removed' } : {}),
         ...(installFields
           ? {

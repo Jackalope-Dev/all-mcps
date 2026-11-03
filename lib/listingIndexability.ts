@@ -27,7 +27,11 @@ import { servers } from '../db/schema';
  *
  * "Proof it runs" means we saw it work: a live tools/list (toolsSource
  * 'introspected'), a sandbox run that started and asked for keys
- * (installNeedsConfig), or a healthy remote endpoint. A tool list parsed from
+ * (installNeedsConfig), or a remote endpoint that answered within
+ * REMOTE_HEALTHY_WINDOW_MS. remoteEndpointHealthy alone flips false on one bad
+ * answer, and the health cron rechecks every listing every couple of days, so
+ * listings (and the hubs counting them) used to drop out of the sitemap and
+ * get noindexed over a single CDN blip, then come back on the next pass. A tool list parsed from
  * the README used to count, but that is the README's claim, not evidence —
  * and it let thin listings in on documentation alone.
  *
@@ -40,6 +44,8 @@ const INDEXABLE_MIN_NPM_DOWNLOADS = 1000;
 /** Traction high enough to index without a verified run. */
 const INDEXABLE_STRONG_GITHUB_STARS = 1000;
 const INDEXABLE_STRONG_NPM_DOWNLOADS = 20000;
+/** A remote endpoint seen healthy this recently still counts as proof it runs. */
+const REMOTE_HEALTHY_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 
 export type IndexabilityInput = {
   status?: string | null;
@@ -47,6 +53,8 @@ export type IndexabilityInput = {
   toolsSource?: string | null;
   installNeedsConfig?: Date | string | number | null;
   remoteEndpointHealthy?: boolean | number | null;
+  /** Last successful remote handshake (servers.remoteEndpointHealthyAt). */
+  remoteEndpointHealthyAt?: Date | string | number | null;
   githubStars?: number | null;
   npmDownloads?: number | null;
   /** Flagged by the stale sweep (lib/staleness.ts). Noindexed during the grace period, before any removal. */
@@ -82,23 +90,41 @@ export function isServerRowIndexable(row: IndexabilityRow): boolean {
     toolsSource: row.toolsSource,
     installNeedsConfig: row.installNeedsConfig,
     remoteEndpointHealthy: row.remoteEndpointHealthy,
+    remoteEndpointHealthyAt: row.remoteEndpointHealthyAt,
     githubStars: row.githubStars,
     npmDownloads: row.npmDownloads,
     staleFlagged: row.staleFlaggedAt != null,
   });
 }
 
-/** We saw the server work: live tools, a sandbox start that asked for keys, or a healthy remote endpoint. */
-function hasVerifiedRun(s: {
-  toolsSource?: string | null;
-  installNeedsConfig?: Date | string | number | null;
-  remoteEndpointHealthy?: boolean | number | null;
-}): boolean {
+/** We saw the server work: live tools, a sandbox start that asked for keys, or a recently healthy remote endpoint. */
+function hasVerifiedRun(
+  s: Pick<
+    IndexabilityInput,
+    | 'toolsSource'
+    | 'installNeedsConfig'
+    | 'remoteEndpointHealthy'
+    | 'remoteEndpointHealthyAt'
+  >,
+): boolean {
   return (
     s.toolsSource === 'introspected' ||
     s.installNeedsConfig != null ||
-    Boolean(s.remoteEndpointHealthy)
+    Boolean(s.remoteEndpointHealthy) ||
+    healthyWithinWindow(s.remoteEndpointHealthyAt)
   );
+}
+
+function healthyWithinWindow(at: IndexabilityInput['remoteEndpointHealthyAt']) {
+  if (at == null) return false;
+  // Seconds or ms; D1 rows read raw (not through Drizzle) carry epoch seconds.
+  const ms =
+    typeof at === 'number'
+      ? at < 1e12
+        ? at * 1000
+        : at
+      : new Date(at).getTime();
+  return !Number.isNaN(ms) && Date.now() - ms <= REMOTE_HEALTHY_WINDOW_MS;
 }
 
 /**
@@ -110,6 +136,9 @@ export function indexableListingSql(): SQL {
   const downloads = sql`coalesce(${servers.npmDownloads}, 0)`;
   const traction = sql`(${stars} >= ${INDEXABLE_MIN_GITHUB_STARS} OR ${downloads} >= ${INDEXABLE_MIN_NPM_DOWNLOADS})`;
   const strongTraction = sql`(${stars} >= ${INDEXABLE_STRONG_GITHUB_STARS} OR ${downloads} >= ${INDEXABLE_STRONG_NPM_DOWNLOADS})`;
-  const verifiedRun = sql`(${servers.toolsSource} = 'introspected' OR ${servers.installNeedsConfig} IS NOT NULL OR coalesce(${servers.remoteEndpointHealthy}, 0) = 1)`;
+  const healthySince = Math.floor(
+    (Date.now() - REMOTE_HEALTHY_WINDOW_MS) / 1000,
+  );
+  const verifiedRun = sql`(${servers.toolsSource} = 'introspected' OR ${servers.installNeedsConfig} IS NOT NULL OR coalesce(${servers.remoteEndpointHealthy}, 0) = 1 OR coalesce(${servers.remoteEndpointHealthyAt}, 0) >= ${healthySince})`;
   return sql`(coalesce(${servers.aiDoc}, '') <> '' AND (${strongTraction} OR (${traction} AND ${verifiedRun})))`;
 }

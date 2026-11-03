@@ -390,7 +390,11 @@ export async function prepareListingIntake(
       supportUrl: supportUrl || null,
       remoteEndpointUrl: remoteEndpointUrl || null,
       ...(endpoint
-        ? { remoteEndpointHealthy: true, remoteEndpointCheckedAt: new Date() }
+        ? {
+            remoteEndpointHealthy: true,
+            remoteEndpointCheckedAt: new Date(),
+            remoteEndpointHealthyAt: new Date(),
+          }
         : {}),
       suggestedInstallCommand:
         (input.suggestedInstallCommand || '')

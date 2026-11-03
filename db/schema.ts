@@ -242,6 +242,16 @@ export const servers = sqliteTable(
     remoteEndpointCheckedAt: integer('remote_endpoint_checked_at', {
       mode: 'timestamp',
     }),
+    /**
+     * Last successful handshake with the remote endpoint (declared or cached).
+     * remoteEndpointHealthy flips false on one bad answer, so listing
+     * indexability reads this instead: a server seen working in the last
+     * REMOTE_HEALTHY_WINDOW_MS still counts as proof it runs (see
+     * lib/listingIndexability.ts). Null = never seen healthy.
+     */
+    remoteEndpointHealthyAt: integer('remote_endpoint_healthy_at', {
+      mode: 'timestamp',
+    }),
     /** stdio | remote — cached install transport from README/description parse. */
     installKind: text('install_kind'),
     /** Runner binary for stdio installs (npx, uvx, bunx). */
