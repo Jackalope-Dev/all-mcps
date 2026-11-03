@@ -3,6 +3,8 @@
  * Key file lives at public/{KEY}.txt and is served at https://allmcps.com/{KEY}.txt
  */
 
+import { isServerRowIndexable } from './listingIndexability';
+
 const INDEXNOW_KEY = 'c7fa82e1d09b4f658a2e3f4b5c6d7e8f';
 const HOST = 'allmcps.com';
 const KEY_LOCATION = `https://${HOST}/${INDEXNOW_KEY}.txt`;
@@ -50,12 +52,19 @@ export async function submitIndexNowUrls(urls: string[]): Promise<boolean> {
   }
 }
 
-/** Ping IndexNow for a listing page (and optional extra paths). */
+/**
+ * Ping IndexNow for a listing page (and optional extra paths), but only when
+ * the page is indexable. A fresh listing has no writeup yet, so it is noindexed
+ * and left out of the listings sitemap; pinging it anyway is what made Bing
+ * flag "important pages missing in sitemaps". The daily indexnow cron pings it
+ * once its writeup lands and it enters the sitemap.
+ */
 export async function notifyListingIndexed(
-  serverId: string,
+  row: Parameters<typeof isServerRowIndexable>[0] & { id: string },
   extraPaths: string[] = [],
 ): Promise<void> {
-  const base = `https://${HOST}/mcp/${serverId}`;
+  if (!isServerRowIndexable(row)) return;
+  const base = `https://${HOST}/mcp/${row.id}`;
   const urls = [
     base,
     ...extraPaths.map((p) =>

@@ -1,18 +1,19 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { and, desc, eq, gte } from 'drizzle-orm';
+import { and, desc, eq, gte, isNull, or, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { servers } from '../../../../db/schema';
 import { getAllPosts } from '../../../../lib/blog';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
 import { submitIndexNowUrls } from '../../../../lib/indexnow';
+import { indexableListingSql } from '../../../../lib/listingIndexability';
 import { INDEXNOW_CORE_PATHS } from '../../../../lib/sitemapHelpers';
 
 /**
  * Change-scoped IndexNow safety net. IndexNow is a "this URL just changed"
  * signal, so this cron only submits URLs that genuinely changed in the lookback
- * window: listings approved in the last 3 days and blog posts published in the
- * last 14 days. When new content lands it also re-pings the aggregate hubs that
+ * window: indexable listings that were approved or got their writeup in the
+ * last 3 days, and blog posts published in the last 14 days. When new content lands it also re-pings the aggregate hubs that
  * content changed (browse/categories/sitemap, via INDEXNOW_CORE_PATHS); when
  * nothing changed it submits nothing.
  *
@@ -21,6 +22,13 @@ import { INDEXNOW_CORE_PATHS } from '../../../../lib/sitemapHelpers';
  * Bing Webmaster flag the key as "batch mode", which Bing recommends against.
  * Real-time discovery is handled by the per-approve/republish pings in
  * lib/indexnow.ts; this cron just catches fire-and-forget misses.
+ *
+ * Listings are filtered to the indexable ones, the same set the listings
+ * sitemap submits. A new listing is usually approved before its writeup
+ * exists, so it is noindexed and outside the sitemap at first; pinging it then
+ * is what made Bing flag "important pages missing in sitemaps". The writeup
+ * landing (aiDocAt) is usually when it becomes indexable, so that counts as
+ * the change.
  * (Google ignores IndexNow either way.)
  */
 const LOOKBACK_MS = 3 * 24 * 60 * 60 * 1000;
@@ -49,12 +57,21 @@ export async function POST(req: Request) {
     const db = drizzle(env.DB as any);
     const since = new Date(Date.now() - LOOKBACK_MS);
 
-    // 1) Listings approved in the lookback window (genuinely new URLs)
+    // 1) Indexable listings approved or written up in the lookback window
     const recent = await db
       .select({ id: servers.id })
       .from(servers)
-      .where(and(eq(servers.status, 'active'), gte(servers.createdAt, since)))
-      .orderBy(desc(servers.createdAt))
+      .where(
+        and(
+          eq(servers.status, 'active'),
+          isNull(servers.staleFlaggedAt),
+          indexableListingSql(),
+          or(gte(servers.createdAt, since), gte(servers.aiDocAt, since)),
+        ),
+      )
+      .orderBy(
+        desc(sql`max(${servers.createdAt}, coalesce(${servers.aiDocAt}, 0))`),
+      )
       .limit(40);
     const listingUrls = recent.map((s) => `${HOST}/mcp/${s.id}`);
 

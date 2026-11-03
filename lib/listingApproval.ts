@@ -41,7 +41,7 @@ export async function approvePendingListing(
     enrollInSequences: true,
   });
   // IndexNow — speed up discovery of the new listing page.
-  void notifyListingIndexed(approved.id, ['/browse', '/sitemap.xml']).catch(
+  void notifyListingIndexed(approved, ['/browse', '/sitemap.xml']).catch(
     () => {},
   );
   return approved;

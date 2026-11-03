@@ -68,6 +68,26 @@ export function isListingIndexable(s: IndexabilityInput): boolean {
   return hasStrongTraction || (hasTraction && hasVerifiedRun(s));
 }
 
+/** A servers row (or the page's Server shape) as isServerRowIndexable reads it. */
+type IndexabilityRow = Omit<IndexabilityInput, 'hasAiDoc' | 'staleFlagged'> & {
+  aiDoc?: string | null;
+  staleFlaggedAt?: unknown;
+};
+
+/** isListingIndexable for a servers row, as the /mcp/[id] page reads it. */
+export function isServerRowIndexable(row: IndexabilityRow): boolean {
+  return isListingIndexable({
+    status: row.status,
+    hasAiDoc: Boolean(row.aiDoc?.trim()),
+    toolsSource: row.toolsSource,
+    installNeedsConfig: row.installNeedsConfig,
+    remoteEndpointHealthy: row.remoteEndpointHealthy,
+    githubStars: row.githubStars,
+    npmDownloads: row.npmDownloads,
+    staleFlagged: row.staleFlaggedAt != null,
+  });
+}
+
 /** We saw the server work: live tools, a sandbox start that asked for keys, or a healthy remote endpoint. */
 function hasVerifiedRun(s: {
   toolsSource?: string | null;

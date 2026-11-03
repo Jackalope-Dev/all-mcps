@@ -366,7 +366,7 @@ export async function POST(req: Request) {
 
       // Republished listing should re-enter search indexes promptly.
       if (action === 'republish' && updateResult[0]) {
-        void notifyListingIndexed(updateResult[0].id).catch(() => {});
+        void notifyListingIndexed(updateResult[0]).catch(() => {});
       }
     } else if (action === 'withdraw') {
       // An owner's takedown request. One-way on purpose: republish only

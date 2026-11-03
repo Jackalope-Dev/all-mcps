@@ -291,9 +291,10 @@ export async function POST(req: Request) {
           promoted++;
           if (review.reviewed)
             await upsertSignals(db, s.id, reviewColumns(review));
-          void notifyListingIndexed(s.id, ['/browse', '/sitemap.xml']).catch(
-            () => {},
-          );
+          void notifyListingIndexed(result[0], [
+            '/browse',
+            '/sitemap.xml',
+          ]).catch(() => {});
         }
         continue;
       }

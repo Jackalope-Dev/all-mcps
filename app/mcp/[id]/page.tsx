@@ -37,7 +37,7 @@ import { ListingVisibilityNotice } from '@/components/listing/ListingVisibilityN
 import { MCP_CLIENTS } from '@/lib/clients';
 import { assessInstallRisk } from '@/lib/installRisk';
 import { serializeJsonLd } from '@/lib/jsonLd';
-import { isListingIndexable } from '@/lib/listingIndexability';
+import { isServerRowIndexable } from '@/lib/listingIndexability';
 import { buildListingMetaDescription } from '@/lib/listingMeta';
 import { isRepositoryUrl } from '@/lib/repoUrl';
 import { parseSecurityProfile } from '@/lib/securityProfile';
@@ -176,16 +176,7 @@ export async function generateMetadata({
   // Same rule the listings sitemap uses (lib/listingIndexability.ts), so we
   // never submit a URL this page noindexes. follow stays on so link equity
   // still flows through noindexed listings.
-  const isThinListing = !isListingIndexable({
-    status: server.status,
-    hasAiDoc: Boolean(server.aiDoc?.trim()),
-    toolsSource: server.toolsSource,
-    installNeedsConfig: server.installNeedsConfig,
-    remoteEndpointHealthy: server.remoteEndpointHealthy,
-    githubStars: server.githubStars,
-    npmDownloads: server.npmDownloads,
-    staleFlagged: server.staleFlaggedAt != null,
-  });
+  const isThinListing = !isServerRowIndexable(server);
 
   const robotsOverride =
     server.status === 'removed'
