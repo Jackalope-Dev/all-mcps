@@ -24,7 +24,8 @@ import { listingSignals, servers } from '../db/schema';
  *   1. Changed: the listing's source moved on since its writeup — the health
  *      cron set listing_signals.content_changed_at (new README, release or
  *      tools) after servers.ai_enriched_at. A writeup that describes an old
- *      version is worse than none, so these jump the queue.
+ *      version is worse than none, so these jump the queue, but at most once
+ *      per CHANGED_MIN_INTERVAL_MS (see there).
  *   2. Never enriched (or summarized without a writeup), by demand.
  *   3. Stale, by demand: 90 days for a listing anyone uses, 180 days for one
  *      with no views, copies or upvotes and under 10 stars / 100 npm downloads.
@@ -139,6 +140,16 @@ const claimColumns = {
   aiEnrichedAt: servers.aiEnrichedAt,
 };
 
+/**
+ * Minimum gap between refreshes of one writeup by the changed pass. Busy repos
+ * edit their README or cut a release most days, and each refresh rewrote the
+ * whole page body and moved its sitemap lastmod and JSON-LD dateModified. In
+ * Nov 2026 a quarter of the listings sitemap claimed a same-day change, and a
+ * page whose LLM text is rewritten daily reads as auto-generated, the pattern
+ * the 2026 spam updates demoted. A change still lands, at most monthly.
+ */
+const CHANGED_MIN_INTERVAL_MS = 30 * 24 * 60 * 60 * 1000;
+
 /** A changed row whose refresh failed waits this long before it is tried again. */
 const CHANGED_RETRY_MS = 24 * 60 * 60 * 1000;
 /** Failed refreshes of one change before it is dropped back to the normal cycle. */
@@ -156,10 +167,7 @@ export function changedCandidates(db: Db, now: Date, limit: number) {
     .innerJoin(listingSignals, eq(listingSignals.serverId, servers.id))
     .where(
       and(
-        servableWhere,
-        notHeldWhere,
-        isNotNull(servers.aiEnrichedAt),
-        gt(listingSignals.contentChangedAt, servers.aiEnrichedAt),
+        changedDueWhere(now),
         or(
           isNull(listingSignals.contentRefreshFailedAt),
           lt(
@@ -253,20 +261,24 @@ export async function countStaleDue(db: Db, now: Date): Promise<number> {
 }
 
 /** Writeups waiting on a source change. */
-export async function countChanged(db: Db): Promise<number> {
+export async function countChanged(db: Db, now: Date): Promise<number> {
   const [row] = await db
     .select({ n: sql<number>`count(*)` })
     .from(servers)
     .innerJoin(listingSignals, eq(listingSignals.serverId, servers.id))
-    .where(
-      and(
-        servableWhere,
-        notHeldWhere,
-        isNotNull(servers.aiEnrichedAt),
-        gt(listingSignals.contentChangedAt, servers.aiEnrichedAt),
-      ),
-    );
+    .where(changedDueWhere(now));
   return Number(row?.n ?? 0);
+}
+
+/** Changed since its writeup, and that writeup is past the minimum interval. */
+function changedDueWhere(now: Date) {
+  return and(
+    servableWhere,
+    notHeldWhere,
+    isNotNull(servers.aiEnrichedAt),
+    gt(listingSignals.contentChangedAt, servers.aiEnrichedAt),
+    lt(servers.aiEnrichedAt, new Date(now.getTime() - CHANGED_MIN_INTERVAL_MS)),
+  );
 }
 
 // --- Install pass --------------------------------------------------------

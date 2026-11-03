@@ -140,6 +140,14 @@ const ROWS: Row[] = [
   // Enriched, then the source changed.
   {
     id: 'changed',
+    aiEnrichedAt: nowSec - 40 * DAY,
+    aiDoc: 'doc',
+    aiSummary: 's',
+    contentChangedAt: nowSec - 2 * DAY,
+  },
+  // Changed, but its writeup is under CHANGED_MIN_INTERVAL_MS old — not due.
+  {
+    id: 'changed-refreshed-recently',
     aiEnrichedAt: nowSec - 10 * DAY,
     aiDoc: 'doc',
     aiSummary: 's',
@@ -208,13 +216,13 @@ beforeAll(() => {
 
 describe('claim queries', () => {
   it('claims changed writeups first', async () => {
-    const rows = await changedCandidates(db, new Date(), 10);
+    const rows = await changedCandidates(db, NOW, 10);
     expect(rows.map((r) => r.id)).toEqual(['changed']);
-    expect(await countChanged(db)).toBe(1);
+    expect(await countChanged(db, NOW)).toBe(1);
   });
 
   it('backs off a changed row whose refresh just failed', async () => {
-    const now = new Date();
+    const now = NOW;
     sqlite
       .prepare(
         "UPDATE listing_signals SET content_refresh_failed_at = ? WHERE server_id = 'changed'",

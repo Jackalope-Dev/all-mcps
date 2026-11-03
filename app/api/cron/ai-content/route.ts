@@ -695,7 +695,7 @@ export async function POST(req: Request) {
     const [remaining, dueForRecheck, changedWaiting] = await Promise.all([
       countNewBacklog(db),
       countStaleDue(db, new Date()),
-      countChanged(db),
+      countChanged(db, new Date()),
     ]);
 
     const [{ installRemaining }] = await db
