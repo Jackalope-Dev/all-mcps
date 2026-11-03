@@ -11,6 +11,7 @@ import {
   isPackageInstallable,
   parseGithubUrl,
 } from '../../../../lib/listingEnrich';
+import { policyFlags } from '../../../../lib/listingPolicy';
 import {
   reviewColumns,
   reviewListing,
@@ -218,6 +219,17 @@ export async function POST(req: Request) {
 
     for (const s of candidates) {
       if (Date.now() > deadline) break;
+      // The imported-listing gate holds policy-flagged listings for a human
+      // (lib/listingPolicy.ts); this fallback must not publish them after the
+      // dwell either. Text and tool names only, so no network call.
+      if (policyFlags(s).length > 0) {
+        await db
+          .update(servers)
+          .set({ reviewFlagged: true, lastCheckedAt: new Date() })
+          .where(eq(servers.id, s.id));
+        heldForReview++;
+        continue;
+      }
       // Multi-interface alive check (mirrors isListingTrulyDead's philosophy in
       // reverse): any one working interface is enough to promote.
       const source = s.url

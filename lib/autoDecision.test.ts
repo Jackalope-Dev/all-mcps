@@ -16,7 +16,7 @@ const strong: GateEvidence = {
   sandboxStatus: null,
   packageAlive: false,
   liveEndpoint: false,
-  adultContent: false,
+  policyFlags: [],
 };
 
 /** A hosted product submitted by its homepage: no repo, stars or package. */
@@ -36,7 +36,11 @@ describe('decideSubmission', () => {
   });
 
   it('holds adult content for a human however strong the evidence', () => {
-    const adult = { ...strong, adultContent: true, liveEndpoint: true };
+    const adult: GateEvidence = {
+      ...strong,
+      policyFlags: ['adult'],
+      liveEndpoint: true,
+    };
     expect(decideSubmission(adult)?.decision).toBe('hold');
     expect(decideIngestPromote(adult)?.decision).toBe('hold');
     // Even before triage has run.
@@ -54,7 +58,10 @@ describe('decideSubmission', () => {
     ['a Jev reject', { triageVerdict: 'reject' }],
     ['a low MCP probability', { mcpProbability: 0.5 }],
     ['a private repo', { repoStatus: 'site_only' as const }],
-    ['an intake flag', { reviewFlagged: true }],
+    [
+      'an intake flag Jev did not overrule',
+      { reviewFlagged: true, triageVerdict: 'needs_review' },
+    ],
     ['no sign of real use', { stars: 2 }],
   ])('holds on %s', (_label, patch) => {
     const r = decideSubmission({ ...strong, ...patch });
@@ -93,19 +100,61 @@ describe('decideSubmission', () => {
     ).toBe('reject');
   });
 
-  it('approves a hosted product on its live endpoint', () => {
-    const r = decideSubmission(hosted);
+  it('approves a hosted product on its live endpoint when Jev approves', () => {
+    const r = decideSubmission({ ...hosted, triageVerdict: 'approve' });
     expect(r?.decision).toBe('approve');
     expect(r?.reasons).toContain('hosted endpoint answers MCP');
-    expect(decideSubmission({ ...hosted, liveEndpoint: false })?.decision).toBe(
-      'hold',
+    expect(
+      decideSubmission({
+        ...hosted,
+        triageVerdict: 'approve',
+        liveEndpoint: false,
+      })?.decision,
+    ).toBe('hold');
+  });
+
+  it('holds when an open endpoint is the only proof and Jev is unsure', () => {
+    const r = decideSubmission(hosted);
+    expect(r?.decision).toBe('hold');
+    expect(r?.reasons).toContain(
+      'endpoint is the only proof and Jev is unsure',
+    );
+    // Other proof of use lifts the requirement.
+    expect(decideSubmission({ ...hosted, packageAlive: true })?.decision).toBe(
+      'approve',
     );
   });
 
-  it("doesn't wait on a repo check for a hosted product with a live endpoint", () => {
-    expect(decideSubmission({ ...hosted, repoStatus: null })?.decision).toBe(
+  it('lets a later Jev approve replace the intake flag', () => {
+    expect(decideSubmission({ ...strong, reviewFlagged: true })?.decision).toBe(
       'approve',
     );
+    expect(
+      decideSubmission({
+        ...strong,
+        reviewFlagged: true,
+        triageVerdict: 'needs_review',
+      })?.decision,
+    ).toBe('hold');
+  });
+
+  it('holds every policy flag with its label as the reason', () => {
+    const r = decideSubmission({ ...strong, policyFlags: ['brochure'] });
+    expect(r?.decision).toBe('hold');
+    expect(r?.reasons[0]).toMatch(/brochure/);
+    expect(
+      decideIngestPromote({ ...strong, policyFlags: ['lead_gen'] })?.decision,
+    ).toBe('hold');
+  });
+
+  it("doesn't wait on a repo check for a hosted product with a live endpoint", () => {
+    expect(
+      decideSubmission({
+        ...hosted,
+        triageVerdict: 'approve',
+        repoStatus: null,
+      })?.decision,
+    ).toBe('approve');
     expect(
       decideSubmission({ ...hosted, repoStatus: null, liveEndpoint: false }),
     ).toBeNull();

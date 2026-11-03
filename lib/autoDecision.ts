@@ -7,7 +7,11 @@ import {
   servers,
   stdioVerifications,
 } from '../db/schema';
-import { isAdultContent } from './contentPolicy';
+import {
+  POLICY_FLAG_LABEL,
+  type PolicyFlag,
+  policyFlags,
+} from './listingPolicy';
 import { isRepoGoneConfirmed, type RepoStatus } from './repoCheck';
 
 /**
@@ -74,10 +78,12 @@ export type GateEvidence = {
    */
   liveEndpoint: boolean;
   /**
-   * The listing's own text says it serves adult content, which isn't listed
-   * (lib/contentPolicy.ts). Never auto-approved, however strong the rest is.
+   * Policy flags (lib/listingPolicy.ts): adult content, which isn't listed,
+   * and kinds of listing a human should see before they go live (brochures,
+   * lead-gen pages, evasion tools, directory links). Never auto-approved,
+   * however strong the rest is.
    */
-  adultContent: boolean;
+  policyFlags: PolicyFlag[];
 };
 
 export type GateResult = { decision: AutoDecision; reasons: string[] };
@@ -119,20 +125,25 @@ function provenRunning(e: GateEvidence): boolean {
   );
 }
 
+const ENDPOINT_PROOF = 'hosted endpoint answers MCP';
+
 function proofOfUse(e: GateEvidence, minStars: number): string | null {
   if (e.sandboxStatus === 'ok') return 'ran in our sandbox';
   if (e.sandboxStatus === 'needs_credentials')
     return 'started in our sandbox (needs keys)';
-  if (e.liveEndpoint) return 'hosted endpoint answers MCP';
+  if (e.liveEndpoint) return ENDPOINT_PROOF;
   if (e.packageAlive) return 'package published';
   if ((e.stars ?? 0) >= minStars) return `${e.stars} GitHub stars`;
   return null;
 }
 
-const ADULT_HOLD: GateResult = {
-  decision: 'hold',
-  reasons: ['adult content (not listed, see /terms)'],
-};
+function policyHold(e: GateEvidence): GateResult | null {
+  if (e.policyFlags.length === 0) return null;
+  return {
+    decision: 'hold',
+    reasons: e.policyFlags.map((f) => POLICY_FLAG_LABEL[f]),
+  };
+}
 
 function pct(n: number | null): string {
   return n === null ? '?' : `${Math.round(n * 100)}%`;
@@ -148,7 +159,8 @@ function pct(n: number | null): string {
  * evidence than either, and a hosted product's root URL often 404s.
  */
 export function decideSubmission(e: GateEvidence): GateResult | null {
-  if (e.adultContent) return ADULT_HOLD;
+  const held = policyHold(e);
+  if (held) return held;
   const proven = provenRunning(e);
   if (e.repoGoneConfirmed && !proven) {
     return {
@@ -179,10 +191,26 @@ export function decideSubmission(e: GateEvidence): GateResult | null {
     missing.push(`MCP ${pct(e.mcpProbability)}`);
   if (e.repoStatus !== 'ok' && !e.liveEndpoint)
     missing.push(`source ${e.repoStatus}`);
-  // The intake flag is a text guess that this isn't an MCP server (or has
-  // useless copy); a live handshake answers the first half.
-  if (e.reviewFlagged && !e.liveEndpoint) missing.push('flagged at intake');
+  // The intake flag is a one-off text guess made at submission that this
+  // isn't an MCP server (or has useless copy). A live handshake answers the
+  // first half, and a later triage approve (which reads the README) replaces
+  // the guess: 19 of the holds the admin approved were only this flag.
+  if (e.reviewFlagged && !e.liveEndpoint && e.triageVerdict !== 'approve')
+    missing.push('flagged at intake');
   if (!proof) missing.push('no sign of real use');
+  // An open endpoint proves an MCP server exists, not that it belongs here.
+  // Every approve the admin overturned in the shadow run (6 of 72, Oct–Nov
+  // 2026) had an open endpoint as its only proof, and the two Jev was unsure
+  // about (look closer) were among them. So when the endpoint is all there
+  // is, Jev must actually say approve, which needs legit and belongs to clear
+  // their bars.
+  if (
+    proof === ENDPOINT_PROOF &&
+    proofOfUse({ ...e, liveEndpoint: false }, SUBMISSION_BAR.stars) === null &&
+    e.triageVerdict !== 'approve' &&
+    !missing.includes('Jev said reject')
+  )
+    missing.push('endpoint is the only proof and Jev is unsure');
 
   if (missing.length > 0) return { decision: 'hold', reasons: missing };
   return {
@@ -197,7 +225,8 @@ export function decideSubmission(e: GateEvidence): GateResult | null {
 }
 
 export function decideIngestPromote(e: GateEvidence): GateResult | null {
-  if (e.adultContent) return ADULT_HOLD;
+  const held = policyHold(e);
+  if (held) return held;
   if (!evidenceReady(e)) return null;
 
   const missing: string[] = [];
@@ -253,6 +282,7 @@ export type GateEvidenceRow = {
   sandboxStatus: string | null;
   remoteEndpointUrl: string | null;
   remoteEndpointHealthy: boolean | null;
+  tools: string | null;
 };
 
 export function gateEvidenceFromRow(
@@ -283,12 +313,7 @@ export function gateEvidenceFromRow(
       !row.packageDeprecated,
     liveEndpoint:
       Boolean(row.remoteEndpointUrl) && row.remoteEndpointHealthy === true,
-    adultContent: isAdultContent(
-      row.name,
-      row.description,
-      row.url,
-      row.websiteUrl,
-    ),
+    policyFlags: policyFlags(row),
   };
 }
 
@@ -312,6 +337,7 @@ export const GATE_EVIDENCE_COLUMNS = {
   sandboxStatus: stdioVerifications.status,
   remoteEndpointUrl: servers.remoteEndpointUrl,
   remoteEndpointHealthy: servers.remoteEndpointHealthy,
+  tools: servers.tools,
 };
 
 /**
