@@ -315,9 +315,21 @@ async function queryQualityTiers(
 async function withOneRetry<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
-  } catch {
+  } catch (err) {
+    console.warn('[getSiteStats] tier page failed, retrying:', d1Cause(err));
     return fn();
   }
+}
+
+/**
+ * Drizzle wraps D1 errors as "Failed query: <sql>"; the D1 reason (timeout,
+ * overload, reset) is only on `cause`.
+ */
+function d1Cause(err: unknown): string {
+  const cause = (err as { cause?: unknown })?.cause;
+  const pick = (e: unknown) =>
+    e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+  return cause ? pick(cause) : pick(err);
 }
 
 function queryQualityTierPage(
@@ -508,7 +520,7 @@ async function querySiteStats(): Promise<SiteStats | null> {
     // access-log scans; one failed page discarded the whole breakdown on every
     // refresh. Each page alone takes about 0.4s on prod.
     const qualityTierRows = await queryQualityTiers(db).catch((err) => {
-      console.error('[getSiteStats] quality tier scan failed:', err);
+      console.error('[getSiteStats] quality tier scan failed:', d1Cause(err));
       return null;
     });
 
