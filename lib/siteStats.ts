@@ -89,13 +89,18 @@ export type SiteStats = {
     okCount: number;
     avgDurationMs: number;
   };
+  /**
+   * Null when the live scan failed. Never filled from the 114-listing snapshot
+   * next to live totals: /trust showed "0 / 1 / 1 / 38 / 74" under a
+   * 34k-server catalog that way.
+   */
   qualityTierBreakdown: {
     Excellent: number;
     Great: number;
     Good: number;
     Fair: number;
     Emerging: number;
-  };
+  } | null;
   reciprocalBadgeCount: number;
   recentCommitCount30d: number;
 };
@@ -291,49 +296,7 @@ async function queryQualityTiers(
   let scored = 0;
   let afterRowid: number | null = null;
   for (;;) {
-    // Only the columns computeQualityScore reads, never heavy text (readme, aiOverview, etc.).
-    const rows: { rowid: number; toolsCount: number }[] = await db
-      .select({
-        // Paged on rowid, not id: (status, rowid) walks idx_servers_status in
-        // order, while ordering by id re-sorts every active row on each page.
-        rowid: sql<number>`rowid`,
-        id: servers.id,
-        url: servers.url,
-        healthStatus: servers.healthStatus,
-        remoteEndpointUrl: servers.remoteEndpointUrl,
-        remoteEndpointHealthy: servers.remoteEndpointHealthy,
-        isOfficial: servers.isOfficial,
-        isVerifiedActive: servers.isVerifiedActive,
-        toolsSource: servers.toolsSource,
-        websiteVerified: servers.websiteVerified,
-        isPremium: servers.isPremium,
-        reciprocalBadgeOk: servers.reciprocalBadgeOk,
-        authType: servers.authType,
-        githubStars: servers.githubStars,
-        npmDownloads: servers.npmDownloads,
-        copies: servers.copies,
-        upvotes: servers.upvotes,
-        views: servers.views,
-        lastCommitAt: servers.lastCommitAt,
-        // Truncated/counted in SQL: the score only needs description length
-        // (ramps out at 400 chars) and the tool count.
-        description: sql<string>`substr(${servers.description}, 1, 500)`,
-        toolsCount: sql<number>`case when ${servers.tools} is not null and json_valid(${servers.tools}) then json_array_length(${servers.tools}) else 0 end`,
-        installCommand: servers.installCommand,
-        installPackage: servers.installPackage,
-        suggestedInstallCommand: servers.suggestedInstallCommand,
-        vulnScannedAt: servers.vulnScannedAt,
-        vulnCriticalCount: servers.vulnCriticalCount,
-        vulnHighCount: servers.vulnHighCount,
-      })
-      .from(servers)
-      .where(
-        afterRowid === null
-          ? eq(servers.status, 'active')
-          : and(eq(servers.status, 'active'), sql`rowid > ${afterRowid}`),
-      )
-      .orderBy(sql`rowid`)
-      .limit(QUALITY_TIER_PAGE_SIZE);
+    const rows = await withOneRetry(() => queryQualityTierPage(db, afterRowid));
     if (rows.length === 0) break;
     const page = calcQualityTiers(
       rows.map((r) => ({ ...r, tools: new Array(Number(r.toolsCount) || 0) })),
@@ -346,6 +309,64 @@ async function queryQualityTiers(
     afterRowid = rows[rows.length - 1].rowid;
   }
   return scored > 0 ? totals : null;
+}
+
+/** One retry: a single busy-D1 blip shouldn't drop a scan that is 18 pages long. */
+async function withOneRetry<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch {
+    return fn();
+  }
+}
+
+function queryQualityTierPage(
+  db: any,
+  afterRowid: number | null,
+): Promise<{ rowid: number; toolsCount: number }[]> {
+  // Only the columns computeQualityScore reads, never heavy text (readme, aiOverview, etc.).
+  return db
+    .select({
+      // Paged on rowid, not id: (status, rowid) walks idx_servers_status in
+      // order, while ordering by id re-sorts every active row on each page.
+      rowid: sql<number>`rowid`,
+      id: servers.id,
+      url: servers.url,
+      healthStatus: servers.healthStatus,
+      remoteEndpointUrl: servers.remoteEndpointUrl,
+      remoteEndpointHealthy: servers.remoteEndpointHealthy,
+      isOfficial: servers.isOfficial,
+      isVerifiedActive: servers.isVerifiedActive,
+      toolsSource: servers.toolsSource,
+      websiteVerified: servers.websiteVerified,
+      isPremium: servers.isPremium,
+      reciprocalBadgeOk: servers.reciprocalBadgeOk,
+      authType: servers.authType,
+      githubStars: servers.githubStars,
+      npmDownloads: servers.npmDownloads,
+      copies: servers.copies,
+      upvotes: servers.upvotes,
+      views: servers.views,
+      lastCommitAt: servers.lastCommitAt,
+      // Truncated/counted in SQL: the score only needs description length
+      // (ramps out at 400 chars) and the tool count.
+      description: sql<string>`substr(${servers.description}, 1, 500)`,
+      toolsCount: sql<number>`case when ${servers.tools} is not null and json_valid(${servers.tools}) then json_array_length(${servers.tools}) else 0 end`,
+      installCommand: servers.installCommand,
+      installPackage: servers.installPackage,
+      suggestedInstallCommand: servers.suggestedInstallCommand,
+      vulnScannedAt: servers.vulnScannedAt,
+      vulnCriticalCount: servers.vulnCriticalCount,
+      vulnHighCount: servers.vulnHighCount,
+    })
+    .from(servers)
+    .where(
+      afterRowid === null
+        ? eq(servers.status, 'active')
+        : and(eq(servers.status, 'active'), sql`rowid > ${afterRowid}`),
+    )
+    .orderBy(sql`rowid`)
+    .limit(QUALITY_TIER_PAGE_SIZE);
 }
 
 /** Live stats from D1, or null when D1 is unreachable (callers fall back to the snapshot). */
@@ -376,7 +397,6 @@ async function querySiteStats(): Promise<SiteStats | null> {
       topCountryRows,
       serverExtraRows,
       stdioVerifyRows,
-      qualityTierRows,
     ] = await Promise.all([
       db
         .select({
@@ -481,9 +501,16 @@ async function querySiteStats(): Promise<SiteStats | null> {
         })
         .from(stdioVerifications)
         .catch(() => []),
-
-      queryQualityTiers(db).catch(() => null),
     ]);
+
+    // Run after the aggregates, not beside them. D1 runs one query at a time,
+    // so in the same Promise.all the tier pages queued behind the 30-day
+    // access-log scans; one failed page discarded the whole breakdown on every
+    // refresh. Each page alone takes about 0.4s on prod.
+    const qualityTierRows = await queryQualityTiers(db).catch((err) => {
+      console.error('[getSiteStats] quality tier scan failed:', err);
+      return null;
+    });
 
     const fallback = getSnapshotFallback();
     const countries = Number(countryRows[0]?.uniqueCountries ?? 0);
@@ -606,8 +633,6 @@ async function querySiteStats(): Promise<SiteStats | null> {
       Number(stdioVerifyRows[0]?.avgDurationMs ?? 0),
     );
 
-    const dbQualityTiers = qualityTierRows ?? fallback.qualityTierBreakdown;
-
     const dbReciprocalBadges = Number(
       serverExtraRows[0]?.reciprocalBadges ?? fallback.reciprocalBadgeCount,
     );
@@ -645,7 +670,7 @@ async function querySiteStats(): Promise<SiteStats | null> {
         okCount: verifyOk,
         avgDurationMs: verifyAvgMs,
       },
-      qualityTierBreakdown: dbQualityTiers,
+      qualityTierBreakdown: qualityTierRows,
       reciprocalBadgeCount: dbReciprocalBadges,
       recentCommitCount30d: dbRecentCommits,
     };

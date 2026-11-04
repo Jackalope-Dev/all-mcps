@@ -664,10 +664,10 @@ export default async function TrustPage() {
     ],
   };
 
-  const totalQualityServers = Object.values(stats.qualityTierBreakdown).reduce(
-    (a, b) => a + b,
-    0,
-  );
+  const qualityTiers = stats.qualityTierBreakdown;
+  const totalQualityServers = qualityTiers
+    ? Object.values(qualityTiers).reduce((a, b) => a + b, 0)
+    : 0;
 
   return (
     <>
@@ -913,29 +913,29 @@ export default async function TrustPage() {
                 title="Catalog Quality Spectrum & Ecosystem Signals"
                 note="Deterministic quality tiering (0–100) and repository health signals across all active listings."
               />
-              <div style={{ margin: '1rem 0 1rem' }}>
-                <div
-                  style={{
-                    fontSize: '0.85rem',
-                    color: 'var(--text-secondary)',
-                    marginBottom: '0.65rem',
-                  }}
-                >
-                  Listing Quality Tier Distribution (
-                  {formatNumber(totalQualityServers)} total active servers):
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    height: 16,
-                    borderRadius: 6,
-                    overflow: 'hidden',
-                    background: 'var(--bg-muted)',
-                    gap: 2,
-                  }}
-                >
-                  {Object.entries(stats.qualityTierBreakdown).map(
-                    ([tier, count]) => {
+              {qualityTiers && (
+                <div style={{ margin: '1rem 0 1rem' }}>
+                  <div
+                    style={{
+                      fontSize: '0.85rem',
+                      color: 'var(--text-secondary)',
+                      marginBottom: '0.65rem',
+                    }}
+                  >
+                    Listing Quality Tier Distribution (
+                    {formatNumber(totalQualityServers)} total active servers):
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      height: 16,
+                      borderRadius: 6,
+                      overflow: 'hidden',
+                      background: 'var(--bg-muted)',
+                      gap: 2,
+                    }}
+                  >
+                    {Object.entries(qualityTiers).map(([tier, count]) => {
                       if (count === 0 || totalQualityServers === 0) return null;
                       const pctVal = (count / totalQualityServers) * 100;
                       return (
@@ -948,20 +948,18 @@ export default async function TrustPage() {
                           }}
                         />
                       );
-                    },
-                  )}
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '0.6rem 1.2rem',
-                    marginTop: '0.65rem',
-                    padding: 0,
-                  }}
-                >
-                  {Object.entries(stats.qualityTierBreakdown).map(
-                    ([tier, count]) => (
+                    })}
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '0.6rem 1.2rem',
+                      marginTop: '0.65rem',
+                      padding: 0,
+                    }}
+                  >
+                    {Object.entries(qualityTiers).map(([tier, count]) => (
                       <div
                         key={tier}
                         style={{
@@ -985,10 +983,10 @@ export default async function TrustPage() {
                           {pct(count, totalQualityServers)})
                         </span>
                       </div>
-                    ),
-                  )}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div style={{ marginTop: '1rem' }}>
                 <div
