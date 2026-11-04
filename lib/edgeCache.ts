@@ -94,21 +94,22 @@ async function readSwrEntry<T>(
  * `freshMs` is returned as is; an older one (kept up to `maxAgeSeconds`) is
  * returned at once and reloaded in waitUntil. Only a cold start with no copy
  * anywhere waits on `load`. `load` returns null for "no usable data" (D1
- * missing or failed), which is never cached.
+ * missing or failed), which is never cached. A background reload gets the
+ * stale copy, so a loader can keep a part it failed to recompute.
  */
 export async function swrEdgeCache<T>(
   key: string,
   opts: { freshMs: number; maxAgeSeconds: number },
-  load: () => Promise<T | null>,
+  load: (stale: T | null) => Promise<T | null>,
 ): Promise<T | null> {
   const entry = await readSwrEntry<T>(key, opts.maxAgeSeconds);
   if (entry) {
     if (Date.now() - entry.timestamp >= opts.freshMs) {
-      void refreshInBackground(key, opts, load);
+      void refreshInBackground(key, opts, () => load(entry.data));
     }
     return entry.data;
   }
-  return loadAndStore(key, opts, load);
+  return loadAndStore(key, opts, () => load(null));
 }
 
 async function loadAndStore<T>(

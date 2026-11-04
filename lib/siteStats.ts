@@ -232,7 +232,9 @@ function getSnapshotFallback(): SiteStats {
  */
 let inflightSiteStats: Promise<SiteStats> | null = null;
 
-const SHARED_CACHE_KEY = 'site-stats/v2';
+// v3: v2 copies carried the 114-listing snapshot's tier breakdown. Seed a new
+// key's R2 copy from a good one before deploying, or every colo loads cold.
+const SHARED_CACHE_KEY = 'site-stats/v3';
 
 /**
  * Total age a cached copy is kept (served stale while it refreshes). Must
@@ -296,7 +298,7 @@ async function queryQualityTiers(
   let scored = 0;
   let afterRowid: number | null = null;
   for (;;) {
-    const rows = await withOneRetry(() => queryQualityTierPage(db, afterRowid));
+    const rows = await withRetries(() => queryQualityTierPage(db, afterRowid));
     if (rows.length === 0) break;
     const page = calcQualityTiers(
       rows.map((r) => ({ ...r, tools: new Array(Number(r.toolsCount) || 0) })),
@@ -311,14 +313,23 @@ async function queryQualityTiers(
   return scored > 0 ? totals : null;
 }
 
-/** One retry: a single busy-D1 blip shouldn't drop a scan that is 18 pages long. */
-async function withOneRetry<T>(fn: () => Promise<T>): Promise<T> {
-  try {
-    return await fn();
-  } catch (err) {
-    console.warn('[getSiteStats] tier page failed, retrying:', d1Cause(err));
-    return fn();
+/** Waits before each retry of a tier page. */
+const TIER_PAGE_RETRY_DELAYS_MS = [500, 2000];
+
+/**
+ * Retries with backoff: in prod a page failed twice back to back, so an
+ * immediate retry alone doesn't ride out whatever D1 hit.
+ */
+async function withRetries<T>(fn: () => Promise<T>): Promise<T> {
+  for (const delay of TIER_PAGE_RETRY_DELAYS_MS) {
+    try {
+      return await fn();
+    } catch (err) {
+      console.warn('[getSiteStats] tier page failed, retrying:', d1Cause(err));
+      await new Promise((r) => setTimeout(r, delay));
+    }
   }
+  return fn();
 }
 
 /**
@@ -381,8 +392,13 @@ function queryQualityTierPage(
     .limit(QUALITY_TIER_PAGE_SIZE);
 }
 
-/** Live stats from D1, or null when D1 is unreachable (callers fall back to the snapshot). */
-async function querySiteStats(): Promise<SiteStats | null> {
+/**
+ * Live stats from D1, or null when D1 is unreachable (callers fall back to the
+ * snapshot). `stale` is the copy being refreshed, if any.
+ */
+async function querySiteStats(
+  stale: SiteStats | null,
+): Promise<SiteStats | null> {
   const now = Date.now();
   let db: any = null;
   try {
@@ -515,13 +531,12 @@ async function querySiteStats(): Promise<SiteStats | null> {
         .catch(() => []),
     ]);
 
-    // Run after the aggregates, not beside them. D1 runs one query at a time,
-    // so in the same Promise.all the tier pages queued behind the 30-day
-    // access-log scans; one failed page discarded the whole breakdown on every
-    // refresh. Each page alone takes about 0.4s on prod.
+    // Run after the aggregates, not beside them: D1 runs one query at a time.
+    // The scan still fails now and then in prod (never through the binding
+    // locally); when it does, keep the last good breakdown rather than drop it.
     const qualityTierRows = await queryQualityTiers(db).catch((err) => {
       console.error('[getSiteStats] quality tier scan failed:', d1Cause(err));
-      return null;
+      return stale?.qualityTierBreakdown ?? null;
     });
 
     const fallback = getSnapshotFallback();

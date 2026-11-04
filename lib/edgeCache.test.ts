@@ -69,6 +69,22 @@ describe('swrEdgeCache', () => {
     expect(await swrEdgeCache('k', OPTS, load)).toEqual(['old']);
   });
 
+  it('hands the stale copy to a background reload', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-16T00:00:00Z'));
+    await swrEdgeCache('k-stale', OPTS, async () => ['old']);
+    vi.setSystemTime(new Date('2026-10-16T00:10:00Z'));
+    const load = vi.fn(async (_stale: string[] | null) => ['new']);
+    await swrEdgeCache('k-stale', OPTS, load);
+    await vi.waitFor(() => expect(load).toHaveBeenCalledWith(['old']));
+  });
+
+  it('hands null to a cold load', async () => {
+    const load = vi.fn(async (_stale: string[] | null) => ['a']);
+    await swrEdgeCache('k-cold', OPTS, load);
+    expect(load).toHaveBeenCalledWith(null);
+  });
+
   it('returns Date columns as Dates after a round trip', async () => {
     const createdAt = new Date('2026-09-01T12:00:00.000Z');
     await swrEdgeCache('k', OPTS, async () => [{ id: 'a', createdAt }]);
