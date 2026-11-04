@@ -54,18 +54,45 @@ export async function syncSequenzySubscriber(
     return;
   }
 
+  // Normalized once here so the submit-flow and webhook call sites can never
+  // create two subscribers for the same person over a case/whitespace mismatch
+  // — which would defeat duplicateStrategy: 'merge' and drop the paid-* tag.
+  const email = input.email.trim().toLowerCase();
+  const headers = {
+    Authorization: `Bearer ${key}`,
+    'Content-Type': 'application/json',
+  };
+
   try {
+    // duplicateStrategy 'merge' below only fills attributes that are missing, so
+    // a repeat submitter kept their FIRST listing's serverName/MCP_NAME/CLAIM_URL
+    // and every later approval email named and linked the wrong listing. Write
+    // the attributes first with a key-level merge (provided keys overwrite, the
+    // rest stay), before the POST can enroll them in a sequence. A 404 just means
+    // a new subscriber, which the POST then creates with these attributes.
+    if (input.customAttributes && Object.keys(input.customAttributes).length) {
+      const patch = await fetch(
+        `${SEQUENZY_SUBSCRIBERS_URL}/${encodeURIComponent(email)}`,
+        {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({
+            customAttributes: input.customAttributes,
+            customAttributesStrategy: 'merge',
+          }),
+          signal: AbortSignal.timeout(SEQUENZY_FETCH_TIMEOUT_MS),
+        },
+      );
+      if (!patch.ok && patch.status !== 404) {
+        console.error('Sequenzy attribute update failed', patch.status);
+      }
+    }
+
     const res = await fetch(SEQUENZY_SUBSCRIBERS_URL, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
-        // Normalized once here so the submit-flow and webhook call sites can never
-        // create two subscribers for the same person over a case/whitespace mismatch
-        // — which would defeat duplicateStrategy: 'merge' and drop the paid-* tag.
-        email: input.email.trim().toLowerCase(),
+        email,
         tags: input.tags,
         lists: input.lists,
         customAttributes: input.customAttributes,
