@@ -44,11 +44,11 @@ function topicCondition(topic: BestTopic): SQL | undefined {
   return conditions.length > 0 ? and(...conditions) : undefined;
 }
 
-async function fetchHubCounts(): Promise<HubCounts | null> {
+async function fetchHubCounts(): Promise<HubCounts> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext({ async: true });
-    if (!ctx?.env || !(ctx.env as any).DB) return null;
+    if (!ctx?.env || !(ctx.env as any).DB) throw new Error('no DB binding');
     const db = drizzle((ctx.env as any).DB);
     const servable = and(
       eq(servers.status, 'active'),
@@ -91,28 +91,39 @@ async function fetchHubCounts(): Promise<HubCounts | null> {
     }
     return { categories, topics };
   } catch (e: any) {
-    const msg = e?.message || e?.cause?.message || String(e);
-    if (msg.includes('no such table') || msg.includes('D1_ERROR')) {
-      console.warn(
-        '[hubIndexability] D1 not available, leaving hubs indexable.',
-      );
-    } else {
-      console.error('[hubIndexability] D1 read failed:', e);
-    }
-    return null;
+    // Thrown, not returned as null, so unstable_cache never stores a failure.
+    throw new Error(
+      `[hubIndexability] D1 read failed: ${e?.cause?.message || e?.message || String(e)}`,
+    );
   }
 }
 
-const getCachedHubCounts = unstable_cache(fetchHubCounts, ['hub-counts'], {
+// v2: v1 entries may hold a cached null (a failed read, or the build, which
+// has no D1), which made every hub render rescan the catalog uncached.
+const getCachedHubCounts = unstable_cache(fetchHubCounts, ['hub-counts-v2'], {
   revalidate: 3600,
 });
 
-/** Null when D1 is unavailable; callers then leave hubs indexable. */
+/** After a failed read, this isolate skips D1 for a while instead of rescanning per render. */
+const FAILURE_COOLDOWN_MS = 5 * 60 * 1000;
+let lastFailureAt = 0;
+let lastGood: HubCounts | null = null;
+
+/**
+ * Null when D1 is unavailable; callers then leave hubs indexable. Never reads
+ * D1 outside the cache: in Nov 2026 a cached null sent every category and
+ * /best render to two uncached full scans (they read ai_doc), which kept D1
+ * past its 10-second resource limit ("D1 DB is overloaded") site-wide.
+ */
 export async function getHubCounts(): Promise<HubCounts | null> {
+  if (Date.now() - lastFailureAt < FAILURE_COOLDOWN_MS) return lastGood;
   try {
-    return (await getCachedHubCounts()) ?? (await fetchHubCounts());
-  } catch {
-    return fetchHubCounts();
+    lastGood = await getCachedHubCounts();
+    return lastGood;
+  } catch (e) {
+    lastFailureAt = Date.now();
+    console.warn(e instanceof Error ? e.message : e);
+    return lastGood;
   }
 }
 

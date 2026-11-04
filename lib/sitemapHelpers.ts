@@ -368,22 +368,38 @@ const getCachedSitemapSummaryFromD1 = unstable_cache(
   { revalidate: SITEMAP_CACHE_SECONDS },
 );
 
+/**
+ * After a failed scan, this isolate serves the last good summary for a while.
+ * A failed scan caches nothing, so without this every crawler hit rescanned
+ * the catalog while D1 was rejecting work as overloaded.
+ */
+const SCAN_FAILURE_COOLDOWN_MS = 5 * 60 * 1000;
+let lastScanFailureAt = 0;
+let lastGoodSummary: SitemapSummary | null = null;
+
 /** Catalog summary for sitemap generation (D1 when available). */
 export async function getSitemapSummary(): Promise<SitemapSummary> {
   let summary: SitemapSummary | null = null;
 
-  try {
-    summary = await getCachedSitemapSummaryFromD1();
-  } catch (e) {
-    // The scan itself just failed: retrying it at once only adds D1 load.
-    if (!(e instanceof SitemapSummaryUnavailable)) {
-      // The cache layer failed (e.g. no request context). Retry uncached
-      // before falling back to the bundled sample, so a cache problem costs a
-      // query instead of shipping a sitemap missing almost every listing.
-      console.error('[sitemap] Cached D1 read failed, querying directly:', e);
-      summary = await fetchSitemapSummaryFromD1();
+  if (Date.now() - lastScanFailureAt < SCAN_FAILURE_COOLDOWN_MS) {
+    summary = lastGoodSummary;
+  } else
+    try {
+      summary = await getCachedSitemapSummaryFromD1();
+      lastGoodSummary = summary;
+    } catch (e) {
+      // The scan itself just failed: retrying it at once only adds D1 load.
+      if (e instanceof SitemapSummaryUnavailable) {
+        lastScanFailureAt = Date.now();
+        summary = lastGoodSummary;
+      } else {
+        // The cache layer failed (e.g. no request context). Retry uncached
+        // before falling back to the bundled sample, so a cache problem costs a
+        // query instead of shipping a sitemap missing almost every listing.
+        console.error('[sitemap] Cached D1 read failed, querying directly:', e);
+        summary = await fetchSitemapSummaryFromD1();
+      }
     }
-  }
   if (summary) return summary;
 
   const summarizer = createSitemapSummarizer();

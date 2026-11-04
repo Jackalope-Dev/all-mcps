@@ -1,4 +1,15 @@
-import { and, count, desc, eq, gt, isNotNull, ne, or, sum } from 'drizzle-orm';
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gt,
+  isNotNull,
+  ne,
+  or,
+  type SQL,
+  sql,
+} from 'drizzle-orm';
 import {
   apiAccessLogs,
   impressionLogs,
@@ -50,107 +61,69 @@ export type AdminStats = {
   }[];
 };
 
+/** Rows in `servers` matching `cond`, as a column of the one-scan count query. */
+function countWhere(cond: SQL | undefined): SQL<number> {
+  return sql<number>`coalesce(sum(case when ${cond} then 1 else 0 end), 0)`;
+}
+
 /** `db` is a drizzle-orm/d1 database instance (typed loosely, matching this repo's `drizzle(env.DB as any)` convention). */
 export async function getAdminStats(db: any): Promise<AdminStats> {
   const now = new Date();
+  const active = eq(servers.status, 'active');
 
   const [
-    statusRows,
-    premiumRows,
-    featuredRows,
-    unhealthyRows,
-    aiEnrichedRows,
-    toolsRows,
-    manualPendingRows,
-    pendingEditsRows,
-    pendingClaimsRows,
-    pendingLogosRows,
-    pendingScreenshotsRows,
+    serverRows,
     usersRows,
-    categorySponsorsRows,
-    toolsErrorRows,
-    logoSourceRows,
-    engagementRows,
     topByViewsRows,
     socialRows,
     callerRows,
     surfaceRows,
     recentToolsErrorsRows,
   ] = await Promise.all([
+    // Every servers count in ONE scan. As ~14 separate count queries fired at
+    // once, each scanning the full table, an /admin load alone could push D1
+    // past its 10-second resource limit ("D1 DB is overloaded"), and the
+    // page's catch-all rendered every card as 0.
     db
-      .select({ status: servers.status, total: count() })
-      .from(servers)
-      .groupBy(servers.status),
-    db
-      .select({ total: count() })
-      .from(servers)
-      .where(eq(servers.isPremium, true)),
-    // Matches lib/featuredStatus.ts's isFeaturedListing (premium counts as featured too).
-    db
-      .select({ total: count() })
-      .from(servers)
-      .where(
-        and(
-          eq(servers.status, 'active'),
-          or(eq(servers.isPremium, true), gt(servers.featuredUntil, now)),
+      .select({
+        pending: countWhere(eq(servers.status, 'pending')),
+        active: countWhere(active),
+        removed: countWhere(eq(servers.status, 'removed')),
+        premium: countWhere(eq(servers.isPremium, true)),
+        // Matches lib/featuredStatus.ts's isFeaturedListing (premium counts as featured too).
+        featured: countWhere(
+          and(
+            active,
+            or(eq(servers.isPremium, true), gt(servers.featuredUntil, now)),
+          ),
         ),
-      ),
-    db
-      .select({ total: count() })
-      .from(servers)
-      .where(
-        and(eq(servers.status, 'active'), ne(servers.healthStatus, 'healthy')),
-      ),
-    db
-      .select({ total: count() })
-      .from(servers)
-      .where(and(eq(servers.status, 'active'), isNotNull(servers.aiSummary))),
-    db.select({ total: count() }).from(servers).where(isNotNull(servers.tools)),
-    db
-      .select({ total: count() })
-      .from(servers)
-      .where(
-        and(eq(servers.status, 'pending'), isNotNull(servers.submitterEmail)),
-      ),
-    db
-      .select({ total: count() })
-      .from(servers)
-      .where(isNotNull(servers.pendingRevision)),
-    db
-      .select({ total: count() })
-      .from(servers)
-      .where(isNotNull(servers.pendingClaimUserId)),
-    db
-      .select({ total: count() })
-      .from(servers)
-      .where(isNotNull(servers.pendingLogoKey)),
-    db
-      .select({ total: count() })
-      .from(servers)
-      .where(isNotNull(servers.pendingScreenshotKey)),
+        unhealthy: countWhere(and(active, ne(servers.healthStatus, 'healthy'))),
+        aiEnriched: countWhere(and(active, isNotNull(servers.aiSummary))),
+        tools: countWhere(isNotNull(servers.tools)),
+        manualPending: countWhere(
+          and(eq(servers.status, 'pending'), isNotNull(servers.submitterEmail)),
+        ),
+        pendingEdits: countWhere(isNotNull(servers.pendingRevision)),
+        pendingClaims: countWhere(isNotNull(servers.pendingClaimUserId)),
+        pendingLogos: countWhere(isNotNull(servers.pendingLogoKey)),
+        pendingScreenshots: countWhere(isNotNull(servers.pendingScreenshotKey)),
+        categorySponsors: countWhere(gt(servers.categorySponsorUntil, now)),
+        toolsErrors: countWhere(and(active, isNotNull(servers.toolsError))),
+        logoManual: countWhere(eq(servers.logoSource, 'manual')),
+        logoReadme: countWhere(eq(servers.logoSource, 'readme')),
+        logoFavicon: countWhere(eq(servers.logoSource, 'website_favicon')),
+        logoGithubOrg: countWhere(eq(servers.logoSource, 'github_org')),
+        logoGithubUser: countWhere(eq(servers.logoSource, 'github_user')),
+        rows: count(),
+        totalViews: sql<number>`coalesce(sum(${servers.views}), 0)`,
+        totalUpvotes: sql<number>`coalesce(sum(${servers.upvotes}), 0)`,
+        totalCopies: sql<number>`coalesce(sum(${servers.copies}), 0)`,
+      })
+      .from(servers),
     db
       .select({ total: count() })
       .from(users)
       .catch(() => [{ total: 0 }]),
-    db
-      .select({ total: count() })
-      .from(servers)
-      .where(gt(servers.categorySponsorUntil, now)),
-    db
-      .select({ total: count() })
-      .from(servers)
-      .where(and(eq(servers.status, 'active'), isNotNull(servers.toolsError))),
-    db
-      .select({ source: servers.logoSource, total: count() })
-      .from(servers)
-      .groupBy(servers.logoSource),
-    db
-      .select({
-        totalViews: sum(servers.views),
-        totalUpvotes: sum(servers.upvotes),
-        totalCopies: sum(servers.copies),
-      })
-      .from(servers),
     db
       .select({ id: servers.id, name: servers.name, views: servers.views })
       .from(servers)
@@ -185,46 +158,38 @@ export async function getAdminStats(db: any): Promise<AdminStats> {
       .catch(() => []),
   ]);
 
-  const statusCounts = { pending: 0, active: 0, removed: 0 };
-  for (const row of statusRows as { status: string; total: number }[]) {
-    if (
-      row.status === 'pending' ||
-      row.status === 'active' ||
-      row.status === 'removed'
-    ) {
-      statusCounts[row.status] = row.total;
-    }
-  }
+  const c = serverRows[0] as Record<string, number | string | null>;
+  const n = (k: string) => Number(c?.[k] ?? 0);
+
+  const statusCounts = {
+    pending: n('pending'),
+    active: n('active'),
+    removed: n('removed'),
+  };
 
   const logoSourceCounts = {
-    manual: 0,
-    readme: 0,
-    website_favicon: 0,
-    github_org: 0,
-    github_user: 0,
+    manual: n('logoManual'),
+    readme: n('logoReadme'),
+    website_favicon: n('logoFavicon'),
+    github_org: n('logoGithubOrg'),
+    github_user: n('logoGithubUser'),
     none: 0,
   };
-  for (const row of logoSourceRows as {
-    source: string | null;
-    total: number;
-  }[]) {
-    if (row.source === 'manual') logoSourceCounts.manual = row.total;
-    else if (row.source === 'readme') logoSourceCounts.readme = row.total;
-    else if (row.source === 'website_favicon')
-      logoSourceCounts.website_favicon = row.total;
-    else if (row.source === 'github_org')
-      logoSourceCounts.github_org = row.total;
-    else if (row.source === 'github_user')
-      logoSourceCounts.github_user = row.total;
-    else logoSourceCounts.none += row.total;
-  }
+  // Null and any unrecognized source, as before.
+  logoSourceCounts.none =
+    n('rows') -
+    logoSourceCounts.manual -
+    logoSourceCounts.readme -
+    logoSourceCounts.website_favicon -
+    logoSourceCounts.github_org -
+    logoSourceCounts.github_user;
 
-  const pendingManualSubmissions = manualPendingRows[0]?.total ?? 0;
+  const pendingManualSubmissions = n('manualPending');
   const pendingSyncQueue = statusCounts.pending - pendingManualSubmissions;
-  const pendingEdits = pendingEditsRows[0]?.total ?? 0;
-  const pendingClaims = pendingClaimsRows[0]?.total ?? 0;
-  const pendingLogos = pendingLogosRows[0]?.total ?? 0;
-  const pendingScreenshots = pendingScreenshotsRows[0]?.total ?? 0;
+  const pendingEdits = n('pendingEdits');
+  const pendingClaims = n('pendingClaims');
+  const pendingLogos = n('pendingLogos');
+  const pendingScreenshots = n('pendingScreenshots');
 
   const socialCounts = { queued: 0, sent: 0, failed: 0 };
   for (const row of (socialRows || []) as { status: string; total: number }[]) {
@@ -269,14 +234,14 @@ export async function getAdminStats(db: any): Promise<AdminStats> {
 
   return {
     statusCounts,
-    premiumCount: premiumRows[0]?.total ?? 0,
-    featuredCount: featuredRows[0]?.total ?? 0,
-    unhealthyCount: unhealthyRows[0]?.total ?? 0,
-    aiEnrichedCount: aiEnrichedRows[0]?.total ?? 0,
-    toolsCount: toolsRows[0]?.total ?? 0,
+    premiumCount: n('premium'),
+    featuredCount: n('featured'),
+    unhealthyCount: n('unhealthy'),
+    aiEnrichedCount: n('aiEnriched'),
+    toolsCount: n('tools'),
     usersCount: usersRows[0]?.total ?? 0,
-    categorySponsorsCount: categorySponsorsRows[0]?.total ?? 0,
-    toolsIntrospectionErrorCount: toolsErrorRows[0]?.total ?? 0,
+    categorySponsorsCount: n('categorySponsors'),
+    toolsIntrospectionErrorCount: n('toolsErrors'),
     pendingCounts: {
       submissions: pendingManualSubmissions,
       syncQueue: pendingSyncQueue,
@@ -296,9 +261,9 @@ export async function getAdminStats(db: any): Promise<AdminStats> {
     surfaceImpressions,
     logoSourceCounts,
     engagement: {
-      totalViews: Number(engagementRows[0]?.totalViews ?? 0),
-      totalUpvotes: Number(engagementRows[0]?.totalUpvotes ?? 0),
-      totalCopies: Number(engagementRows[0]?.totalCopies ?? 0),
+      totalViews: n('totalViews'),
+      totalUpvotes: n('totalUpvotes'),
+      totalCopies: n('totalCopies'),
     },
     topByViews: topByViewsRows,
     recentToolsErrors: formattedRecentToolsErrors,

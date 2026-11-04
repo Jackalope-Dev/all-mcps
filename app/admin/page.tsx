@@ -244,8 +244,12 @@ async function getAdminData() {
         stats: await getAdminStats(db),
       };
     }
-  } catch (_e) {
-    // Fallback if not in edge context
+  } catch (e) {
+    // Any one failed query lands here and renders every card as 0, so say why.
+    console.error(
+      '[admin] data load failed:',
+      (e as { cause?: unknown })?.cause ?? e,
+    );
   }
   return {
     pending: [],
