@@ -69,8 +69,21 @@ export function isSafeSubmissionUrl(urlString: string): boolean {
 }
 
 /** Normalizes a URL string by lowercasing scheme and host using URL standard formatting. */
+/**
+ * The URL out of a pasted field. A URL never holds a raw space, so anything
+ * after the first one is page text that came along with the copy: a
+ * submission stored `https://mcp.onlinealarmkur.com/%20%20Copy%20endpoint`
+ * (the site's "Copy endpoint" button label), which 404s. `encoded` also
+ * splits on `%20`, for values already stored that way.
+ */
+export function firstUrlToken(raw: string, encoded = false): string {
+  const s = (raw || '').trim();
+  const spaced = encoded ? s.replace(/%20/gi, ' ') : s;
+  return spaced.split(/\s+/)[0] ?? '';
+}
+
 export function normalizeUrl(urlString: string): string {
-  const trimmed = (urlString || '').trim();
+  const trimmed = firstUrlToken(urlString);
   if (!trimmed) return '';
   try {
     const parsed = new URL(trimmed);

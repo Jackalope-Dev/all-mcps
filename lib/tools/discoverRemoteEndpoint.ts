@@ -1,3 +1,4 @@
+import { serverJsonRemotes } from '../repoManifest';
 import { isSafeSubmissionUrl } from '../urlSafety';
 import { looksLikeMcpEndpointUrl } from './parseInstallHint';
 import {
@@ -211,6 +212,11 @@ export function endpointCandidates(input: {
   url: string;
   websiteUrl?: string | null;
   description?: string | null;
+  /**
+   * Endpoints the listing itself names outside its description: the one the
+   * submitter typed, and its repo's server.json remotes. Asked first.
+   */
+  stated?: string[];
   pages?: { url: string; html: string }[];
 }): Candidate[] {
   const seen = new Set<string>();
@@ -230,6 +236,7 @@ export function endpointCandidates(input: {
         new URL(b).pathname.split('/').filter(Boolean).length,
     );
 
+  for (const u of input.stated || []) add(u, 'stated');
   for (const u of byDepth(
     urlsIn(input.description || '').filter(looksLikeMcpEndpointUrl),
   )) {
@@ -331,17 +338,26 @@ export async function discoverRemoteEndpoint(input: {
   url: string;
   websiteUrl?: string | null;
   description?: string | null;
+  /** Endpoints the listing names (the submitted one); its server.json remotes are added here. */
+  stated?: string[];
   /** Does another listing already own this endpoint? Asked only for a linked or guessed answer. */
   isClaimedElsewhere?: (url: string) => Promise<boolean>;
 }): Promise<DiscoveredEndpoint | null> {
   const sites = ownSites(input.url, input.websiteUrl);
-  const pages = (
-    await Promise.all(
+  const [pages, remotes] = await Promise.all([
+    Promise.all(
       sites.map(async (url) => ({ url, html: await fetchSitePage(url) })),
-    )
-  ).filter((p): p is { url: string; html: string } => p.html !== null);
+    ).then((all) =>
+      all.filter((p): p is { url: string; html: string } => p.html !== null),
+    ),
+    serverJsonRemotes(input.url),
+  ]);
 
-  const candidates = endpointCandidates({ ...input, pages });
+  const candidates = endpointCandidates({
+    ...input,
+    stated: [...(input.stated || []), ...remotes],
+    pages,
+  });
   const verdicts = await Promise.all(
     candidates.map(async (c) => {
       try {

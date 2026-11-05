@@ -1,5 +1,24 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { isSafeSubmissionUrl, safeFetch } from './urlSafety';
+import {
+  firstUrlToken,
+  isSafeSubmissionUrl,
+  normalizeUrl,
+  safeFetch,
+} from './urlSafety';
+
+describe('pasted URL cleanup', () => {
+  it('drops page text copied along with the URL', () => {
+    expect(normalizeUrl('https://mcp.brainscanner.dev/  Copy endpoint')).toBe(
+      'https://mcp.brainscanner.dev/',
+    );
+  });
+
+  it('splits a stored value on %20 only when asked', () => {
+    const stored = 'https://mcp.brainscanner.dev/%20%20Copy%20endpoint';
+    expect(firstUrlToken(stored, true)).toBe('https://mcp.brainscanner.dev/');
+    expect(firstUrlToken(stored)).toBe(stored);
+  });
+});
 
 describe('isSafeSubmissionUrl', () => {
   it.each([

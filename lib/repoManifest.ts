@@ -161,3 +161,35 @@ export async function manifestInstallCandidates(
   const keep = await Promise.all(candidates.map(ownedFor));
   return candidates.filter((_, i) => keep[i]);
 }
+
+/**
+ * Hosted endpoints the repo declares in its MCP registry manifest
+ * (server.json `remotes`). Many hosted servers are submitted by a GitHub repo
+ * that only holds that manifest, under an owner not named for the product's
+ * site, so discovery never guessed on the site and the endpoint went unseen
+ * (1ToolRing, SimpleVerifier, Nov 2026). The listing's own repo naming the
+ * endpoint is as strong as its description doing so. Never throws.
+ */
+export async function serverJsonRemotes(
+  listingUrl: string | null | undefined,
+): Promise<string[]> {
+  const repo = githubRepo(listingUrl);
+  if (!repo) return [];
+  const raw = await fetchRepoFile(
+    repo,
+    `${githubFolderPrefix(listingUrl)}server.json`,
+  );
+  if (!raw) return [];
+  try {
+    const remotes = (JSON.parse(raw) as { remotes?: unknown }).remotes;
+    if (!Array.isArray(remotes)) return [];
+    return remotes
+      .map((r) => (r as { url?: unknown })?.url)
+      .filter(
+        (u): u is string => typeof u === 'string' && /^https:\/\//.test(u),
+      )
+      .slice(0, 3);
+  } catch {
+    return [];
+  }
+}
