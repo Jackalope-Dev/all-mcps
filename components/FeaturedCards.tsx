@@ -4,6 +4,7 @@ import { categoryHueClass, getCategoryMeta } from '../lib/categories';
 import { parseServerName } from '../lib/displayName';
 import { isFeaturedListing } from '../lib/featuredStatus';
 import { publicViewCount } from '../lib/format';
+import { SponsorAdUnit } from './ads/SponsorAdUnit';
 import { ImpressionBeacon } from './ImpressionTracker';
 import { ServerAvatar } from './ui/ServerAvatar';
 
@@ -160,6 +161,12 @@ export function FeaturedServers({
               <ArrowRight size={14} aria-hidden="true" />
             </span>
           </Link>
+        </div>
+
+        {/* Below the fold but on the main scroll path: the first thing after
+            the top picks, before the explainer sections. */}
+        <div className="home-sponsor">
+          <SponsorAdUnit placement="directory_inline" layout="row" />
         </div>
       </div>
     </section>

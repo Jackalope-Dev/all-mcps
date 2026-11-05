@@ -137,7 +137,7 @@ export const STATIC_PAGE_LASTMOD: Record<string, string> = {
   '/best/seo': '2026-10-21',
   '/mcp-for-seo': '2026-08-23',
   '/lucky': '2026-10-14',
-  '/advertise': '2026-10-14',
+  '/advertise': '2026-11-05',
   '/best/figma': '2026-09-23',
   '/best/obsidian': '2026-09-23',
   '/best/shopify': '2026-09-23',

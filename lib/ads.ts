@@ -68,10 +68,9 @@ export const AD_PLACEMENTS: Record<AdPlacement, PlacementMeta> = {
   directory_inline: {
     id: 'directory_inline',
     name: 'Directory Native Card',
-    tagline:
-      'Inlined natively in the MCP directory results (one slot per list)',
+    tagline: 'Inlined natively in directory results and on the homepage',
     description:
-      'Featured directly inside the main catalog and search results. Reaches high-intent developers browsing for tools.',
+      'Featured on the homepage and inside the main catalog and search results, repeating as visitors load more. Reaches high-intent developers browsing for tools.',
     aspectRatioHint: 'Square 1:1 logo (64x64 or higher)',
     estimatedDailyViews: 25000,
   },
@@ -89,7 +88,7 @@ export const AD_PLACEMENTS: Record<AdPlacement, PlacementMeta> = {
     name: 'Blog & Guide In-Text Unit',
     tagline: 'Clean horizontal banner inside technical tutorials and guides',
     description:
-      'Placement embedded directly into long-form guides and technical tutorials.',
+      'Placement embedded directly into long-form guides, technical tutorials, and the blog index.',
     aspectRatioHint: 'Horizontal or square icon',
     estimatedDailyViews: 8000,
   },

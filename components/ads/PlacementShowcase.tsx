@@ -33,7 +33,7 @@ const FORMATS: FormatDef[] = [
     tabLabel: 'Directory Card',
     title: 'Directory Native Card',
     description:
-      'Inlined seamlessly inside directory search, browse and category lists, a few rows down.',
+      'Inlined seamlessly on the homepage and inside directory search, browse and category lists, repeating as visitors load more.',
     previewAd: {
       title: 'Example AI Cloud',
       description:
@@ -83,7 +83,7 @@ const FORMATS: FormatDef[] = [
     tabLabel: 'Blog Banner',
     title: 'Blog & Guide In-Article Banner',
     description:
-      'Embedded in long-form guides, client setups (Cursor, Claude, Windsurf), and technical tutorials.',
+      'Embedded in the blog index, long-form guides, client setups (Cursor, Claude, Windsurf), and technical tutorials.',
     previewAd: {
       title: 'Example AgentOps',
       description:

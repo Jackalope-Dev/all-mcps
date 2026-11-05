@@ -4,6 +4,7 @@ import { ArrowRight, Search, X } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import type { BlogPost } from '../lib/blog';
+import { SponsorAdUnit } from './ads/SponsorAdUnit';
 import { blogTagClass, blogTagHueClass } from './content/blogTags';
 
 function formatDate(date: string): string {
@@ -157,6 +158,8 @@ export function BlogListClient({
               </span>
             </Link>
           ) : null}
+
+          <SponsorAdUnit placement="blog_guide" className="blog-sponsor" />
 
           <ul className="blog-grid">
             {rest.map((post) => (
