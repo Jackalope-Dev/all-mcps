@@ -1,6 +1,13 @@
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { NextResponse } from 'next/server';
+import { x402Status } from '@/lib/x402';
+
+// Reads secrets at request time: x402 is only advertised once it's configured.
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const { env } = await getCloudflareContext();
+  const x402 = x402Status(env);
   const serverCard = {
     $schema:
       'https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/main/schema/server-card.schema.json',
@@ -29,9 +36,12 @@ export async function GET() {
       },
       payments: {
         supported: true,
-        protocol: ['x402-v1', 'stripe_checkout'],
+        protocol: x402.enabled
+          ? ['x402', 'stripe_checkout']
+          : ['stripe_checkout'],
         pricingEndpoint: 'https://allmcps.com/api/v1/boost/pricing',
         checkoutEndpoint: 'https://allmcps.com/api/v1/boost/checkout',
+        ...(x402.enabled ? { x402 } : {}),
       },
     },
   };
@@ -41,7 +51,7 @@ export async function GET() {
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
       'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'public, max-age=3600',
+      'Cache-Control': 'public, max-age=300',
     },
   });
 }

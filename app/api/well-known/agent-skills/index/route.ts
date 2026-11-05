@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+// sha256 is of the served SKILL.md bytes; route.test.ts fails if a file
+// changes without its digest being updated here.
 export async function GET() {
   const index = {
     $schema: 'https://agentskills.io/schema/v0.2.0/index.json',
@@ -11,7 +13,7 @@ export async function GET() {
           'Search and discover MCP servers across categories, tech stacks, and capabilities',
         url: 'https://allmcps.com/.well-known/agent-skills/mcp-search/SKILL.md',
         sha256:
-          '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+          '6a285a6e42ae7b628423602c98277953ad8e4e7943b3692156b390331ec7d90a',
       },
       {
         name: 'mcp-registry',
@@ -20,16 +22,16 @@ export async function GET() {
           'Query details and configuration schemas for individual MCP servers',
         url: 'https://allmcps.com/.well-known/agent-skills/mcp-registry/SKILL.md',
         sha256:
-          '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
+          '5f3283c09f5cb6d9041dfe25d267f49de93cf6fb68ecefacf4fbb8c797c51fac',
       },
       {
         name: 'mcp-monetization',
         type: 'monetization',
         description:
-          'Feature MCP servers, query sponsorship tiers, and initiate agentic commerce payments',
+          'Boost MCP server listings and buy sponsor ads, paying by Stripe checkout or autonomously over x402',
         url: 'https://allmcps.com/.well-known/agent-skills/mcp-monetization/SKILL.md',
         sha256:
-          '3a884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542e9',
+          '165141d593b0ecc24235dcf6b4b41edc605b28575fc17be7613dcacec21c7505',
       },
     ],
   };

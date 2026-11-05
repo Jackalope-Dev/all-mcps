@@ -685,6 +685,168 @@ export async function GET() {
           },
         },
       },
+      '/api/v1/boost/pricing': {
+        get: {
+          summary: 'Boost tiers, prices, and accepted payment methods',
+          description:
+            'Every paid tier with list and agent price, weekly volume tiers, and whether x402 is currently enabled (`agent_commerce_support.x402.enabled`).',
+          operationId: 'getBoostPricing',
+          responses: {
+            '200': jsonResponse('Pricing.', { type: 'object' }),
+          },
+        },
+      },
+      '/api/v1/boost/checkout': {
+        post: {
+          summary: 'Create a Stripe checkout link for a boost',
+          description:
+            'Returns a Stripe checkout URL for a human to pay by card. `amount_due` is read back from the Stripe session. The AGENTREADY agent promo is applied by default.',
+          operationId: 'createBoostCheckout',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['serverId'],
+                  properties: {
+                    serverId: { type: 'string' },
+                    sku: {
+                      type: 'string',
+                      enum: [
+                        'priority_review',
+                        'featured_7d',
+                        'category_sponsor_7d',
+                        'premium_monthly',
+                      ],
+                      default: 'featured_7d',
+                    },
+                    weeks: { type: 'integer', minimum: 1, maximum: 8 },
+                    email: { type: 'string', format: 'email' },
+                    coupon: { type: 'string', default: 'AGENTREADY' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': jsonResponse('Checkout session created.', {
+              type: 'object',
+              properties: {
+                checkout_url: { type: 'string', format: 'uri' },
+                amount_due: { type: 'string', nullable: true },
+                coupon_applied: { type: 'boolean' },
+              },
+            }),
+            '400': errorResponse('Invalid sku or listing not eligible.'),
+            '404': errorResponse('Listing not found.'),
+            '409': errorResponse('Category already sponsored.'),
+          },
+        },
+      },
+      '/api/v1/boost/x402': {
+        post: {
+          summary: 'Buy a boost autonomously with x402 (USDC)',
+          description:
+            'x402 v2, `exact` scheme, USDC on Base. Without a `PAYMENT-SIGNATURE` header this returns 402 with a base64 `PAYMENT-REQUIRED` header (and the same JSON body). Retry with `PAYMENT-SIGNATURE` to pay; the boost activates once payment settles and a `PAYMENT-RESPONSE` header carries the receipt. The price includes the 50% agent discount. Returns 503 while x402 is not enabled.',
+          operationId: 'buyBoostX402',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['serverId'],
+                  properties: {
+                    serverId: { type: 'string' },
+                    sku: {
+                      type: 'string',
+                      enum: [
+                        'priority_review',
+                        'featured_7d',
+                        'category_sponsor_7d',
+                      ],
+                      default: 'featured_7d',
+                    },
+                    weeks: { type: 'integer', minimum: 1, maximum: 8 },
+                    email: { type: 'string', format: 'email' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': jsonResponse('Paid and activated.', { type: 'object' }),
+            '400': errorResponse('Invalid sku or listing not eligible.'),
+            '402': errorResponse(
+              'Payment required, or the supplied payment was invalid (see `error`).',
+            ),
+            '404': errorResponse('Listing not found.'),
+            '409': errorResponse('Category already sponsored.'),
+            '503': errorResponse('x402 is not enabled.'),
+          },
+        },
+      },
+      '/api/v1/ads/x402': {
+        post: {
+          summary: 'Buy a sponsor ad campaign autonomously with x402 (USDC)',
+          description:
+            'Same 402 / PAYMENT-SIGNATURE flow as /api/v1/boost/x402. Cost is impressions / 1000 × bidCpm. The campaign is created only after payment settles, then reviewed before it serves. Returns 503 while x402 is not enabled.',
+          operationId: 'buyAdX402',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: [
+                    'title',
+                    'description',
+                    'targetUrl',
+                    'logoUrl',
+                    'advertiserEmail',
+                  ],
+                  properties: {
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                    ctaText: { type: 'string', default: 'Learn More' },
+                    targetUrl: { type: 'string', format: 'uri' },
+                    logoUrl: { type: 'string', format: 'uri' },
+                    placement: {
+                      type: 'string',
+                      enum: [
+                        'all',
+                        'directory_inline',
+                        'detail_sidebar',
+                        'blog_guide',
+                        'header_banner',
+                      ],
+                      default: 'all',
+                    },
+                    bidCpm: {
+                      type: 'integer',
+                      description: 'Cents per 1,000 impressions',
+                      default: 500,
+                    },
+                    impressions: { type: 'integer', default: 1000 },
+                    advertiserEmail: { type: 'string', format: 'email' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': jsonResponse('Paid; campaign created pending review.', {
+              type: 'object',
+            }),
+            '400': errorResponse('Invalid ad.'),
+            '402': errorResponse(
+              'Payment required, or the supplied payment was invalid (see `error`).',
+            ),
+            '503': errorResponse('x402 is not enabled.'),
+          },
+        },
+      },
       '/api/badge/{id}': {
         get: {
           summary: 'Generate dynamic SVG badge',

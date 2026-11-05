@@ -3,7 +3,14 @@ import {
   logApiAccess,
   logApiAccessBatch,
 } from '@/lib/accessLog';
-import { fetchActiveSponsorAd, logAiInjectionEvent } from '@/lib/ads';
+import {
+  AD_PLACEMENTS,
+  type AdPlacement,
+  calculateAdCostCents,
+  fetchActiveSponsorAd,
+  logAiInjectionEvent,
+  validateAdPayload,
+} from '@/lib/ads';
 import {
   AGENT_SCOPES,
   getAgentAuthDb,
@@ -29,7 +36,16 @@ import {
   listingFacts,
   sponsorContentBlock,
 } from '@/lib/mcpToolFormat';
-import { formatUsd, PAID_PRODUCTS, type PaidSku } from '@/lib/pricing';
+import {
+  AGENT_PROMO_CODE,
+  agentPriceCents,
+  clampWeeks,
+  formatUsd,
+  isX402BoostSku,
+  PAID_PRODUCTS,
+  type PaidSku,
+  tieredTotal,
+} from '@/lib/pricing';
 import {
   checkRateLimit,
   clientKey,
@@ -52,8 +68,10 @@ import {
   type Server,
   searchActiveServers,
 } from '@/lib/servers';
+import { createStripeCheckoutSession } from '@/lib/stripeCheckout';
 import { submitListing } from '@/lib/submitListing';
 import { computeTrustTier } from '@/lib/trustTier';
+import { x402Status } from '@/lib/x402';
 
 const SERVER_INFO = {
   name: 'AllMCPs Directory Server',
@@ -200,7 +218,7 @@ const TOOLS = [
   {
     name: 'boost_mcp_server',
     description:
-      'Initiate a sponsorship / boost order for an MCP server by ID, returning a Stripe checkout session URL and x402 invoice.',
+      'Start a boost order for an MCP server listing. Returns a Stripe checkout link (for a human to pay by card, with the AGENTREADY 50% agent discount) and, when x402 is enabled, the exact request to pay autonomously in USDC over x402.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -218,6 +236,13 @@ const TOOLS = [
           ],
           description: 'Sponsorship tier (default: featured_7d)',
         },
+        weeks: {
+          type: 'integer',
+          minimum: 1,
+          maximum: 8,
+          description:
+            'Weeks to buy for featured_7d / category_sponsor_7d (default 1; longer blocks are cheaper per week)',
+        },
         email: {
           type: 'string',
           description: 'Optional contact/billing email',
@@ -225,6 +250,49 @@ const TOOLS = [
       },
       required: ['id'],
     },
+  },
+  {
+    name: 'quote_sponsor_ad',
+    description:
+      'Validate a sponsor ad campaign and get its exact cost, plus how to pay: autonomously over x402 (USDC) when enabled, or a link for a human to finish at allmcps.com/advertise/create. Campaigns are reviewed before they serve.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Ad headline' },
+        description: { type: 'string', description: 'Ad body copy' },
+        ctaText: {
+          type: 'string',
+          description: 'Button text (default "Learn More")',
+        },
+        targetUrl: { type: 'string', description: 'https URL the ad links to' },
+        logoUrl: { type: 'string', description: 'https URL of a square logo' },
+        placement: {
+          type: 'string',
+          enum: Object.keys(AD_PLACEMENTS),
+          description: 'Where the ad shows (default "all")',
+        },
+        bidCpm: {
+          type: 'integer',
+          description: 'Bid in cents per 1,000 impressions (default 500 = $5)',
+        },
+        impressions: {
+          type: 'integer',
+          description: 'Impressions to buy (default 1000)',
+        },
+        advertiserEmail: {
+          type: 'string',
+          description: 'Where receipts and review results are sent',
+        },
+      },
+      required: [
+        'title',
+        'description',
+        'targetUrl',
+        'logoUrl',
+        'advertiserEmail',
+      ],
+    },
+    annotations: READ_ONLY,
   },
   {
     name: 'get_boost_status',
@@ -482,6 +550,16 @@ async function filteredSearch(opts: {
       return true;
     })
     .slice(0, opts.limit);
+}
+
+/** Worker env (secrets) for tools that need it; undefined outside a Worker. */
+async function mcpEnv(): Promise<unknown> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    return (await getCloudflareContext()).env;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function POST(request: Request) {
@@ -867,12 +945,16 @@ export async function POST(request: Request) {
 
     if (toolName === 'get_boost_pricing') {
       let md = `# AllMCPs Server Boosting & Sponsorship Tiers\n\n`;
-      md += `🎁 **AI Agent Exclusive 50% Off Promo**: Use promo code \`AGENTREADY\` at checkout for 50% off any tier!\n\n`;
+      md += `🎁 **AI Agent Exclusive 50% Off Promo**: Use promo code \`${AGENT_PROMO_CODE}\` at checkout for 50% off any tier!\n\n`;
+      const x402 = x402Status(await mcpEnv());
+      md += x402.enabled
+        ? `💸 **x402**: pay autonomously in USDC (${x402.network}). Call \`boost_mcp_server\` for the exact request; the agent price is built in. Premium is Stripe-only.\n\n`
+        : `Payment is by Stripe checkout (call \`boost_mcp_server\` for a link).\n\n`;
       for (const p of Object.values(PAID_PRODUCTS)) {
-        const halfPrice = formatUsd(Math.round(p.unitAmount * 0.5));
+        const halfPrice = formatUsd(agentPriceCents(p.unitAmount));
         md += `### ${p.name} (${p.sku})\n`;
         md += `- **Regular Price**: ${formatUsd(p.unitAmount)} (${p.interval})\n`;
-        md += `- **Agent 50% Off Price (\`AGENTREADY\`)**: ${halfPrice}\n`;
+        md += `- **Agent 50% Off Price (\`${AGENT_PROMO_CODE}\`)**: ${halfPrice}${p.weeklyTiers ? ' per week (longer blocks are cheaper per week)' : ''}\n`;
         md += `- **Tagline**: ${p.tagline}\n`;
         md += `- **Benefits**:\n`;
         for (const b of p.benefits) {
@@ -886,8 +968,15 @@ export async function POST(request: Request) {
     }
 
     if (toolName === 'boost_mcp_server') {
-      const serverId = args.id;
-      const sku = (args.sku || 'featured_7d') as PaidSku;
+      const serverId = String(args.id || '');
+      const sku = String(args.sku || 'featured_7d') as PaidSku;
+      const product = PAID_PRODUCTS[sku];
+      if (!product) {
+        return text(
+          `Unknown sku "${sku}". Options: ${Object.keys(PAID_PRODUCTS).join(', ')}`,
+          true,
+        );
+      }
 
       const server = await getServerById(serverId);
       if (!server) {
@@ -897,38 +986,116 @@ export async function POST(request: Request) {
         );
       }
 
-      const product = PAID_PRODUCTS[sku];
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://allmcps.com';
-      const checkoutUrl = `${appUrl}/pricing?serverId=${encodeURIComponent(serverId)}&sku=${sku}&coupon=AGENTREADY`;
-      const regularPrice = product ? formatUsd(product.unitAmount) : 'N/A';
-      const discountedPrice = product
-        ? formatUsd(Math.round(product.unitAmount * 0.5))
-        : 'N/A';
+      const env = await mcpEnv();
+      const weeks = clampWeeks(product, args.weeks);
+      const checkout = await createStripeCheckoutSession({
+        serverId,
+        sku,
+        weeks,
+        email: typeof args.email === 'string' ? args.email : undefined,
+        coupon: AGENT_PROMO_CODE,
+        env,
+      });
+      if (!checkout.success || !checkout.url) {
+        return text(
+          `Could not start a boost order: ${checkout.error || 'unknown error'}`,
+          true,
+        );
+      }
 
-      const outputText = `# Boost Order Created for "${server.name}"
+      const listCents = tieredTotal(product, weeks);
+      const span = product.weeklyTiers
+        ? ` (${weeks} week${weeks === 1 ? '' : 's'})`
+        : '';
+      const due =
+        checkout.amountTotalCents != null
+          ? formatUsd(checkout.amountTotalCents)
+          : formatUsd(listCents);
+      const promoNote = checkout.promoApplied
+        ? ` (\`${AGENT_PROMO_CODE}\` applied)`
+        : ` (enter \`${AGENT_PROMO_CODE}\` at checkout for 50% off)`;
+
+      let out = `# Boost Order for "${server.name}"
 
 - **Server ID**: ${server.id}
-- **Selected Tier**: ${product ? product.name : sku}
-- **Regular Price**: ${regularPrice}
-- **Agent Discounted Price (50% Off with AGENTREADY)**: **${discountedPrice}**
-- **Applied Coupon**: \`AGENTREADY\`
-- **Checkout URL**: [Complete 50% Off Payment via Stripe](${checkoutUrl})
+- **Tier**: ${product.name}${span}
+- **List price**: ${formatUsd(listCents)}
 
-### Autonomous Agent Payment (x402 Protocol)
-\`\`\`json
-{
-  "spec": "x402-v1",
-  "asset": "USD",
-  "amount": ${product ? product.unitAmount / 100 : 0},
-  "payee": "AllMCPs Directory",
-  "checkout_url": "${checkoutUrl}"
-}
+## Pay by card (a human completes this)
+- **Amount due at checkout**: ${due}${promoNote}
+- **Checkout URL**: ${checkout.url}
+`;
+
+      const x402 = x402Status(env);
+      if (x402.enabled && isX402BoostSku(sku)) {
+        out += `
+## Pay autonomously with x402 (USDC on ${x402.network})
+- **Price**: ${formatUsd(agentPriceCents(listCents))} (agent price, no code needed)
+- Send this request with an x402 client. The first response is a 402 with a PAYMENT-REQUIRED header; retry with PAYMENT-SIGNATURE and the boost activates once payment settles.
+
+\`\`\`http
+POST ${x402.boost_endpoint}
+Content-Type: application/json
+
+${JSON.stringify({ serverId, sku, weeks })}
 \`\`\`
-
-To complete activation, open the checkout URL or trigger autonomous agent payment.`;
+`;
+      } else if (x402.enabled) {
+        out += `\n${product.name} is a subscription, so it is Stripe checkout only (x402 handles one-time payments).\n`;
+      }
 
       await logMcp(serverId, `boost_mcp_server sku:${sku}`);
-      return text(outputText);
+      return text(out);
+    }
+
+    if (toolName === 'quote_sponsor_ad') {
+      const placement = String(args.placement || 'all');
+      if (!(placement in AD_PLACEMENTS)) {
+        return text(
+          `Unknown placement "${placement}". Options: ${Object.keys(AD_PLACEMENTS).join(', ')}`,
+          true,
+        );
+      }
+      const ad = {
+        title: String(args.title || '').trim(),
+        description: String(args.description || '').trim(),
+        ctaText: String(args.ctaText || 'Learn More').trim(),
+        targetUrl: String(args.targetUrl || '').trim(),
+        logoUrl: String(args.logoUrl || '').trim(),
+        advertiserEmail: String(args.advertiserEmail || '').trim(),
+        impressions: Number(args.impressions ?? 1000),
+        bidCpm: Number(args.bidCpm ?? 500),
+      };
+      const validation = validateAdPayload(ad);
+      if (!validation.valid) {
+        return text(`Ad is not valid: ${validation.error}`, true);
+      }
+      const cost = calculateAdCostCents(ad.impressions, ad.bidCpm);
+      const x402 = x402Status(await mcpEnv());
+
+      let out = `# Sponsor Ad Quote
+
+- **Placement**: ${AD_PLACEMENTS[placement as AdPlacement].name}
+- **Impressions**: ${ad.impressions.toLocaleString()} at ${formatUsd(ad.bidCpm)} CPM
+- **Cost**: ${formatUsd(cost)}
+- Campaigns are reviewed before they serve.
+`;
+      if (x402.enabled) {
+        out += `
+## Pay autonomously with x402 (USDC on ${x402.network})
+The campaign is created only after payment settles.
+
+\`\`\`http
+POST ${x402.ads_endpoint}
+Content-Type: application/json
+
+${JSON.stringify({ ...ad, placement })}
+\`\`\`
+`;
+      }
+      out += `\n## Or have a human finish it\nhttps://allmcps.com/advertise/create\n`;
+      await logMcp(null, 'quote_sponsor_ad');
+      return text(out);
     }
 
     if (toolName === 'get_boost_status') {

@@ -100,7 +100,7 @@ export function WebMCPProvider() {
       {
         name: 'boost_mcp_server',
         description:
-          'Initiate a server boost order, returning a checkout link and x402 invoice.',
+          'Start a server boost order: returns a Stripe checkout link, plus x402 (USDC) payment instructions when enabled.',
         inputSchema: {
           type: 'object',
           properties: {

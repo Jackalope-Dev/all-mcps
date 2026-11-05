@@ -1,7 +1,14 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { NextResponse } from 'next/server';
-import { formatUsd, PAID_PRODUCTS, type PaidSku } from '@/lib/pricing';
+import {
+  AGENT_PROMO_CODE,
+  formatUsd,
+  isX402BoostSku,
+  PAID_PRODUCTS,
+  type PaidSku,
+} from '@/lib/pricing';
 import { createStripeCheckoutSession } from '@/lib/stripeCheckout';
+import { x402Status } from '@/lib/x402';
 
 export async function POST(req: Request) {
   try {
@@ -14,12 +21,7 @@ export async function POST(req: Request) {
     }
 
     const body = (await req.json().catch(() => ({}))) as any;
-    const {
-      serverId,
-      sku = 'featured_7d',
-      email,
-      coupon = 'AGENTREADY',
-    } = body || {};
+    const { serverId, sku = 'featured_7d', email, coupon } = body || {};
 
     if (!serverId) {
       return NextResponse.json(
@@ -38,63 +40,51 @@ export async function POST(req: Request) {
       );
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://allmcps.com';
-    const effectiveCoupon = (coupon || 'AGENTREADY').toUpperCase();
-    const isAgentReadyPromo = effectiveCoupon === 'AGENTREADY';
-    const discountedCents = isAgentReadyPromo
-      ? Math.round(product.unitAmount * 0.5)
-      : product.unitAmount;
-
-    // Call direct Stripe session creation helper in-memory (no HTTP fetch subrequest overhead)
+    const effectiveCoupon = String(coupon || AGENT_PROMO_CODE).toUpperCase();
     const checkoutResult = await createStripeCheckoutSession({
       serverId,
       sku: sku as PaidSku,
       email,
+      weeks: body?.weeks,
       coupon: effectiveCoupon,
       env,
     });
 
-    if (checkoutResult.success && checkoutResult.url) {
-      return NextResponse.json({
-        success: true,
-        serverId,
-        sku,
-        product: product.name,
-        original_price: formatUsd(product.unitAmount),
-        discounted_price: formatUsd(discountedCents),
-        applied_coupon: effectiveCoupon,
-        checkout_url: checkoutResult.url,
-        session_id: checkoutResult.sessionId,
-        x402_invoice: {
-          spec: 'x402-v1',
-          asset: 'USD',
-          amount: discountedCents / 100,
-          coupon: effectiveCoupon,
-          payee: 'AllMCPs Directory',
-          checkout_url: checkoutResult.url,
+    if (!checkoutResult.success || !checkoutResult.url) {
+      return NextResponse.json(
+        {
+          error: checkoutResult.error || 'Could not create checkout session',
+          ...(checkoutResult.hint ? { hint: checkoutResult.hint } : {}),
         },
-      });
+        { status: checkoutResult.status || 500 },
+      );
     }
 
-    // Fallback checkout URL (pricing page) if Stripe secrets are not yet configured in env
-    const fallbackCheckoutUrl = `${appUrl}/pricing?serverId=${encodeURIComponent(serverId)}&sku=${sku}&coupon=${effectiveCoupon}`;
+    const x402 = x402Status(env);
     return NextResponse.json({
       success: true,
       serverId,
       sku,
       product: product.name,
-      original_price: formatUsd(product.unitAmount),
-      discounted_price: formatUsd(discountedCents),
-      applied_coupon: effectiveCoupon,
-      checkout_url: fallbackCheckoutUrl,
-      x402_invoice: {
-        spec: 'x402-v1',
-        asset: 'USD',
-        amount: discountedCents / 100,
-        coupon: effectiveCoupon,
-        payee: 'AllMCPs Directory',
-        checkout_url: fallbackCheckoutUrl,
-      },
+      // Read back from the Stripe session, so it's what the buyer will pay.
+      amount_due:
+        checkoutResult.amountTotalCents != null
+          ? formatUsd(checkoutResult.amountTotalCents)
+          : null,
+      coupon: effectiveCoupon,
+      coupon_applied: checkoutResult.promoApplied === true,
+      checkout_url: checkoutResult.url,
+      session_id: checkoutResult.sessionId,
+      ...(x402.enabled && isX402BoostSku(sku)
+        ? {
+            x402: {
+              endpoint: x402.boost_endpoint,
+              method: 'POST',
+              body: { serverId, sku, weeks: body?.weeks ?? 1 },
+              note: 'Pay in USDC instead of opening the checkout link: POST this body, answer the 402 challenge with a PAYMENT-SIGNATURE header. Agent price applies automatically.',
+            },
+          }
+        : {}),
     });
   } catch (e: any) {
     return NextResponse.json(

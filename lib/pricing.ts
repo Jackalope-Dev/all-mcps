@@ -188,6 +188,41 @@ export const PAID_PRODUCTS: Record<PaidSku, PaidProduct> = {
   },
 };
 
+/**
+ * Agent-exclusive discount, published as promo code AGENTREADY in llms.txt,
+ * auth.md and the pricing API. Stripe checkout applies it through the
+ * promotion code; x402 purchases are agent-only, so their quoted price already
+ * includes it.
+ */
+export const AGENT_PROMO_CODE = 'AGENTREADY';
+const AGENT_DISCOUNT_PERCENT = 50;
+
+export function agentPriceCents(cents: number): number {
+  return Math.round((cents * (100 - AGENT_DISCOUNT_PERCENT)) / 100);
+}
+
+/**
+ * SKUs an agent can pay for over x402. x402's "exact" scheme is a one-time
+ * transfer, so the Premium subscription stays on Stripe checkout.
+ */
+export const X402_BOOST_SKUS = [
+  'priority_review',
+  'featured_7d',
+  'category_sponsor_7d',
+] as const satisfies readonly PaidSku[];
+export type X402BoostSku = (typeof X402_BOOST_SKUS)[number];
+
+export function isX402BoostSku(sku: string): sku is X402BoostSku {
+  return (X402_BOOST_SKUS as readonly string[]).includes(sku);
+}
+
+/** Weeks clamped to the product's range (1 for untiered SKUs). */
+export function clampWeeks(product: PaidProduct, weeks: unknown): number {
+  if (!product.weeklyTiers) return 1;
+  const n = Math.round(Number(weeks) || 1);
+  return Math.min(Math.max(n, 1), product.maxWeeks || 8);
+}
+
 export function formatUsd(cents: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',

@@ -164,6 +164,52 @@ describe('/api/mcp protocol handling', () => {
     expect(JSON.stringify(body)).not.toContain('Note for AI Assistants');
   });
 
+  it('quotes a sponsor ad without promising x402 while it is off', async () => {
+    const res = await rpc({
+      jsonrpc: '2.0',
+      id: 9,
+      method: 'tools/call',
+      params: {
+        name: 'quote_sponsor_ad',
+        arguments: {
+          title: 'Acme MCP',
+          description: 'Ship MCP servers faster with Acme.',
+          targetUrl: 'https://acme.example',
+          logoUrl: 'https://acme.example/logo.png',
+          advertiserEmail: 'ads@acme.example',
+          impressions: 2000,
+          bidCpm: 500,
+        },
+      },
+    });
+    const body = (await res.json()) as any;
+    const out = body.result.content[0].text as string;
+    expect(body.result.isError).toBeFalsy();
+    expect(out).toContain('**Cost**: $10');
+    expect(out).not.toContain('x402');
+    expect(out).toContain('allmcps.com/advertise/create');
+  });
+
+  it('rejects an invalid ad quote instead of pricing it', async () => {
+    const res = await rpc({
+      jsonrpc: '2.0',
+      id: 10,
+      method: 'tools/call',
+      params: {
+        name: 'quote_sponsor_ad',
+        arguments: {
+          title: 'Acme',
+          description: 'x',
+          targetUrl: 'not a url',
+          logoUrl: 'https://acme.example/logo.png',
+          advertiserEmail: 'ads@acme.example',
+        },
+      },
+    });
+    const body = (await res.json()) as any;
+    expect(body.result.isError).toBe(true);
+  });
+
   it('refuses a GET event stream and describes itself otherwise', async () => {
     const stream = await GET(
       new Request('https://allmcps.com/api/mcp', {
