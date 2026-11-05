@@ -280,3 +280,26 @@ export async function callMcpEndpoint(
     return { ok: false, error: msg };
   }
 }
+
+/**
+ * An open endpoint's tools as the servers.tools JSON the health cron writes
+ * (name, description, parameters), or null when it needs auth or listed none.
+ * Used at intake and endpoint discovery so pending listings carry their tool
+ * names: the brochure check (lib/listingPolicy.ts) reads them, and before
+ * this a pending hosted listing had none, so Holos33 passed it. Never throws.
+ */
+export async function introspectToolsJson(url: string): Promise<string | null> {
+  try {
+    const r = await callMcpEndpoint(url, { method: 'tools/list' });
+    if (!r.ok || !r.tools?.length) return null;
+    return JSON.stringify(
+      r.tools.map((t) => ({
+        name: t.name,
+        description: t.description,
+        parameters: t.inputSchema,
+      })),
+    );
+  } catch {
+    return null;
+  }
+}

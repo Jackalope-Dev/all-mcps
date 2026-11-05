@@ -55,6 +55,17 @@ describe('repoOwnerMatchesSite', () => {
 });
 
 describe('endpointCandidates', () => {
+  it('asks the endpoints the listing names before anything else', () => {
+    const c = endpointCandidates({
+      url: 'https://brainscanner.dev/',
+      stated: ['https://connect.brainscanner.dev/'],
+    });
+    expect(c[0]).toEqual({
+      url: 'https://connect.brainscanner.dev/',
+      source: 'stated',
+    });
+  });
+
   it('guesses the usual paths and subdomains on a hosted product site', () => {
     expect(
       urls(endpointCandidates({ url: 'https://www.brainscanner.dev/' })),
@@ -220,6 +231,45 @@ describe('judgeCandidate', () => {
 
 describe('discoverRemoteEndpoint', () => {
   afterEach(() => vi.unstubAllGlobals());
+
+  it("finds the endpoint a GitHub listing's server.json declares", async () => {
+    // The repo owner isn't named for the product's site, so nothing is
+    // guessed there; only the registry manifest names the endpoint.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (
+          url ===
+          'https://raw.githubusercontent.com/jdoe/acme-mcp/HEAD/server.json'
+        ) {
+          return new Response(
+            JSON.stringify({
+              remotes: [
+                { type: 'streamable-http', url: 'https://mcp.acme.dev/mcp' },
+              ],
+            }),
+          );
+        }
+        if (init?.method && url === 'https://mcp.acme.dev/mcp') {
+          return new Response('{}', {
+            status: 401,
+            headers: { 'www-authenticate': oauthChallenge },
+          });
+        }
+        return new Response('nope', { status: 404 });
+      }),
+    );
+    await expect(
+      discoverRemoteEndpoint({
+        url: 'https://github.com/jdoe/acme-mcp',
+        websiteUrl: 'https://acme.dev/',
+      }),
+    ).resolves.toEqual({
+      url: 'https://mcp.acme.dev/mcp',
+      authType: 'oauth',
+      source: 'stated',
+    });
+  });
 
   it('returns the best-ranked candidate that answers', async () => {
     vi.stubGlobal(

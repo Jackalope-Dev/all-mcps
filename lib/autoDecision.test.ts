@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   decideIngestPromote,
   decideSubmission,
+  decideSubmissionFromStored,
   type GateEvidence,
+  NO_USAGE_YET,
 } from './autoDecision';
 
 const strong: GateEvidence = {
@@ -62,11 +64,49 @@ describe('decideSubmission', () => {
       'an intake flag Jev did not overrule',
       { reviewFlagged: true, triageVerdict: 'needs_review' },
     ],
-    ['no sign of real use', { stars: 2 }],
   ])('holds on %s', (_label, patch) => {
     const r = decideSubmission({ ...strong, ...patch });
     expect(r?.decision).toBe('hold');
     expect(r?.reasons.length).toBeGreaterThan(0);
+  });
+
+  it('does not hold a Jev-approved server for low usage', () => {
+    // Admin policy 2026-11-05: discovery of new servers is part of the point,
+    // and the trust tier tells users how proven a listing is.
+    const r = decideSubmission({ ...strong, stars: 0 });
+    expect(r?.decision).toBe('approve');
+    expect(r?.reasons).toContain(NO_USAGE_YET);
+  });
+
+  it('holds when Jev is unsure and nothing shows the server runs', () => {
+    const r = decideSubmission({
+      ...strong,
+      stars: 0,
+      triageVerdict: 'needs_review',
+    });
+    expect(r?.decision).toBe('hold');
+    expect(r?.reasons).toContain('Jev is unsure and nothing shows it runs');
+  });
+
+  it('holds a listing the admin rejected before, however strong', () => {
+    const r = decideSubmission({
+      ...strong,
+      liveEndpoint: true,
+      priorRejection: true,
+    });
+    expect(r?.decision).toBe('hold');
+    expect(r?.reasons[0]).toMatch(/rejected this listing before/);
+  });
+
+  it('holds a batch of submissions from one submitter', () => {
+    // A templated network (13 near-identical listings at once) looks like a
+    // real new server on every other signal.
+    const r = decideSubmission({ ...strong, sameSubmitterPending: 13 });
+    expect(r?.decision).toBe('hold');
+    expect(r?.reasons[0]).toMatch(/13 submissions pending/);
+    expect(
+      decideSubmission({ ...strong, sameSubmitterPending: 2 })?.decision,
+    ).toBe('approve');
   });
 
   it("approves on Jev's look-closer verdict when the other evidence is strong", () => {
@@ -234,5 +274,20 @@ describe('decideIngestPromote', () => {
     expect(decideIngestPromote({ ...site, packageAlive: true })?.decision).toBe(
       'approve',
     );
+  });
+});
+
+describe('decideSubmissionFromStored', () => {
+  it('re-runs the gate on stored evidence, tolerating missing fields', () => {
+    expect(decideSubmissionFromStored(JSON.stringify(strong))?.decision).toBe(
+      'approve',
+    );
+    expect(
+      decideSubmissionFromStored(
+        JSON.stringify({ triageVerdict: 'reject', repoStatus: 'ok' }),
+      )?.decision,
+    ).toBe('reject');
+    expect(decideSubmissionFromStored('not json')).toBeNull();
+    expect(decideSubmissionFromStored(null)).toBeNull();
   });
 });

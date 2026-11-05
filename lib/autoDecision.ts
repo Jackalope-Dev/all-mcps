@@ -1,9 +1,10 @@
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import {
   autoDecisions,
   automationGates,
   listingSignals,
+  moderationDecisions,
   servers,
   stdioVerifications,
 } from '../db/schema';
@@ -42,7 +43,7 @@ export const GATE_COPY: Record<Gate, { label: string; detail: string }> = {
   submission: {
     label: 'Human submissions',
     detail:
-      'Approves submissions Jev rates likely MCP and did not reject, with a live source repo and a sign of real use; rejects only a confirmed-dead source. Emails the submitter either way.',
+      'Approves submissions Jev rates likely MCP and did not reject, with a live source or MCP endpoint. Low usage is not a bar (the trust tier shows it), but when Jev is unsure something must show the server runs. Holds resubmissions of rejected listings and policy flags; rejects only a confirmed-dead source or a Jev reject with no sign of use. Emails the submitter either way.',
   },
   ingest_promote: {
     label: 'Imported listings fast-track',
@@ -84,6 +85,20 @@ export type GateEvidence = {
    * however strong the rest is.
    */
   policyFlags: PolicyFlag[];
+  /**
+   * An admin already rejected this listing and it came back (the submitter
+   * resubmitted it, or a fixable reject kept the row). Holos33 went
+   * "Recommend: approve" twice in Nov 2026 because the gate never knew.
+   * Optional: only the submission gate's callers look it up.
+   */
+  priorRejection?: boolean;
+  /**
+   * How many submissions from this submitter's email are pending right now,
+   * this one included. A templated network (Energy North: 13 near-identical
+   * "directory" listings in one batch, all rejected) arrives this way, and
+   * nothing else in the evidence tells it apart from a real new server.
+   */
+  sameSubmitterPending?: number;
 };
 
 export type GateResult = { decision: AutoDecision; reasons: string[] };
@@ -101,6 +116,8 @@ export type GateResult = { decision: AutoDecision; reasons: string[] };
 export const SUBMISSION_BAR = {
   mcpProbability: 0.6,
   stars: 5,
+  /** Pending submissions from one email at once before a human looks. */
+  batch: 5,
 } as const;
 export const INGEST_BAR = {
   mcpProbability: 0.6,
@@ -149,6 +166,9 @@ function pct(n: number | null): string {
   return n === null ? '?' : `${Math.round(n * 100)}%`;
 }
 
+/** Shown on an approve with no usage signal: users see the trust tier, so it isn't a bar. */
+export const NO_USAGE_YET = 'no usage signal yet (listed as unverified)';
+
 /**
  * Backtested on the 140 submissions an admin decided 2026-10-13..23: the 49
  * Jev rejects the admin also rejected all had no sign of real use, and the 3
@@ -157,10 +177,31 @@ function pct(n: number | null): string {
  * the server is used; on its own it still holds. A live endpoint also stands
  * in for the is-MCP bar and the source check: a completed handshake is better
  * evidence than either, and a hosted product's root URL often 404s.
+ *
+ * Low usage is not a reason to hold (admin policy, 2026-11-05): the directory
+ * is also for discovering new servers, and the listing's trust tier already
+ * tells users how proven it is. So a real MCP server Jev approves goes
+ * through with no stars, package or sandbox run. What still needs a human is
+ * Jev being unsure when nothing beyond the listing's own word (or a bare open
+ * endpoint) shows the server is what it says.
  */
 export function decideSubmission(e: GateEvidence): GateResult | null {
   const held = policyHold(e);
   if (held) return held;
+  if (e.priorRejection) {
+    return {
+      decision: 'hold',
+      reasons: ['you rejected this listing before (resubmitted)'],
+    };
+  }
+  if ((e.sameSubmitterPending ?? 0) >= SUBMISSION_BAR.batch) {
+    return {
+      decision: 'hold',
+      reasons: [
+        `${e.sameSubmitterPending} submissions pending from this submitter at once`,
+      ],
+    };
+  }
   const proven = provenRunning(e);
   if (e.repoGoneConfirmed && !proven) {
     return {
@@ -197,20 +238,26 @@ export function decideSubmission(e: GateEvidence): GateResult | null {
   // the guess: 19 of the holds the admin approved were only this flag.
   if (e.reviewFlagged && !e.liveEndpoint && e.triageVerdict !== 'approve')
     missing.push('flagged at intake');
-  if (!proof) missing.push('no sign of real use');
   // An open endpoint proves an MCP server exists, not that it belongs here.
   // Every approve the admin overturned in the shadow run (6 of 72, Oct–Nov
   // 2026) had an open endpoint as its only proof, and the two Jev was unsure
-  // about (look closer) were among them. So when the endpoint is all there
-  // is, Jev must actually say approve, which needs legit and belongs to clear
-  // their bars.
+  // about (look closer) were among them. So when the endpoint (or nothing) is
+  // all there is, Jev must actually say approve, which needs legit and
+  // belongs to clear their bars.
+  const independentProof = proofOfUse(
+    { ...e, liveEndpoint: false },
+    SUBMISSION_BAR.stars,
+  );
   if (
-    proof === ENDPOINT_PROOF &&
-    proofOfUse({ ...e, liveEndpoint: false }, SUBMISSION_BAR.stars) === null &&
+    !independentProof &&
     e.triageVerdict !== 'approve' &&
     !missing.includes('Jev said reject')
   )
-    missing.push('endpoint is the only proof and Jev is unsure');
+    missing.push(
+      proof === ENDPOINT_PROOF
+        ? 'endpoint is the only proof and Jev is unsure'
+        : 'Jev is unsure and nothing shows it runs',
+    );
 
   if (missing.length > 0) return { decision: 'hold', reasons: missing };
   return {
@@ -219,9 +266,37 @@ export function decideSubmission(e: GateEvidence): GateResult | null {
       `Jev ${e.triageVerdict === 'approve' ? 'approve' : 'no objection'}`,
       `MCP ${pct(e.mcpProbability)}`,
       e.repoStatus === 'ok' ? 'source live' : 'endpoint live',
-      proof as string,
+      proof ?? NO_USAGE_YET,
     ],
   };
+}
+
+/**
+ * Re-run on the evidence a past decision stored, so the admin's track record
+ * can be read against the gate as it is now (lib/gateCalibration.ts).
+ */
+export function decideSubmissionFromStored(json: string | null) {
+  if (!json) return null;
+  try {
+    const e = JSON.parse(json) as Partial<GateEvidence>;
+    return decideSubmission({
+      triageVerdict: e.triageVerdict ?? null,
+      triageConfidence: e.triageConfidence ?? null,
+      mcpProbability: e.mcpProbability ?? null,
+      repoStatus: e.repoStatus ?? null,
+      repoGoneConfirmed: e.repoGoneConfirmed ?? false,
+      stars: e.stars ?? null,
+      reviewFlagged: e.reviewFlagged ?? false,
+      sandboxStatus: e.sandboxStatus ?? null,
+      packageAlive: e.packageAlive ?? false,
+      liveEndpoint: e.liveEndpoint ?? false,
+      policyFlags: e.policyFlags ?? [],
+      priorRejection: e.priorRejection ?? false,
+      sameSubmitterPending: e.sameSubmitterPending ?? 0,
+    });
+  } catch {
+    return null;
+  }
 }
 
 export function decideIngestPromote(e: GateEvidence): GateResult | null {
@@ -283,6 +358,9 @@ export type GateEvidenceRow = {
   remoteEndpointUrl: string | null;
   remoteEndpointHealthy: boolean | null;
   tools: string | null;
+  /** From submitterSignals(); left out where nobody looked them up. */
+  priorRejection?: boolean;
+  sameSubmitterPending?: number;
 };
 
 export function gateEvidenceFromRow(
@@ -290,6 +368,8 @@ export function gateEvidenceFromRow(
   now: Date,
 ): GateEvidence {
   return {
+    priorRejection: row.priorRejection ?? false,
+    sameSubmitterPending: row.sameSubmitterPending ?? 0,
     triageVerdict: row.triageVerdict,
     triageConfidence: row.triageConfidence,
     mcpProbability: row.mcpProbability,
@@ -341,6 +421,119 @@ export const GATE_EVIDENCE_COLUMNS = {
 };
 
 /**
+ * Which of these listings an admin has rejected before: a reject in the
+ * moderation log, or an admin reject written next to a gate decision (that
+ * covers rejects from before the log existed, 2026-11-03). Both tables are
+ * indexed on server_id; IN lists are chunked under D1's bound-parameter cap.
+ */
+async function priorRejections(db: Db, ids: string[]): Promise<Set<string>> {
+  const out = new Set<string>();
+  for (let i = 0; i < ids.length; i += 90) {
+    const chunk = ids.slice(i, i + 90);
+    const [a, b] = await Promise.all([
+      db
+        .select({ id: moderationDecisions.serverId })
+        .from(moderationDecisions)
+        .where(
+          and(
+            inArray(moderationDecisions.serverId, chunk),
+            eq(moderationDecisions.action, 'reject'),
+          ),
+        ),
+      db
+        .select({ id: autoDecisions.serverId })
+        .from(autoDecisions)
+        .where(
+          and(
+            inArray(autoDecisions.serverId, chunk),
+            eq(autoDecisions.humanDecision, 'reject'),
+          ),
+        ),
+    ]);
+    for (const r of [...a, ...b]) out.add(r.id);
+  }
+  return out;
+}
+
+export type SubmitterSignals = {
+  priorRejection: boolean;
+  sameSubmitterPending: number;
+};
+
+/**
+ * The submission gate's track-record evidence for these listings: was it
+ * rejected before, and how many submissions are pending from the same email.
+ * Indexed lookups only (status, server_id); never a scan of the catalog.
+ */
+export async function submitterSignals(
+  db: Db,
+  ids: string[],
+): Promise<Map<string, SubmitterSignals>> {
+  const out = new Map<string, SubmitterSignals>();
+  if (ids.length === 0) return out;
+  const emails = new Map<string, string>();
+  for (let i = 0; i < ids.length; i += 90) {
+    const rows = await db
+      .select({ id: servers.id, email: servers.submitterEmail })
+      .from(servers)
+      .where(inArray(servers.id, ids.slice(i, i + 90)));
+    for (const r of rows) if (r.email) emails.set(r.id, r.email.toLowerCase());
+  }
+  const uniq = [...new Set(emails.values())];
+  const pendingBy = new Map<string, number>();
+  for (let i = 0; i < uniq.length; i += 90) {
+    const rows = await db
+      .select({
+        email: sql<string>`lower(${servers.submitterEmail})`,
+        n: sql<number>`count(*)`,
+      })
+      .from(servers)
+      .where(
+        and(
+          eq(servers.status, 'pending'),
+          inArray(sql`lower(${servers.submitterEmail})`, uniq.slice(i, i + 90)),
+        ),
+      )
+      .groupBy(sql`lower(${servers.submitterEmail})`);
+    for (const r of rows) pendingBy.set(r.email, Number(r.n));
+  }
+  const rejected = await priorRejections(db, ids);
+  for (const id of ids) {
+    const email = emails.get(id);
+    out.set(id, {
+      priorRejection: rejected.has(id),
+      sameSubmitterPending: email ? (pendingBy.get(email) ?? 0) : 0,
+    });
+  }
+  return out;
+}
+
+export type PendingRecommendation = {
+  decision: AutoDecision;
+  reasons: string[];
+};
+
+/**
+ * What the gate would do with a pending listing right now, so a review card
+ * shows the combined call (Jev plus hard evidence) and not Jev alone.
+ */
+export function recommendPending(
+  row: GateEvidenceRow & { submitterEmail: string | null },
+  now: Date,
+): PendingRecommendation {
+  const evidence = gateEvidenceFromRow(
+    { ...row, repoGoneCount: row.repoGoneCount ?? 0 },
+    now,
+  );
+  const result = row.submitterEmail
+    ? decideSubmission(evidence)
+    : decideIngestPromote(evidence);
+  return result
+    ? { decision: result.decision, reasons: result.reasons }
+    : { decision: 'hold', reasons: ['still gathering evidence'] };
+}
+
+/**
  * Called by the admin approve/reject route just *before* the admin's action
  * runs: records, in shadow, what the gate would have decided from the
  * evidence available at that moment, if it hadn't already. Without this an
@@ -366,8 +559,12 @@ export async function snapshotGateDecision(
       .limit(1);
     if (row?.status !== 'pending') return;
     const gate: Gate = row.submitterEmail ? 'submission' : 'ingest_promote';
+    const signals =
+      gate === 'submission'
+        ? (await submitterSignals(db, [serverId])).get(serverId)
+        : undefined;
     const evidence = gateEvidenceFromRow(
-      { ...row, repoGoneCount: row.repoGoneCount ?? 0 },
+      { ...row, repoGoneCount: row.repoGoneCount ?? 0, ...signals },
       new Date(),
     );
     const result =

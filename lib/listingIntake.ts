@@ -5,6 +5,7 @@ import { endpointClaimedElsewhere } from './endpointOwnership';
 import { getGithubToken, githubApiHeaders } from './githubAuth';
 import { policyFlags } from './listingPolicy';
 import { alignListings, reviewColumns, reviewListing } from './listingReview';
+import { introspectToolsJson } from './mcpIntrospect';
 import { isPlaceholderUrl } from './placeholderUrl';
 import { isRepositoryUrl } from './repoUrl';
 import { isWithdrawn, REJECTED_STATUS } from './servability';
@@ -324,20 +325,29 @@ export async function prepareListingIntake(
   // A submitted endpoint is checked the same way, so the automation gate can
   // count it as proof the server runs (lib/autoDecision.ts).
   const submittedEndpoint = remoteEndpointUrl;
+  const discover = () =>
+    discoverRemoteEndpoint({
+      url,
+      websiteUrl,
+      description,
+      isClaimedElsewhere: endpointClaimedElsewhere(db),
+    });
   const [review, endpoint] = await Promise.all([
     reviewListing({ name, description, url }),
+    // A submitted endpoint that doesn't answer (a typo, pasted page text, an
+    // old path) falls back to discovery instead of being the last word.
     submittedEndpoint
       ? checkEndpoint(submittedEndpoint).then((c) =>
-          c.live ? { url: submittedEndpoint, authType: c.authType } : null,
+          c.live
+            ? { url: submittedEndpoint, authType: c.authType }
+            : discover(),
         )
-      : discoverRemoteEndpoint({
-          url,
-          websiteUrl,
-          description,
-          isClaimedElsewhere: endpointClaimedElsewhere(db),
-        }),
+      : discover(),
   ]);
   if (endpoint) remoteEndpointUrl = endpoint.url;
+  // An open endpoint's tool names, so the brochure check can see them before
+  // anyone reviews it (lib/listingPolicy.ts).
+  const toolsJson = endpoint ? await introspectToolsJson(endpoint.url) : null;
   // A live endpoint answering the MCP handshake outranks a text guess that
   // this isn't an MCP server.
   // Policy flags (adult content, lead-gen pages, evasion tools, directory
@@ -346,7 +356,8 @@ export async function prepareListingIntake(
   const reviewFlagged =
     (review.reviewed && review.isMcpServer === false && !endpoint) ||
     (review.qualityScore !== null && review.qualityScore < 2) ||
-    policyFlags({ name, description, url, websiteUrl }).length > 0;
+    policyFlags({ name, description, url, websiteUrl, tools: toolsJson })
+      .length > 0;
 
   return {
     ok: true,
@@ -389,6 +400,7 @@ export async function prepareListingIntake(
         : null,
       supportUrl: supportUrl || null,
       remoteEndpointUrl: remoteEndpointUrl || null,
+      ...(toolsJson ? { tools: toolsJson, toolsSource: 'introspected' } : {}),
       ...(endpoint
         ? {
             remoteEndpointHealthy: true,

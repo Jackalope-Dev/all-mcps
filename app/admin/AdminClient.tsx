@@ -38,6 +38,7 @@ import { AdminBlogDrafts } from './AdminBlogDrafts';
 import { AdminToolsControl } from './AdminCronsControl';
 import { AdminTriageQueue } from './AdminTriageQueue';
 import { AdminEmpty, AdminModal, AdminSectionHead } from './AdminUi';
+import { GateCall, type GateCallData } from './GateCall';
 import ManageListings, { type ListingFilters } from './ManageListings';
 import {
   ModerationReasonPicker,
@@ -61,6 +62,12 @@ type Server = {
   pendingRevision?: string | null;
   /** Pending submissions only: lib/submitterHistory.ts. */
   history?: SubmitterHistory | null;
+  /** Pending submissions only: the gate's call and Jev's verdict (app/admin/page.tsx). */
+  gate?: {
+    recommendation: GateCallData;
+    triageVerdict: string | null;
+    triageReason: string | null;
+  } | null;
   pendingClaimUserId?: string | null;
   pendingClaimWebsiteUrl?: string | null;
   pendingLogoKey?: string | null;
@@ -1125,6 +1132,13 @@ function ServerTable({
                       )}
                     </div>
                     {server.history && <HistoryLine h={server.history} />}
+                    {server.gate && (
+                      <GateCall
+                        recommendation={server.gate.recommendation}
+                        triageVerdict={server.gate.triageVerdict}
+                        triageReason={server.gate.triageReason}
+                      />
+                    )}
 
                     <div className="adm-desc">{server.description}</div>
 

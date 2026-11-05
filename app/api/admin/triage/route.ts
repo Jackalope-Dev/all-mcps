@@ -6,11 +6,11 @@ import { z } from 'zod';
 import { listingSignals, servers, stdioVerifications } from '@/db/schema';
 import { getAuthorizedAdminEmail } from '@/lib/adminAuth';
 import {
-  decideIngestPromote,
-  decideSubmission,
   GATE_EVIDENCE_COLUMNS,
-  gateEvidenceFromRow,
+  recommendPending,
+  submitterSignals,
 } from '@/lib/autoDecision';
+import { calibrationNote, getGateCalibration } from '@/lib/gateCalibration';
 import { getGithubToken } from '@/lib/githubAuth';
 import {
   reviewColumns,
@@ -146,6 +146,15 @@ export async function GET(req: Request) {
       .where(queueWhere)
       .groupBy(listingSignals.triageVerdict);
 
+    const now = new Date();
+    const pendingIds = rows
+      .filter((r) => r.status === 'pending' && r.submitterEmail)
+      .map((r) => r.id);
+    const [signals, calibration] = await Promise.all([
+      submitterSignals(db, pendingIds),
+      queue === 'pending' ? getGateCalibration(db) : Promise.resolve({}),
+    ]);
+
     return NextResponse.json({
       queue,
       verdict,
@@ -154,13 +163,28 @@ export async function GET(req: Request) {
       counts: Object.fromEntries(
         counts.map((c) => [c.verdict ?? 'none', Number(c.n)]),
       ),
-      items: rows.map((r) => ({
-        ...r,
-        recommendation: recommend(r),
-        staleReasons: parseStaleReasons(r.staleReasons),
-        trustTier: computeTrustTier(r),
-        sandboxStderr: r.sandboxStderr ? r.sandboxStderr.slice(-600) : null,
-      })),
+      items: rows.map((r) => {
+        const recommendation =
+          r.status === 'pending'
+            ? recommendPending({ ...r, ...signals.get(r.id) }, now)
+            : null;
+        return {
+          ...r,
+          recommendation: recommendation && {
+            ...recommendation,
+            calibration: r.submitterEmail
+              ? calibrationNote(
+                  calibration,
+                  recommendation.decision,
+                  r.triageVerdict,
+                )
+              : null,
+          },
+          staleReasons: parseStaleReasons(r.staleReasons),
+          trustTier: computeTrustTier(r),
+          sandboxStderr: r.sandboxStderr ? r.sandboxStderr.slice(-600) : null,
+        };
+      }),
     });
   } catch (error: any) {
     console.error('admin triage GET error:', error);
@@ -169,30 +193,6 @@ export async function GET(req: Request) {
       { status: 500 },
     );
   }
-}
-
-/**
- * What the automation gate would do with a pending listing right now, so the
- * card shows the combined call (Jev plus hard evidence) and not Jev alone.
- * Null for live listings, which no gate decides here.
- */
-function recommend(
-  r: Parameters<typeof gateEvidenceFromRow>[0] & {
-    status: string;
-    submitterEmail: string | null;
-  },
-) {
-  if (r.status !== 'pending') return null;
-  const evidence = gateEvidenceFromRow(
-    { ...r, repoGoneCount: r.repoGoneCount ?? 0 },
-    new Date(),
-  );
-  const result = r.submitterEmail
-    ? decideSubmission(evidence)
-    : decideIngestPromote(evidence);
-  return result
-    ? { decision: result.decision, reasons: result.reasons }
-    : { decision: 'hold' as const, reasons: ['still gathering evidence'] };
 }
 
 const postSchema = z.object({

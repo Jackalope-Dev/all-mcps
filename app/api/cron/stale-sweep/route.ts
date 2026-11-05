@@ -31,6 +31,7 @@ import {
   markActed,
   PENDING_GATES,
   recordDecision,
+  submitterSignals,
 } from '../../../../lib/autoDecision';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
 import { getGithubToken } from '../../../../lib/githubAuth';
@@ -903,7 +904,8 @@ export async function POST(req: Request) {
               // Re-decide a hold only once newer evidence has arrived.
               and(
                 eq(autoDecisions.decision, 'hold'),
-                sql`${autoDecisions.createdAt} < max(coalesce(${listingSignals.reviewedAt}, 0), coalesce(${listingSignals.repoCheckedAt}, 0))`,
+                // (an endpoint found or repaired by discovery counts).
+                sql`${autoDecisions.createdAt} < max(coalesce(${listingSignals.reviewedAt}, 0), coalesce(${listingSignals.repoCheckedAt}, 0), coalesce(${servers.remoteEndpointHealthyAt}, 0))`,
               ),
             ),
           ),
@@ -911,8 +913,18 @@ export async function POST(req: Request) {
         .orderBy(desc(servers.reviewPriority), asc(servers.createdAt))
         .limit(GATE_BATCH);
 
+      const signals =
+        gate === 'submission'
+          ? await submitterSignals(
+              db,
+              rows.map((r) => r.id),
+            )
+          : new Map();
       for (const row of rows) {
-        const evidence = gateEvidenceFromRow(row, now);
+        const evidence = gateEvidenceFromRow(
+          { ...row, ...signals.get(row.id) },
+          now,
+        );
         const result =
           gate === 'submission'
             ? decideSubmission(evidence)

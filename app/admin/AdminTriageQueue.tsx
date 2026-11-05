@@ -16,6 +16,7 @@ import type { RepoStatus } from '../../lib/repoCheck';
 import { STALE_REASON_LABEL, type StaleReason } from '../../lib/staleness';
 import { TRUST_TIER_COPY, type TrustTier } from '../../lib/trustTier';
 import { AdminEmpty, AdminSectionHead, AdminSkeletonList } from './AdminUi';
+import { GateCall, type GateCallData } from './GateCall';
 
 type Queue = 'pending' | 'stale';
 type VerdictFilter = 'all' | 'approve' | 'needs_review' | 'reject' | 'none';
@@ -56,10 +57,7 @@ type TriageItem = {
   sandboxToolCount: number | null;
   trustTier: TrustTier;
   /** The automation gate's call on a pending listing (Jev plus hard evidence). */
-  recommendation: {
-    decision: 'approve' | 'reject' | 'hold';
-    reasons: string[];
-  } | null;
+  recommendation: GateCallData | null;
 };
 
 type TriageResponse = {
@@ -67,18 +65,6 @@ type TriageResponse = {
   counts: Record<string, number>;
   pageSize: number;
 };
-
-const VERDICT_STYLE: Record<Verdict, { label: string; hue: string }> = {
-  approve: { label: 'Jev: approve', hue: 'hue-green' },
-  needs_review: { label: 'Jev: look closer', hue: 'hue-amber' },
-  reject: { label: 'Jev: reject', hue: 'hue-red' },
-};
-
-const RECOMMENDATION_STYLE = {
-  approve: { label: 'Recommend: approve', hue: 'hue-green' },
-  reject: { label: 'Recommend: reject', hue: 'hue-red' },
-  hold: { label: 'Your call', hue: 'hue-amber' },
-} as const;
 
 /**
  * What a row's bulk action keys on: the gate's recommendation on the pending
@@ -455,9 +441,6 @@ export function AdminTriageQueue() {
       <div className="adm-triage-list">
         {items.map((item, idx) => {
           const focused = idx === focus;
-          const v = item.triageVerdict
-            ? VERDICT_STYLE[item.triageVerdict]
-            : null;
           const isBusy = busy.has(item.id);
           return (
             <div
@@ -486,28 +469,12 @@ export function AdminTriageQueue() {
                 )}
               </div>
 
-              {item.recommendation && (
-                <div className="adm-verdict">
-                  <Chip
-                    hue={RECOMMENDATION_STYLE[item.recommendation.decision].hue}
-                  >
-                    {RECOMMENDATION_STYLE[item.recommendation.decision].label}
-                  </Chip>
-                  <span className="adm-muted">
-                    {item.recommendation.reasons.join(' · ')}
-                  </span>
-                </div>
-              )}
-
-              {v ? (
-                <div className="adm-verdict">
-                  <Chip hue={v.hue}>
-                    <Sparkles size={12} aria-hidden="true" />
-                    {v.label}
-                  </Chip>
-                  <span className="adm-muted">{item.triageReason}</span>
-                </div>
-              ) : (
+              <GateCall
+                recommendation={item.recommendation}
+                triageVerdict={item.triageVerdict}
+                triageReason={item.triageReason}
+              />
+              {!item.triageVerdict && (
                 <span className="adm-note">
                   Not triaged yet — press <kbd className="kbd">t</kbd> to ask
                   Jev now.
