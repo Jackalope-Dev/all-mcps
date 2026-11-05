@@ -12,10 +12,10 @@ import {
   agentPriceCents,
   clampWeeks,
   formatUsd,
-  isX402BoostSku,
+  isOneTimeBoostSku,
+  ONE_TIME_BOOST_SKUS,
   PAID_PRODUCTS,
   tieredTotal,
-  X402_BOOST_SKUS,
 } from '@/lib/pricing';
 import { getX402Config, sellWithX402 } from '@/lib/x402';
 
@@ -58,13 +58,13 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  if (!isX402BoostSku(sku)) {
+  if (!isOneTimeBoostSku(sku)) {
     return NextResponse.json(
       {
         error:
           sku === 'premium_monthly'
             ? 'Premium is a monthly subscription, which x402 cannot bill. Use POST /api/v1/boost/checkout instead.'
-            : `Invalid sku. x402 accepts: ${X402_BOOST_SKUS.join(', ')}`,
+            : `Invalid sku. x402 accepts: ${ONE_TIME_BOOST_SKUS.join(', ')}`,
       },
       { status: 400 },
     );

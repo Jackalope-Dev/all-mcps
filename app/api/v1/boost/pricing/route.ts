@@ -5,7 +5,7 @@ import {
   agentPriceCents,
   FREE_TIER,
   formatUsd,
-  isX402BoostSku,
+  isOneTimeBoostSku,
   PAID_PRODUCTS,
 } from '@/lib/pricing';
 import { x402Status } from '@/lib/x402';
@@ -27,7 +27,7 @@ export async function GET() {
     mode: p.mode,
     payment_methods: [
       'stripe_checkout',
-      ...(x402.enabled && isX402BoostSku(p.sku) ? ['x402'] : []),
+      ...(x402.enabled && isOneTimeBoostSku(p.sku) ? ['x402'] : []),
     ],
     ...(p.weeklyTiers
       ? { weekly_tiers: p.weeklyTiers, max_weeks: p.maxWeeks ?? 8 }

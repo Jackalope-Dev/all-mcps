@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import {
   AGENT_PROMO_CODE,
   formatUsd,
-  isX402BoostSku,
+  isOneTimeBoostSku,
   PAID_PRODUCTS,
   type PaidSku,
 } from '@/lib/pricing';
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
       coupon_applied: checkoutResult.promoApplied === true,
       checkout_url: checkoutResult.url,
       session_id: checkoutResult.sessionId,
-      ...(x402.enabled && isX402BoostSku(sku)
+      ...(x402.enabled && isOneTimeBoostSku(sku)
         ? {
             x402: {
               endpoint: x402.boost_endpoint,

@@ -202,18 +202,18 @@ export function agentPriceCents(cents: number): number {
 }
 
 /**
- * SKUs an agent can pay for over x402. x402's "exact" scheme is a one-time
- * transfer, so the Premium subscription stays on Stripe checkout.
+ * One-time SKUs agents can buy over x402 and ACP. Both rails take a single
+ * payment, so the Premium subscription stays on Stripe checkout.
  */
-export const X402_BOOST_SKUS = [
+export const ONE_TIME_BOOST_SKUS = [
   'priority_review',
   'featured_7d',
   'category_sponsor_7d',
 ] as const satisfies readonly PaidSku[];
-export type X402BoostSku = (typeof X402_BOOST_SKUS)[number];
+export type OneTimeBoostSku = (typeof ONE_TIME_BOOST_SKUS)[number];
 
-export function isX402BoostSku(sku: string): sku is X402BoostSku {
-  return (X402_BOOST_SKUS as readonly string[]).includes(sku);
+export function isOneTimeBoostSku(sku: string): sku is OneTimeBoostSku {
+  return (ONE_TIME_BOOST_SKUS as readonly string[]).includes(sku);
 }
 
 /** Weeks clamped to the product's range (1 for untiered SKUs). */

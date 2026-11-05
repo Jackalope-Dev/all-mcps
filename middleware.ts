@@ -118,6 +118,14 @@ export function middleware(req: NextRequest) {
   ) {
     response = NextResponse.rewrite(new URL('/api/well-known/acp', req.url));
   } else if (
+    pathname === '/.well-known/agent-card.json' ||
+    // A2A 0.2.x path; 0.3+ clients use agent-card.json.
+    pathname === '/.well-known/agent.json'
+  ) {
+    response = NextResponse.rewrite(
+      new URL('/api/well-known/agent-card', req.url),
+    );
+  } else if (
     pathname === '/.well-known/mcp.json' ||
     pathname === '/.well-known/mcp'
   ) {
@@ -190,6 +198,7 @@ export function middleware(req: NextRequest) {
     '</docs/api>; rel="service-doc"',
     '</.well-known/agent-skills/index.json>; rel="agent-skills"',
     '</.well-known/mcp/server-card.json>; rel="mcp-server-card"',
+    '</.well-known/agent-card.json>; rel="a2a-agent-card"',
     '</.well-known/openid-configuration>; rel="oauth-authorization-server"',
     '</.well-known/oauth-protected-resource>; rel="oauth-protected-resource"',
     '</auth.md>; rel="authorizing-agent"',

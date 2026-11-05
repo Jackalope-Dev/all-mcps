@@ -847,6 +847,55 @@ export async function GET() {
           },
         },
       },
+      '/api/a2a': {
+        post: {
+          summary: 'A2A (Agent2Agent) JSON-RPC endpoint',
+          description:
+            'A2A 1.0 and 0.3 JSON-RPC binding; send `A2A-Version: 1.0` for 1.0. Each MCP tool is an A2A skill: SendMessage with a data part `{ "skill": "<tool name>", "arguments": {...} }`, or a text part to search. Answers with a Message (no tasks are kept). Agent card: /.well-known/agent-card.json.',
+          operationId: 'a2aJsonRpc',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['jsonrpc', 'method', 'id'],
+                  properties: {
+                    jsonrpc: { type: 'string', enum: ['2.0'] },
+                    id: {},
+                    method: { type: 'string', example: 'SendMessage' },
+                    params: { type: 'object' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'JSON-RPC 2.0 response (errors use A2A codes).',
+              content: { 'application/json': { schema: { type: 'object' } } },
+            },
+          },
+        },
+      },
+      '/api/acp/checkout_sessions': {
+        post: {
+          summary: 'Agentic Commerce Protocol checkout (boosts)',
+          description:
+            'ACP 2026-04-17 checkout_sessions API for buying listing boosts with a Stripe shared payment token. Also GET/POST /api/acp/checkout_sessions/{id}, POST .../complete and .../cancel. Needs `Authorization: Bearer` (agent token with the checkout:write scope), `API-Version: 2026-04-17` and `Idempotency-Key`. Item ids are `<sku>:<listing id>`; quantity is weeks for weekly SKUs. Full contract: https://github.com/agentic-commerce-protocol/agentic-commerce-protocol. Returns 503 while ACP is not enabled.',
+          operationId: 'acpCreateCheckoutSession',
+          security: [{ agentBearerAuth: ['checkout:write'] }],
+          responses: {
+            '201': {
+              description: 'The checkout session.',
+              content: { 'application/json': { schema: { type: 'object' } } },
+            },
+            '400': errorResponse('Bad headers or line items.'),
+            '401': errorResponse('Missing or invalid agent token.'),
+            '503': errorResponse('ACP is not enabled.'),
+          },
+        },
+      },
       '/api/badge/{id}': {
         get: {
           summary: 'Generate dynamic SVG badge',

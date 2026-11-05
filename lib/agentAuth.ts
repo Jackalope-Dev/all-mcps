@@ -9,7 +9,7 @@ import { agentTokens, users } from '@/db/schema';
  * table). Extend this list (and the corresponding `hasScope` check at the
  * call site) as more agent-authenticated write endpoints are added.
  */
-export const AGENT_SCOPES = ['listings:claim'] as const;
+export const AGENT_SCOPES = ['listings:claim', 'checkout:write'] as const;
 export type AgentScope = (typeof AGENT_SCOPES)[number];
 
 /** Legacy tokens/registrations minted before scopes existed carry this — the exact capability set they always had. */
@@ -27,6 +27,11 @@ export const AGENT_SCOPE_DETAILS: Record<
       'POST /api/v1/agent/claim',
       'MCP tool: verify_mcp_claim (with an agentToken)',
     ],
+  },
+  'checkout:write': {
+    description:
+      'Create, update, complete and cancel Agentic Commerce Protocol checkout sessions to buy listing boosts. Payment still needs a Stripe shared payment token the buyer granted; this scope alone cannot spend money.',
+    requiredBy: ['ACP: /api/acp/checkout_sessions (all endpoints)'],
   },
 };
 

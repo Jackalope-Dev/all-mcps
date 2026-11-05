@@ -14,7 +14,7 @@ DNS-AID utilizes ServiceMode `SVCB` or `HTTPS` records under subdomains prefixed
 
 ```dns
 _index._agents.allmcps.com. IN HTTPS 1 . alpn="h2,h3" port="443" uri="https://allmcps.com/.well-known/agent-skills/index.json"
-_a2a._agents.allmcps.com.   IN HTTPS 1 . alpn="h2,h3" port="443" uri="https://allmcps.com/.well-known/api-catalog"
+_a2a._agents.allmcps.com.   IN HTTPS 1 . alpn="h2,h3" port="443" uri="https://allmcps.com/.well-known/agent-card.json"
 _mcp._agents.allmcps.com.   IN HTTPS 1 . alpn="h2,h3" port="443" uri="https://allmcps.com/.well-known/mcp/server-card.json"
 ```
 

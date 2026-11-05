@@ -31,7 +31,7 @@ export async function GET() {
           'Boost MCP server listings and buy sponsor ads, paying by Stripe checkout or autonomously over x402',
         url: 'https://allmcps.com/.well-known/agent-skills/mcp-monetization/SKILL.md',
         sha256:
-          '165141d593b0ecc24235dcf6b4b41edc605b28575fc17be7613dcacec21c7505',
+          '0e0ddfd8321d8610d4056a71ab645b5eaeac5b04f025d7fb793a2679d5749bc5',
       },
     ],
   };

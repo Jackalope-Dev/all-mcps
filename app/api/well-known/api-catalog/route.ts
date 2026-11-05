@@ -27,6 +27,16 @@ export async function GET() {
           },
         ],
       },
+      {
+        anchor: 'https://allmcps.com/api/a2a',
+        'service-desc': [
+          {
+            href: 'https://allmcps.com/.well-known/agent-card.json',
+            type: 'application/json',
+            title: 'AllMCPs A2A Agent Card (JSON-RPC, A2A 1.0 and 0.3)',
+          },
+        ],
+      },
     ],
   };
 
