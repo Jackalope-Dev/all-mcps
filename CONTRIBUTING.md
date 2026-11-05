@@ -75,10 +75,11 @@ than relying on what you remember from earlier versions. See
 **UI work follows [BRAND_GUIDE.md](./BRAND_GUIDE.md)** — colors, typography
 (Atkinson Hyperlegible Next), and logo usage via `components/BrandLogo.tsx`.
 
-**Blog posts** are one markdown file at `content/blog/YYYY-MM-DD-slug.md`. The
-filename is the source of truth for date and slug; everything else — tags,
-search, RSS, sitemap, structured data — is generated from the file. The
-frontmatter schema is documented in [AGENTS.md](./AGENTS.md).
+**Blog posts** are written and published by LopeBase, which opens a pull request
+adding `content/blog/<slug>.md`; a workflow merges it once CI passes. Don't
+hand-write posts here. Everything else (tags, search, RSS, sitemap, structured
+data) is generated from the file. The front-matter format is documented in
+[AGENTS.md](./AGENTS.md).
 
 **Sitemap `lastmod` values are honest.** Static marketing pages carry a hand-
 maintained ship date in `STATIC_PAGE_LASTMOD` (`lib/sitemapHelpers.ts`) rather

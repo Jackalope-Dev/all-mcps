@@ -101,10 +101,10 @@ function collectUrlBuckets() {
   const blogDir = path.join(rootDir, 'content', 'blog');
   if (fs.existsSync(blogDir)) {
     const files = fs.readdirSync(blogDir).filter((f) => f.endsWith('.md'));
-    const pattern = /^(\d{4}-\d{2}-\d{2})-(.+)\.md$/;
+    const pattern = /^([a-z0-9]+(?:-[a-z0-9]+)*)\.md$/;
     for (const file of files) {
       const match = file.match(pattern);
-      if (match) add(core, `${BASE_URL}/blog/${encodeURIComponent(match[2])}`);
+      if (match) add(core, `${BASE_URL}/blog/${encodeURIComponent(match[1])}`);
     }
   }
 

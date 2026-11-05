@@ -89,7 +89,7 @@ app/           App Router routes — directory, listings, tools, guides, blog, A
 components/    Shared React components and UI primitives
 lib/           Data access and domain logic (lib/servers.ts is the entry point)
 db/ drizzle/   Drizzle schema and numbered migrations
-content/blog/  Markdown blog posts (YYYY-MM-DD-slug.md)
+content/blog/  Markdown blog posts (<slug>.md), published by LopeBase
 mcp-server/    The AllMCPs MCP server itself
 scripts/       Build, enrichment, ingest, and maintenance scripts
 ```

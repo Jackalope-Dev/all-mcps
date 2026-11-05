@@ -2,10 +2,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import matter from 'gray-matter';
 import blogManifest from './blog-manifest.json';
-import { keywordTokens } from './blogPipeline/similarity';
+import { keywordTokens } from './blogTitleTokens';
+import { BLOG_TOPICS, type BlogTopic, MAX_POST_TOPICS } from './blogTopics';
 
+/**
+ * Blog posts are written and published by LopeBase (the content autopilot): it
+ * opens a pull request adding `content/blog/<slug>.md` in its "markdown"
+ * format, which .github/workflows/lopebase-posts.yml merges once CI passes.
+ * This module reads that format; see AGENTS.md → Blog Posts.
+ */
 const BLOG_DIR = path.join(process.cwd(), 'content', 'blog');
-const FILENAME_PATTERN = /^(\d{4}-\d{2}-\d{2})-(.+)\.md$/;
+const FILENAME_PATTERN = /^([a-z0-9]+(?:-[a-z0-9]+)*)\.md$/;
 
 type BlogFaq = {
   q: string;
@@ -15,44 +22,171 @@ type BlogFaq = {
 export type BlogPost = {
   slug: string;
   title: string;
+  /** YYYY-MM-DD the post went live. */
   date: string;
+  /** YYYY-MM-DD of the last real edit (LopeBase writes `updated`), else `date`. */
+  updated: string;
   excerpt: string;
+  /** 1-2 of BLOG_TOPICS, main topic first (labels the OG card and filter chips). */
   tags: string[];
+  /** LopeBase's free-form tags: meta keywords only, never filter chips. */
+  keywords: string[];
   faq: BlogFaq[];
+  /**
+   * First image LopeBase rendered for the post (it is also placed in the body),
+   * used for structured data and social previews only.
+   */
+  image?: { url: string; alt: string };
   readingTime: number;
   content: string;
 };
 
-function readPostFile(filename: string): BlogPost {
-  const match = filename.match(FILENAME_PATTERN);
+/** A post file split into front matter and body, before normalization. */
+export type RawPostFile = {
+  file: string;
+  data: Record<string, unknown>;
+  content: string;
+};
+
+/**
+ * Keyword cues for free-form tags that are not BLOG_TOPICS. LopeBase is told
+ * to lead with BLOG_TOPICS names; this only catches drift, first match wins.
+ */
+const TOPIC_CUES: [BlogTopic, RegExp][] = [
+  [
+    'Security',
+    /secur|auth|oauth|permission|secret|credential|injection|sandbox|vulnerab|threat|privacy/,
+  ],
+  [
+    'Deployment',
+    /deploy|docker|hosting|kubernetes|serverless|scal|production|observab|logging|monitor|cloudflare|container/,
+  ],
+  [
+    'Building Servers',
+    /build|sdk|typescript|python|implement|schema|transport|tool design|develop|testing|debug/,
+  ],
+  ['Directory & News', /directory|registry|news|allmcps/],
+];
+
+function toDay(value: unknown): string | undefined {
+  if (value instanceof Date && !Number.isNaN(value.getTime()))
+    return value.toISOString().slice(0, 10);
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value))
+    return value.slice(0, 10);
+  return undefined;
+}
+
+function stringList(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((v): v is string => typeof v === 'string' && v.trim() !== '')
+    : [];
+}
+
+/** Map front-matter tags onto 1-2 BLOG_TOPICS, keeping the post's order. */
+export function postTopics(tags: string[], title: string): BlogTopic[] {
+  const topics: BlogTopic[] = [];
+  const add = (t: BlogTopic) => {
+    if (!topics.includes(t) && topics.length < MAX_POST_TOPICS) topics.push(t);
+  };
+  for (const tag of tags) {
+    const exact = BLOG_TOPICS.find(
+      (t) => t.toLowerCase() === tag.trim().toLowerCase(),
+    );
+    if (exact) add(exact);
+  }
+  if (topics.length === 0) {
+    const haystack = [...tags, title].join(' ').toLowerCase();
+    for (const [topic, cue] of TOPIC_CUES) if (cue.test(haystack)) add(topic);
+  }
+  if (topics.length === 0) add('Using MCP');
+  return topics;
+}
+
+/**
+ * LopeBase keeps the FAQ in the body (## FAQ with ### questions) and also
+ * writes it to front matter. The page renders the front-matter copy with
+ * FAQPage data, so drop the body section rather than show it twice.
+ */
+export function stripFaqSection(body: string): string {
+  return body
+    .replace(
+      /^##[ \t]+(?:FAQs?|Frequently asked questions)[ \t]*\n[\s\S]*?(?=^##[ \t]|(?![\s\S]))/im,
+      '',
+    )
+    .trim();
+}
+
+function parseFaq(value: unknown): BlogFaq[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (f): f is BlogFaq =>
+      typeof f === 'object' &&
+      f !== null &&
+      typeof (f as BlogFaq).q === 'string' &&
+      typeof (f as BlogFaq).a === 'string',
+  );
+}
+
+export function toBlogPost({ file, data, content }: RawPostFile): BlogPost {
+  const match = file.match(FILENAME_PATTERN);
   if (!match) {
     throw new Error(
-      `Blog post filename "${filename}" must match YYYY-MM-DD-slug.md`,
+      `Blog post filename "${file}" must be a kebab-case slug.md`,
     );
   }
-  const [, date, slug] = match;
-
-  const raw = fs.readFileSync(path.join(BLOG_DIR, filename), 'utf8');
-  const { data, content } = matter(raw);
-
-  if (!data.title || !data.excerpt) {
+  const slug = match[1];
+  const date = toDay(data.date);
+  const title = typeof data.title === 'string' ? data.title : '';
+  const excerpt = typeof data.description === 'string' ? data.description : '';
+  if (!title || !excerpt || !date) {
     throw new Error(
-      `Blog post "${filename}" is missing required frontmatter (title, excerpt)`,
+      `Blog post "${file}" is missing required front matter (title, description, date)`,
     );
   }
 
-  const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
+  const rawTags = stringList(data.tags);
+  const tags = postTopics(rawTags, title);
+  const faq = parseFaq(data.faq);
+  const body = faq.length > 0 ? stripFaqSection(content) : content.trim();
+  const wordCount = body.split(/\s+/).filter(Boolean).length;
+  const imageUrl =
+    typeof data.image === 'string' && data.image.startsWith('https://')
+      ? data.image
+      : undefined;
 
   return {
     slug,
-    title: data.title as string,
+    title,
     date,
-    excerpt: data.excerpt as string,
-    tags: Array.isArray(data.tags) ? (data.tags as string[]) : [],
-    faq: Array.isArray(data.faq) ? (data.faq as BlogFaq[]) : [],
+    updated: toDay(data.updated) ?? date,
+    excerpt,
+    tags,
+    keywords: rawTags.filter((t) => !(tags as string[]).includes(t)),
+    faq,
+    ...(imageUrl
+      ? {
+          image: {
+            url: imageUrl,
+            alt: typeof data.image_alt === 'string' ? data.image_alt : '',
+          },
+        }
+      : {}),
     readingTime: Math.max(1, Math.ceil(wordCount / 200)),
-    content: content.trim(),
+    content: body,
   };
+}
+
+function readPostFiles(dir = BLOG_DIR): RawPostFile[] {
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith('.md'))
+    .map((file) => {
+      const { data, content } = matter(
+        fs.readFileSync(path.join(dir, file), 'utf8'),
+      );
+      return { file, data, content };
+    });
 }
 
 function getTodayString(): string {
@@ -63,26 +197,16 @@ export function getAllPosts(): BlogPost[] {
   const today = getTodayString();
   const includeFuture = process.env.INCLUDE_FUTURE_POSTS === 'true';
 
-  let rawPosts: BlogPost[] = [];
-
+  let files: RawPostFile[] = [];
   try {
-    if (fs.existsSync(BLOG_DIR)) {
-      const filenames = fs
-        .readdirSync(BLOG_DIR)
-        .filter((f) => f.endsWith('.md'));
-      if (filenames.length > 0) {
-        rawPosts = filenames.map(readPostFile);
-      }
-    }
+    files = readPostFiles();
   } catch {
-    // If fs fails (e.g. in Cloudflare Worker environment), fall back to static blogManifest
+    // No fs on the Cloudflare Worker: fall back to the prebuild manifest.
   }
+  if (files.length === 0) files = blogManifest as RawPostFile[];
 
-  if (rawPosts.length === 0) {
-    rawPosts = blogManifest as BlogPost[];
-  }
-
-  return rawPosts
+  return files
+    .map(toBlogPost)
     .filter((post) => includeFuture || post.date <= today)
     .sort((a, b) => (a.date < b.date ? 1 : -1));
 }
