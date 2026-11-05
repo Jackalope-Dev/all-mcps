@@ -36,7 +36,7 @@ import { calculateCtr, formatUsdAmount } from '../../../../lib/ads';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Campaign Analytics Dashboard — AllMCPs Ads',
+  title: 'Campaign Analytics Dashboard - AllMCPs Ads',
   robots: {
     index: false,
     follow: false,

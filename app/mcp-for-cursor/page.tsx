@@ -4,7 +4,7 @@ import { serializeJsonLd } from '@/lib/jsonLd';
 import { getCuratedStarterServers } from '@/lib/servers';
 
 export const metadata: Metadata = {
-  title: 'Top MCP Servers for Cursor IDE — Setup Guide',
+  title: 'Top MCP Servers for Cursor IDE - Setup Guide',
   description:
     'Discover top Model Context Protocol (MCP) tools for Cursor IDE. Interactive setup guide for Cursor MCP server configurations on macOS and Windows.',
   alternates: { canonical: 'https://allmcps.com/mcp-for-cursor' },

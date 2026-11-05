@@ -25,7 +25,7 @@ import { getSiteStats } from '../../lib/siteStats';
 import { PricingClient } from './PricingClient';
 
 export const metadata: Metadata = {
-  title: 'Pricing & Sponsorships — Featured MCP Listings',
+  title: 'Pricing & Sponsorships - Featured MCP Listings',
   description:
     'Promote your Model Context Protocol server on AllMCPs with featured placements, dofollow backlinks, real-time agent analytics, and priority review.',
   alternates: { canonical: 'https://allmcps.com/pricing' },
@@ -38,14 +38,14 @@ export const metadata: Metadata = {
         alt: 'AllMCPs',
       },
     ],
-    title: 'Pricing & Sponsorships — Featured MCP Listings | AllMCPs',
+    title: 'Pricing & Sponsorships - Featured MCP Listings | AllMCPs',
     description:
       'Promote your Model Context Protocol server on AllMCPs with featured placements, dofollow backlinks, real-time agent analytics, and priority review.',
     url: 'https://allmcps.com/pricing',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Pricing & Sponsorships — Featured MCP Listings | AllMCPs',
+    title: 'Pricing & Sponsorships - Featured MCP Listings | AllMCPs',
     description:
       'Promote your Model Context Protocol server on AllMCPs with featured placements, dofollow backlinks, real-time agent analytics, and priority review.',
   },

@@ -4,7 +4,7 @@ import { serializeJsonLd } from '@/lib/jsonLd';
 import { getCuratedStarterServers } from '@/lib/servers';
 
 export const metadata: Metadata = {
-  title: 'Top MCP Servers for Claude Desktop — Setup Guide',
+  title: 'Top MCP Servers for Claude Desktop - Setup Guide',
   description:
     'Discover top Model Context Protocol (MCP) tools for Anthropic Claude Desktop. Interactive setup guide for claude_desktop_config.json on macOS and Windows.',
   alternates: { canonical: 'https://allmcps.com/mcp-for-claude-desktop' },

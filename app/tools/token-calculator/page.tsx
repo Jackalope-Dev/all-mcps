@@ -3,7 +3,7 @@ import { TokenCalculatorTool } from '../../../components/tools/TokenCalculatorTo
 import { ToolPage } from '../../../components/tools/ToolPage';
 
 export const metadata: Metadata = {
-  title: 'MCP Token Cost Calculator — Estimate Context Usage',
+  title: 'MCP Token Cost Calculator - Estimate Context Usage',
   description:
     'Estimate how many tokens your MCP servers tool schemas cost against your context window. Paste real tool JSON, or quick-estimate from the directory.',
   alternates: { canonical: 'https://allmcps.com/tools/token-calculator' },

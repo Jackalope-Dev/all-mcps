@@ -4,7 +4,7 @@ import { ConfigAuditor } from '@/components/tools/ConfigAuditor';
 import { ToolPage } from '@/components/tools/ToolPage';
 
 export const metadata: Metadata = {
-  title: 'MCP Config Auditor & Merger — Combine Configs',
+  title: 'MCP Config Auditor & Merger - Combine Configs',
   description:
     'Audit claude_desktop_config.json, Cursor, Windsurf, and Cline MCP configs for syntax errors, missing API key placeholders, and duplicate server keys.',
   alternates: { canonical: 'https://allmcps.com/tools/config-auditor' },

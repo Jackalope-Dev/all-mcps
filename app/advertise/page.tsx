@@ -31,14 +31,14 @@ const CPM_TIER_HUE: Record<string, Hue> = {
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Advertise on AllMCPs — Sponsor the MCP Directory',
+  title: 'Advertise on AllMCPs - Sponsor the MCP Directory',
   description:
     'Sponsor AllMCPs with logo and copy ads across the MCP server directory, search results, and our MCP server. Transparent CPM pricing, every ad reviewed by hand.',
   alternates: {
     canonical: 'https://allmcps.com/advertise',
   },
   openGraph: {
-    title: 'Advertise on AllMCPs — Sponsor the MCP Directory',
+    title: 'Advertise on AllMCPs - Sponsor the MCP Directory',
     description:
       'Sponsor AllMCPs with logo and copy ads across the MCP server directory, search results, and our MCP server.',
     images: [

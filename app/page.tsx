@@ -19,7 +19,7 @@ import { getSiteStats } from '../lib/siteStats';
 
 export const metadata: Metadata = {
   title: {
-    absolute: 'AllMCPs — Discover & Install MCP Servers for AI Agents',
+    absolute: 'AllMCPs - Discover & Install MCP Servers for AI Agents',
   },
   description:
     'Find and install MCP servers for Claude, Cursor, and other AI agents. Search thousands of listings by the job you need done.',
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
         alt: 'AllMCPs',
       },
     ],
-    title: 'AllMCPs — Discover & Install MCP Servers for AI Agents',
+    title: 'AllMCPs - Discover & Install MCP Servers for AI Agents',
     description:
       'Find and install MCP servers for Claude, Cursor, and other AI agents. Search thousands of listings by the job you need done.',
     url: 'https://allmcps.com',
