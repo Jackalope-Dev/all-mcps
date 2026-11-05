@@ -347,31 +347,30 @@
 /* ── In-feed sponsor row (components/ads/SponsorAdUnit.tsx) ───────────── */
 
 .dir-ad-slot {
-  background: var(--bg-muted);
+  padding: 0.6rem;
 }
 
+/* One bordered card everywhere it appears: list view (inset in its row),
+   grid view (full-width span) and the homepage strip. */
 .dir-ad-row {
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr) auto;
   align-items: center;
   gap: 0 1rem;
   padding: 0.85rem 1.1rem;
-}
-
-.dir-grid-span .dir-ad-row {
-  border: 1px dashed var(--border-strong);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
   background: var(--bg-muted);
 }
 
 .dir-ad-row--loading {
   min-height: 72px;
-  border-radius: 0;
   padding: 0;
+  border: 0;
 }
 
-.dir-grid-span .dir-ad-row--loading {
-  border-radius: var(--radius-lg);
+.home-sponsor {
+  margin-top: 1.25rem;
 }
 
 .dir-ad-icon,
@@ -2824,6 +2823,71 @@
 
 .sponsor-skeleton {
   border-radius: var(--radius-lg);
+}
+
+.sponsor.blog-sponsor {
+  margin: 0 0 1.25rem;
+}
+
+/* ── Sponsor sweep: a short accent highlight travels once around the
+   border, then rests for a few seconds. Draws attention to the slot without
+   flashing or moving the content. Overlays the existing 1px border via a
+   masked pseudo-element, so the card's own background is untouched. ── */
+
+@property --sponsor-sweep {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.sponsor,
+.dir-ad-row:not(.dir-ad-row--loading) {
+  position: relative;
+}
+
+.sponsor::after,
+.dir-ad-row:not(.dir-ad-row--loading)::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  padding: 1px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--sponsor-sweep),
+    transparent 0deg 250deg,
+    rgba(var(--accent-rgb), 0.35) 310deg,
+    rgba(var(--accent-rgb), 0.95) 352deg,
+    transparent 360deg
+  );
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+  pointer-events: none;
+  opacity: 0;
+  animation: sponsor-sweep 7s linear infinite;
+}
+
+@keyframes sponsor-sweep {
+  0% {
+    --sponsor-sweep: 0deg;
+    opacity: 0;
+  }
+  6%,
+  40% {
+    opacity: 1;
+  }
+  46%,
+  100% {
+    --sponsor-sweep: 360deg;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sponsor::after,
+  .dir-ad-row::after {
+    display: none;
+  }
 }
 
 .sponsor-skeleton--card {
