@@ -1146,7 +1146,10 @@ export const adminAudit = sqliteTable(
 );
 
 /**
- * Blog content pipeline (lib/blogPipeline). Three tables:
+ * RETIRED (Nov 2026): the in-repo blog pipeline was removed when LopeBase took
+ * over writing and publishing posts (see lib/blog.ts). Nothing reads or writes
+ * these three tables any more; they are kept only until a migration drops them.
+ * What they held:
  *
  * - `content_index`: every indexable page the pipeline must not cannibalize or
  *   duplicate — published posts, guides, /best and /clients hubs, and in-flight

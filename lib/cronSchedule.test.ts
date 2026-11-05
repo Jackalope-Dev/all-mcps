@@ -65,13 +65,6 @@ describe('jobsForTick', () => {
     expect(jobsForTick('*/10 * * * *', 'site')).toEqual([]);
     expect(jobsForTick('*/10 * * * *', 'all')).toEqual([]);
   });
-
-  it('keeps the blog pipeline last in the slow list (it spends ~9 min of budget)', () => {
-    for (const role of ['site', 'all'] as const) {
-      const slow = paths(jobsForTick('4 */4 * * *', role));
-      expect(slow.at(-1)).toBe('/api/cron/blog-pipeline');
-    }
-  });
 });
 
 describe('isOffloadedCronPath', () => {

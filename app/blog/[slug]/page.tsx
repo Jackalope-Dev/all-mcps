@@ -46,7 +46,8 @@ export async function generateMetadata({
     title: metaTitle,
     description: metaDescription,
     keywords: [
-      ...(Array.isArray(post.tags) ? post.tags : []),
+      ...post.tags,
+      ...post.keywords,
       'MCP',
       'Model Context Protocol',
     ].join(', '),
@@ -59,7 +60,7 @@ export async function generateMetadata({
       url,
       type: 'article',
       publishedTime: `${post.date}T12:00:00.000Z`,
-      modifiedTime: `${post.date}T12:00:00.000Z`,
+      modifiedTime: `${post.updated}T12:00:00.000Z`,
       authors: [SITE_AUTHOR.name],
       tags: post.tags,
     },
@@ -102,9 +103,12 @@ export default async function BlogPostPage({
         headline: post.title,
         description: post.excerpt,
         url,
-        image: 'https://allmcps.com/opengraph-image',
+        image: [
+          ...(post.image ? [post.image.url] : []),
+          `${url}/opengraph-image`,
+        ],
         datePublished: post.date,
-        dateModified: post.date,
+        dateModified: post.updated,
         keywords: post.tags.join(', '),
         articleSection: post.tags,
         inLanguage: 'en-US',
@@ -176,8 +180,8 @@ export default async function BlogPostPage({
       <ArticleLayout
         crumbs={[{ label: 'Blog', href: '/blog' }, { label: post.title }]}
         title={post.title}
-        updated={post.date}
-        updatedLabel="Published"
+        updated={post.updated}
+        updatedLabel={post.updated === post.date ? 'Published' : 'Updated'}
         readingMinutes={post.readingTime}
         meta={
           post.tags.length > 0 ? (

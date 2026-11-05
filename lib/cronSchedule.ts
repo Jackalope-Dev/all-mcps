@@ -95,7 +95,7 @@ export const FAST_JOBS: CronJob[] = [
   { path: '/api/cron/endpoint-discovery', secretVar: 'CRON_SECRET' },
   // Catalog ingest (app/api/cron/ingest): new servers from public sources,
   // staged as pending. On the :30 fast ticks rather than the 4h list so its
-  // bounded few minutes never sit in front of blog-pipeline's long budget.
+  // bounded few minutes never queue behind the slow 4h list.
   // Registry every 4h with a 6h window (overlap absorbs a slow tick), plus a
   // 30h catch-up once a day; the other sources daily, an hour apart.
   ...CATALOG_SOURCING_JOBS,
@@ -207,11 +207,6 @@ export const SLOW_JOBS: CronJob[] = [
   // regenerates any whose cached render still says nofollow. Every tick; a
   // few dozen page loads.
   { path: '/api/cron/listing-rel-audit', secretVar: 'CRON_SECRET' },
-  // Blog content pipeline: corpus sync, topic dedupe, draft → self-review →
-  // revise (lib/blogPipeline). Deliberately LAST — it spends up to ~9 min of
-  // its own time budget on LLM calls, so everything above runs first. Stops
-  // itself once BACKLOG_CAP drafts are waiting for review in /admin → Blog Drafts.
-  { path: '/api/cron/blog-pipeline', secretVar: 'CRON_SECRET' },
 ];
 
 /**
@@ -241,7 +236,6 @@ export const JOB_SECRET_NAMES = [
   'RESEND_API_KEY',
   'SEQUENZY_API_KEY',
   'SEQUENZY_CAMPAIGNS_API_KEY',
-  'BLOG_PUBLISH_TOKEN',
   'LOPEBASE_SIGNING_SECRET',
   // Jev (lib/typesafe.ts): stale-sweep triage, auto-promote, ai-content. A
   // missing key makes every Jev call a silent no-op, so the automation gates

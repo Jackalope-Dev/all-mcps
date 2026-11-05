@@ -1,4 +1,4 @@
-import { asc, count, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
+import { asc, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { Globe, LogOut, ShieldAlert } from 'lucide-react';
 import type { Metadata } from 'next';
@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { PageShell } from '../../components/PageShell';
 import {
-  blogDrafts,
   listingSignals,
   reports,
   reviews,
@@ -195,11 +194,6 @@ async function getAdminData() {
         .from(sponsorAds)
         .orderBy(desc(sponsorAds.createdAt));
 
-      const [blogReady] = await db
-        .select({ n: count() })
-        .from(blogDrafts)
-        .where(eq(blogDrafts.status, 'ready'));
-
       const map = (s: (typeof pendingServers)[0]) => ({
         ...s,
         createdAt:
@@ -260,7 +254,6 @@ async function getAdminData() {
         })),
         recentlyAdded: recentlyAdded.map(mapRecent),
         ads: ads.map(mapAd),
-        blogReadyCount: blogReady?.n ?? 0,
         stats: await getAdminStats(db),
       };
     }
@@ -281,7 +274,6 @@ async function getAdminData() {
     pendingReviewComments: [],
     recentlyAdded: [],
     ads: [],
-    blogReadyCount: 0,
     stats: EMPTY_STATS,
   };
 }
@@ -329,7 +321,6 @@ export default async function AdminPage() {
     pendingReviewComments,
     recentlyAdded,
     ads,
-    blogReadyCount,
     stats,
   } = await getAdminData();
 
@@ -366,7 +357,6 @@ export default async function AdminPage() {
         initialPendingReviewComments={pendingReviewComments as any}
         recentlyAdded={recentlyAdded as any}
         initialAds={ads as any}
-        initialBlogReadyCount={blogReadyCount}
         stats={stats}
       />
     </PageShell>

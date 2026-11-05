@@ -12,6 +12,8 @@ export const BLOG_TOPICS = [
   'Directory & News',
 ] as const;
 
+export type BlogTopic = (typeof BLOG_TOPICS)[number];
+
 export const MAX_POST_TOPICS = 2;
 
 export function isBlogTopic(tag: string): boolean {
