@@ -1,4 +1,4 @@
-import { asc, count, desc, eq, isNotNull, sql } from 'drizzle-orm';
+import { asc, count, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { Globe, LogOut, ShieldAlert } from 'lucide-react';
 import type { Metadata } from 'next';
@@ -7,16 +7,25 @@ import { redirect } from 'next/navigation';
 import { PageShell } from '../../components/PageShell';
 import {
   blogDrafts,
+  listingSignals,
   reports,
   reviews,
   servers,
   sponsorAds,
+  stdioVerifications,
   users,
 } from '../../db/schema';
 import { type AdminStats, getAdminStats } from '../../lib/adminStats';
 import { auth } from '../../lib/auth';
+import {
+  GATE_EVIDENCE_COLUMNS,
+  recommendPending,
+  submitterSignals,
+} from '../../lib/autoDecision';
+import { calibrationNote, getGateCalibration } from '../../lib/gateCalibration';
 import { getSubmitterHistory } from '../../lib/submitterHistory';
 import AdminClient from './AdminClient';
+import type { GateCallData } from './GateCall';
 
 export const dynamic = 'force-dynamic';
 
@@ -101,6 +110,16 @@ async function getAdminData() {
           return new Map();
         },
       );
+      // The gate's call and Jev's verdict for each manual submission, so the
+      // Submissions tab shows the same recommendation as Triage (it used to
+      // show neither). Never blocks the page.
+      const gateCalls = await submissionGateCalls(
+        db,
+        pendingServers.filter((s) => s.submitterEmail).map((s) => s.id),
+      ).catch((e) => {
+        console.error('submission gate calls failed:', e);
+        return new Map<string, SubmissionGateCall>();
+      });
       const pendingEdits = await db
         .select()
         .from(servers)
@@ -219,6 +238,7 @@ async function getAdminData() {
         pending: pendingServers.map((s) => ({
           ...map(s),
           history: history.get(s.id) ?? null,
+          gate: gateCalls.get(s.id) ?? null,
         })),
         pendingEdits: pendingEdits.map(map),
         pendingClaims: pendingClaims.map(map),
@@ -351,4 +371,60 @@ export default async function AdminPage() {
       />
     </PageShell>
   );
+}
+
+type SubmissionGateCall = {
+  recommendation: GateCallData;
+  triageVerdict: string | null;
+  triageReason: string | null;
+};
+
+/** Indexed lookups by id (chunked under D1's bound-parameter cap). */
+async function submissionGateCalls(
+  db: ReturnType<typeof drizzle>,
+  ids: string[],
+): Promise<Map<string, SubmissionGateCall>> {
+  const out = new Map<string, SubmissionGateCall>();
+  if (ids.length === 0) return out;
+  const [signals, calibration] = await Promise.all([
+    submitterSignals(db, ids),
+    getGateCalibration(db),
+  ]);
+  const now = new Date();
+  for (let i = 0; i < ids.length; i += 90) {
+    const rows = await db
+      .select({
+        ...GATE_EVIDENCE_COLUMNS,
+        id: servers.id,
+        submitterEmail: servers.submitterEmail,
+        triageReason: listingSignals.triageReason,
+      })
+      .from(servers)
+      .leftJoin(listingSignals, eq(listingSignals.serverId, servers.id))
+      .leftJoin(stdioVerifications, eq(stdioVerifications.serverId, servers.id))
+      .where(inArray(servers.id, ids.slice(i, i + 90)));
+    for (const r of rows) {
+      const rec = recommendPending(
+        {
+          ...r,
+          reviewFlagged: Boolean(r.reviewFlagged),
+          ...signals.get(r.id),
+        },
+        now,
+      );
+      out.set(r.id, {
+        recommendation: {
+          ...rec,
+          calibration: calibrationNote(
+            calibration,
+            rec.decision,
+            r.triageVerdict,
+          ),
+        },
+        triageVerdict: r.triageVerdict,
+        triageReason: r.triageReason,
+      });
+    }
+  }
+  return out;
 }
