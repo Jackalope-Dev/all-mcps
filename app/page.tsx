@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { FeaturedServers, HeroFeatured } from '../components/FeaturedCards';
 import { HeroSection } from '../components/HeroSection';
+import { HomeCategoryGrid } from '../components/HomeCategoryGrid';
 import {
   LandingCta,
   LandingFaq,
@@ -11,6 +12,8 @@ import {
 } from '../components/LandingHome';
 import { pickDiscoveryServers } from '../lib/featured';
 import { isFeaturedListing } from '../lib/featuredStatus';
+import { topCategoriesForHome } from '../lib/homeCategories';
+import { getHubCounts } from '../lib/hubIndexability';
 import {
   getActiveServersLight,
   getShowcaseActiveServers,
@@ -50,6 +53,9 @@ export const metadata: Metadata = {
 // sub-15ms Edge CDN response times for root homepage visitors.
 export const revalidate = 300;
 
+/** Category hubs linked from the homepage grid. */
+const HOME_CATEGORY_LINKS = 12;
+
 // `?category=`/`?q=` on `/` used to be handled by reading `searchParams` here and
 // redirecting to /browse — but merely reading that prop (even to find it empty,
 // which is true for virtually all real homepage traffic) forces Next to render
@@ -61,11 +67,14 @@ export default async function Home() {
   // The discovery pool selects lightweight columns only (see
   // getActiveServersLight) and doubles as the paid-placement source and the
   // fallback; the showcase pool is the quality-ranked curated preview.
-  const [showcaseServers, discoveryPool, siteStats] = await Promise.all([
-    getShowcaseActiveServers(8),
-    getActiveServersLight(200),
-    getSiteStats(),
-  ]);
+  const [showcaseServers, discoveryPool, siteStats, hubCounts] =
+    await Promise.all([
+      getShowcaseActiveServers(8),
+      getActiveServersLight(200),
+      getSiteStats(),
+      getHubCounts(),
+    ]);
+  const homeCategories = topCategoriesForHome(hubCounts, HOME_CATEGORY_LINKS);
   // discoveryPool is capped at 200 rows for ranking, so its length is not the
   // catalog size — use the real active-listing count.
   const catalogTotal = Math.max(siteStats.totalServers, discoveryPool.length);
@@ -144,6 +153,7 @@ export default async function Home() {
           hero so they're seen early. */}
       <FeaturedServers servers={previewServers} totalCount={catalogTotal} />
       <LandingIntents />
+      <HomeCategoryGrid categories={homeCategories} />
       <LandingHowItWorks />
       <LandingTrust stats={siteStats} totalCount={catalogTotal} />
       <LandingFaq />

@@ -1045,6 +1045,69 @@
   color: var(--text-tertiary);
 }
 
+/* Hub pagination (categories, tags): plain crawlable page links. */
+.dir-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.dir-pager-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dir-pager-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+.dir-pager-num:hover {
+  border-color: var(--border-accent);
+  color: var(--text-primary);
+}
+.dir-pager-num.is-current {
+  border-color: var(--border-accent);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* "Recently added" links on listing pages: spreads links into the long tail. */
+.lst-recent {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.lst-recent a {
+  font-size: 0.875rem;
+}
+
+/* Directory links under a blog post. */
+.content-hubs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 /* Empty state */
 .dir-empty {
   display: flex;

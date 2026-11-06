@@ -31,9 +31,9 @@ Examples:
 
 That sentence maps to a **category** and a shortlist. On AllMCPs you can jump straight to curated rankings:
 
-- [Best MCP servers by use case](https://allmcps.com/best)
-- Category landings under [Browse categories](https://allmcps.com/categories)
-- Client setup guides under [Install by client](https://allmcps.com/clients)
+- [Best MCP servers by use case](/best)
+- Category landings under [Browse categories](/categories)
+- Client setup guides under [Install by client](/clients)
 
 If you only search by package name, you often miss a better-maintained alternative in the same category. (A curated directory is also a different tool from the [official MCP registry](/blog/mcp-registry-vs-directory-publish-official-registry) — the registry is the machine-readable source of truth clients read from, while a directory adds the comparison and evaluation signals this guide is about.)
 
@@ -66,7 +66,7 @@ Views, installs (copy actions), and upvotes on AllMCPs are **directory engagemen
 
 ### 5. Client fit
 
-MCP is shared, but config shape differs. If your team lives in Cursor or VS Code, skim the matching [client guide](https://allmcps.com/clients) so install steps match reality. A server that only documents Claude Desktop JSON is still usable elsewhere, but you will spend less time if examples match your client.
+MCP is shared, but config shape differs. If your team lives in Cursor or VS Code, skim the matching [client guide](/clients) so install steps match reality. A server that only documents Claude Desktop JSON is still usable elsewhere, but you will spend less time if examples match your client.
 
 ## Use AllMCPs alternatives and compare pages
 
@@ -107,8 +107,8 @@ If two servers tie, prefer the one with clearer docs and a verified listing — 
 
 If you ship an MCP server:
 
-- Submit free at [allmcps.com/submit](https://allmcps.com/submit)
-- Claim the listing and verify your website ([free dofollow path](https://allmcps.com/blog/free-dofollow-backlink-claim-mcp-listing))
+- Submit free at [allmcps.com/submit](/submit)
+- Claim the listing and verify your website ([free dofollow path](/blog/free-dofollow-backlink-claim-mcp-listing))
 - Keep install instructions copy-pasteable
 - Add the AllMCPs badge so reciprocal verification can stay green
 
@@ -116,11 +116,11 @@ Better packaging does not just help you rank — it helps agents and humans pick
 
 ## Related resources on AllMCPs
 
-- [Browse the full directory](https://allmcps.com/browse)
-- [Best MCP servers by use case](https://allmcps.com/best)
-- [How to install MCP servers in Claude, Cursor, Windsurf, and VS Code](https://allmcps.com/blog/how-to-install-mcp-servers-in-claude-cursor-windsurf-and-vs-code)
-- [MCP server not connecting — troubleshooting](https://allmcps.com/blog/mcp-server-not-connecting-troubleshooting-guide)
-- [Agent API docs](https://allmcps.com/docs/api)
-- [Pricing](https://allmcps.com/pricing) if you want optional priority review or premium placement
+- [Browse the full directory](/browse)
+- [Best MCP servers by use case](/best)
+- [How to install MCP servers in Claude, Cursor, Windsurf, and VS Code](/blog/how-to-install-mcp-servers-in-claude-cursor-windsurf-and-vs-code)
+- [MCP server not connecting — troubleshooting](/blog/mcp-server-not-connecting-troubleshooting-guide)
+- [Agent API docs](/docs/api)
+- [Pricing](/pricing) if you want optional priority review or premium placement
 
 Comparing MCP servers well is a product skill, not a popularity contest. Start from the job, shortlist by category, then use alternatives and side-by-side compare pages until the install path and tools clearly win.

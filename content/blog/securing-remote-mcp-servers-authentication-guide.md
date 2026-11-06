@@ -227,4 +227,4 @@ Before promoting a remote MCP server to production environments, verify the foll
 
 ## Summary
 
-Securing remote Model Context Protocol servers requires elevating MCP from local desktop scripting to standard enterprise API security practices. By combining robust HTTP Bearer token validation, OAuth 2.0 PKCE user delegation, multi-tenant database scoping, and aggressive prompt injection defenses, organizations can safely scale LLM agent tool calling across production cloud infrastructure.
+Securing remote Model Context Protocol servers requires elevating MCP from local desktop scripting to standard enterprise API security practices. By combining robust HTTP Bearer token validation, OAuth 2.0 PKCE user delegation, multi-tenant database scoping, and aggressive prompt injection defenses, organizations can safely scale LLM agent tool calling across production cloud infrastructure. For servers that help with this work, such as secret scanners and vulnerability checkers, see the [best security MCP servers](/best/security).

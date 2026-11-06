@@ -923,6 +923,85 @@ export async function getRankingCandidates(filter: {
 }
 
 /**
+ * Ids of the servable listings in one category that we let search engines
+ * index (lib/listingIndexability.ts). Null when D1 is unavailable or fails, so
+ * callers never cache a guess. Feeds the paginated category hubs, which only
+ * link indexable listings past page 1.
+ */
+export async function getIndexableIdsInCategory(
+  category: string,
+): Promise<string[] | null> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (!ctx?.env || !(ctx.env as any).DB) return null;
+    const db = drizzle((ctx.env as any).DB);
+    const rows = await db
+      .select({ id: serversTable.id })
+      .from(serversTable)
+      .where(
+        and(
+          servableFilter(),
+          indexableListingSql(),
+          eq(serversTable.category, category),
+        ),
+      );
+    return rows.map((r) => r.id);
+  } catch (e) {
+    console.error('[servers] indexable ids read failed:', e);
+    return null;
+  }
+}
+
+/** Newest indexable listings per category, cached: read by every listing page. */
+const NEWEST_IN_CATEGORY_CACHE = {
+  freshMs: 6 * 60 * 60 * 1000,
+  maxAgeSeconds: 3 * 24 * 60 * 60,
+};
+
+export type ListingLink = { id: string; name: string };
+
+/**
+ * The `limit` most recently added indexable listings in a category (id + name
+ * only), newest first. Cached per category for 6h because every listing page
+ * in the category reads it. Empty on any failure: it is a garnish.
+ */
+export async function getNewestIndexableInCategory(
+  category: string,
+  limit: number,
+): Promise<ListingLink[]> {
+  const rows = await swrEdgeCache<ListingLink[]>(
+    `newest-in-category/v1/${limit}/${category}`,
+    NEWEST_IN_CATEGORY_CACHE,
+    async () => {
+      try {
+        const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+        const ctx = await getCloudflareContext();
+        if (!ctx?.env || !(ctx.env as any).DB) return null;
+        const db = drizzle((ctx.env as any).DB);
+        const result = await db
+          .select({ id: serversTable.id, name: serversTable.name })
+          .from(serversTable)
+          .where(
+            and(
+              servableFilter(),
+              indexableListingSql(),
+              eq(serversTable.category, category),
+            ),
+          )
+          .orderBy(desc(serversTable.createdAt))
+          .limit(limit);
+        return result.length > 0 ? result : null;
+      } catch (e) {
+        console.error('[servers] newest-in-category read failed:', e);
+        return null;
+      }
+    },
+  );
+  return rows ?? [];
+}
+
+/**
  * Full rows (public columns, tools trimmed to name + description) for just the
  * ids a page renders, in the order given. Pairs with getRankingCandidates.
  */

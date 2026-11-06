@@ -1,5 +1,11 @@
 import { cache } from 'react';
 import { DIRECTORY_CATEGORIES, parseCategoryLabel } from './categories';
+import {
+  HUB_PAGE_SIZE,
+  hubPageCount,
+  hubPageSlice,
+  TAG_MAX_PAGES,
+} from './categoryPagination';
 import { swrEdgeCache } from './edgeCache';
 import { engagementScore } from './search';
 import {
@@ -100,10 +106,11 @@ function isTagIndexable(
 }
 
 /**
- * Most ids kept per tag: the rows /tags/[slug] lists (its JSON-LD list takes
- * the first 50; bigger tags link out to /browse search). `count` stays exact.
+ * Most ids kept per tag: every row /tags/[slug] and its /page/N pages list
+ * (lib/categoryPagination.ts caps tags at TAG_MAX_PAGES pages). The vocabulary
+ * has ~60 tags, so the index stays well under a megabyte. `count` stays exact.
  */
-const TAG_INDEX_IDS_CAP = 60;
+const TAG_INDEX_IDS_CAP = TAG_MAX_PAGES * HUB_PAGE_SIZE;
 
 /**
  * Tags are regex-extracted per listing, so there is no SQL that finds one
@@ -113,7 +120,8 @@ const TAG_INDEX_IDS_CAP = 60;
  * those walks and D1 was reset for exceeding its CPU limit. One walk now
  * builds this index, kept stale-while-revalidate per colo and in R2.
  */
-const TAG_INDEX_CACHE_KEY = 'tag-index/v3';
+// v4: ids cap raised from 60 to 300 for tag pagination.
+const TAG_INDEX_CACHE_KEY = 'tag-index/v4';
 const TAG_INDEX_CACHE = {
   freshMs: 60 * 60 * 1000,
   maxAgeSeconds: 24 * 60 * 60,
@@ -222,28 +230,39 @@ export async function getAllTagsWithCounts(): Promise<TagWithCount[]> {
 }
 
 /**
- * One tag page's data: the top TAG_INDEX_IDS_CAP listings by engagement
- * (full rows, best first), the true number of listings carrying the tag, its
- * label, and whether search engines get it. An unknown tag has total 0. Wrapped in React `cache` because
- * /tags/[slug] calls it from both generateMetadata and the page.
+ * One page of a tag hub: up to HUB_PAGE_SIZE listings by engagement (full
+ * rows, best first) for 1-based `page`, the page count, the true number of
+ * listings carrying the tag, its label, and whether search engines get it.
+ * An unknown tag has total 0; a page past the last has no servers. Wrapped in
+ * React `cache` because /tags/[slug] calls it from both generateMetadata and
+ * the page.
  */
 export const getServersForTag = cache(async function getServersForTag(
   targetSlug: string,
+  page = 1,
 ): Promise<{
   servers: Server[];
   total: number;
+  pageCount: number;
   rawTag: string;
   indexable: boolean;
 }> {
   const index = await getTagIndex();
   const tag = lookupTag(index, targetSlug);
   if (!tag || tag.count === 0) {
-    return { servers: [], total: 0, rawTag: targetSlug, indexable: false };
+    return {
+      servers: [],
+      total: 0,
+      pageCount: 0,
+      rawTag: targetSlug,
+      indexable: false,
+    };
   }
-  const servers = await hydrateServersByIds(tag.ids);
+  const servers = await hydrateServersByIds(hubPageSlice(tag.ids, page));
   return {
     servers,
     total: tag.count,
+    pageCount: hubPageCount(tag.ids.length, TAG_MAX_PAGES),
     rawTag: tag.label,
     indexable: isTagIndexable(targetSlug, tag, index.indexableListings),
   };

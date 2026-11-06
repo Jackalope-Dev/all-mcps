@@ -57,7 +57,7 @@ This launches your server as a child process and opens a browser UI that:
 - Lets you invoke any tool with hand-typed arguments and see the exact response
 - Shows the raw JSON-RPC messages flowing in both directions, which is the fastest way to spot a malformed response before a client ever sees it
 
-Use the Inspector first every time you add or change a tool. It costs nothing to set up and it's the fastest way to catch a broken schema or an off-by-one in your response shape before you've written a single test.
+Use the Inspector first every time you add or change a tool. It costs nothing to set up and it's the fastest way to catch a broken schema or an off-by-one in your response shape before you've written a single test. When you already have a raw JSON-RPC response or tool output and just want to check its shape, paste it into the browser-based [MCP protocol inspector](/tools/protocol-inspector) instead of re-running the server.
 
 ## Layer 1: Unit test the handler, not the protocol
 

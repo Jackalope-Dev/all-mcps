@@ -2,6 +2,7 @@ import { Hash, Search } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { HubPagination } from '@/components/directory/HubPagination';
 import { ServerRow } from '@/components/directory/ServerRow';
 import { ImpressionBeacon } from '@/components/ImpressionTracker';
 import { PageShell } from '@/components/PageShell';
@@ -65,7 +66,12 @@ export default async function TagDetailPage({
 }) {
   const { slug } = await params;
   // `shown` is already the top rows by engagementScore, best first.
-  const { servers: shown, total, rawTag } = await getServersForTag(slug);
+  const {
+    servers: shown,
+    total,
+    pageCount,
+    rawTag,
+  } = await getServersForTag(slug);
   const definition = tagBySlug(slug)?.definition;
 
   if (total === 0) {
@@ -187,13 +193,12 @@ export default async function TagDetailPage({
           <span className="dir-more-meta tabular">
             Showing {shown.length} of {total.toLocaleString()}
           </span>
-          <Link
-            href={`/browse?q=${encodeURIComponent(rawTag)}`}
-            className="btn btn-secondary btn-md"
-            rel="nofollow"
-          >
-            See all in Browse
-          </Link>
+          <HubPagination
+            base={`/tags/${slug}`}
+            page={1}
+            pageCount={pageCount}
+            label={`${rawTag} servers`}
+          />
         </div>
       )}
     </PageShell>

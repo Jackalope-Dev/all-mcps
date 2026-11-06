@@ -309,4 +309,4 @@ OAuth is one part of an MCP threat model. Review tool authorization, tenant isol
 
 ## Next steps
 
-Implement the flow against the MCP specification and your identity provider’s OAuth metadata, then verify resource, audience, scope, PKCE, and opaque-token introspection behavior with automated tests.
+Implement the flow against the MCP specification and your identity provider’s OAuth metadata, then verify resource, audience, scope, PKCE, and opaque-token introspection behavior with automated tests. If the server you're protecting handles credentials or scans for risky configuration, compare it with the [best security MCP servers](/best/security) people already run.

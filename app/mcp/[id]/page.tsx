@@ -35,9 +35,11 @@ import {
 } from '@/components/listing/ListingSectionNav';
 import { ListingVisibilityNotice } from '@/components/listing/ListingVisibilityNotice';
 import { MCP_CLIENTS } from '@/lib/clients';
+import { comparePath, curatedPairsFor } from '@/lib/comparePairs';
 import { assessInstallRisk } from '@/lib/installRisk';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { isServerRowIndexable } from '@/lib/listingIndexability';
+import { listingIdHash, pickRotatingLinks } from '@/lib/listingLinks';
 import { buildListingMetaDescription } from '@/lib/listingMeta';
 import { isRepositoryUrl } from '@/lib/repoUrl';
 import { parseSecurityProfile } from '@/lib/securityProfile';
@@ -125,6 +127,7 @@ import { statusHueClass } from '../../../lib/palette';
 import {
   computeCombinedAvailabilityPct,
   getFeaturedServers,
+  getNewestIndexableInCategory,
   getRelatedServers,
   getServerById,
   getServerHealthHistory,
@@ -222,6 +225,10 @@ export async function generateMetadata({
 }
 
 const README_FETCH_TIMEOUT_MS = 5000;
+/** Newest indexable listings per category that the "Recently added" links rotate through. */
+const RECENT_POOL_SIZE = 120;
+/** "Recently added in <category>" links per listing page. */
+const RECENT_LINKS = 5;
 
 async function fetchReadme(url: string) {
   try {
@@ -309,6 +316,7 @@ export default async function MCPDetail({
     healthHistory,
     reviewSummary,
     signals,
+    newestInCategory,
   ] = await Promise.all([
     needsReadmeFallback ? fetchReadme(server.url) : Promise.resolve(null),
     getRelatedServers(server as any, 4),
@@ -317,6 +325,7 @@ export default async function MCPDetail({
     getServerHealthHistory(server.id),
     getServerReviews(server.id),
     getServerSignalsById(server.id),
+    getNewestIndexableInCategory(server.category, RECENT_POOL_SIZE),
   ]);
   // Trust tier and security card read listing_signals fields; merged here
   // rather than in getServerById so other callers don't pay for the read.
@@ -386,15 +395,21 @@ export default async function MCPDetail({
   // so a random roll froze one outcome per page for the whole revalidate window
   // (often the upsell). Hashing spreads every featured server evenly across
   // the catalog's listing pages instead.
-  let spotlightHash = 0;
-  for (let i = 0; i < server.id.length; i++) {
-    spotlightHash =
-      (Math.imul(spotlightHash, 31) + server.id.charCodeAt(i)) | 0;
-  }
   const spotlightPick =
     featuredPool.length > 0
-      ? featuredPool[Math.abs(spotlightHash) % featuredPool.length]
+      ? featuredPool[listingIdHash(server.id) % featuredPool.length]
       : null;
+  // A rotating window of the category's newest indexable listings. Related
+  // servers come from an engagement-ordered pool, so they only ever linked
+  // listings that were already popular; this gives the long tail inbound
+  // links from across its category.
+  const recentlyAdded = pickRotatingLinks(
+    newestInCategory,
+    server.id,
+    RECENT_LINKS,
+    (relatedServers ?? []).map((r) => r.id),
+  );
+  const comparePairs = curatedPairsFor(server.id);
   // The mcpServers key just needs to be a readable identifier; the npx arg below
   // uses server.name verbatim since that's typically the real package name
   // (e.g. "@agentfund/mcp") and slugifying it would produce a nonexistent package.
@@ -1171,7 +1186,6 @@ export default async function MCPDetail({
                 </Link>
                 <Link
                   href={`/mcp/${server.id}/alternatives`}
-                  rel="nofollow"
                   className="lst-menu-item"
                 >
                   <Shuffle size={15} aria-hidden="true" /> Compare alternatives
@@ -1707,7 +1721,6 @@ export default async function MCPDetail({
                       </Link>
                       <Link
                         href={`/mcp/${server.id}/alternatives`}
-                        rel="nofollow"
                         className="link-arrow"
                       >
                         All alternatives <ArrowRight size={14} />
@@ -2117,14 +2130,35 @@ export default async function MCPDetail({
                     </li>
                   ))}
                   <li>
-                    <Link
-                      href={`/mcp/${server.id}/alternatives`}
-                      rel="nofollow"
-                    >
+                    <Link href={`/mcp/${server.id}/alternatives`}>
                       Alternatives to {displayName}
                     </Link>
                   </li>
+                  {comparePairs.map((pair) => {
+                    const otherId = pair.a === server.id ? pair.b : pair.a;
+                    return (
+                      <li key={otherId}>
+                        <Link href={comparePath(pair)}>{pair.label}</Link>
+                      </li>
+                    );
+                  })}
                 </ul>
+                {recentlyAdded.length > 0 && (
+                  <>
+                    <h3 className="lst-side-title">
+                      Recently added in {categoryLabel}
+                    </h3>
+                    <ul className="lst-recent">
+                      {recentlyAdded.map((r) => (
+                        <li key={r.id}>
+                          <Link href={`/mcp/${r.id}`}>
+                            {parseServerName(r.name).displayName}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
                 <ul className="lst-explore-secondary">
                   <li>
                     <Link href="/clients/claude-desktop">

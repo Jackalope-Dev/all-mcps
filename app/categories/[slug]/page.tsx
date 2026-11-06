@@ -5,6 +5,7 @@ import { notFound, permanentRedirect } from 'next/navigation';
 import { getHubCounts, isCategoryHubIndexable } from '@/lib/hubIndexability';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { SponsorAdUnit } from '../../../components/ads/SponsorAdUnit';
+import { HubPagination } from '../../../components/directory/HubPagination';
 import { ServerCard, ServerRow } from '../../../components/directory/ServerRow';
 import { ImpressionBeacon } from '../../../components/ImpressionTracker';
 import { FaqSection } from '../../../components/ui/FaqSection';
@@ -17,27 +18,27 @@ import {
   getCategoryMeta,
   parseCategoryLabel,
 } from '../../../lib/categories';
+import { getCategoryPagination } from '../../../lib/categoryHub';
+import {
+  categoryPageCount,
+  HUB_PAGE_SIZE,
+  orderCategoryListings,
+} from '../../../lib/categoryPagination';
 import { parseServerName } from '../../../lib/displayName';
 import {
   getCategoryCounts,
   getRankingCandidates,
   relatedRankingScore,
-  type Server,
 } from '../../../lib/servers';
 
 const SITE = 'https://allmcps.com';
 
-/** Cap the server-rendered card list; larger categories link out to the full filter view. */
-const MAX_CARDS = 60;
+/** Cards on page 1; the rest are on /categories/[slug]/page/N. */
+const MAX_CARDS = HUB_PAGE_SIZE;
 /** Leading servers shown as "top picks" cards above the list. */
 const TOP_PICKS = 3;
 /** Row index of the in-feed sponsor unit in the list below the picks. */
 const AD_ROW_INDEX = 2;
-
-/** Ranking mirrors lib/servers.relatedRankingScore so ordering is consistent site-wide. */
-function score(s: Server): number {
-  return relatedRankingScore(s);
-}
 
 // Without a revalidate window this page is fully static (baked in at build/deploy
 // time only) — fine for content, but rankings/counts go stale between deploys.
@@ -110,30 +111,20 @@ export default async function CategoryLandingPage({
   const { label } = parseCategoryLabel(category);
   const meta = getCategoryMeta(category);
 
-  const [categoryServers, countsObj] = await Promise.all([
+  const [categoryServers, countsObj, pagination] = await Promise.all([
     getRankingCandidates({ category }),
     getCategoryCounts(),
+    getCategoryPagination(category),
   ]);
-  const byScore = [...categoryServers].sort((a, b) => score(b) - score(a));
-
-  // A category_sponsor_7d purchase pins its listing to #1 for the life of the
-  // sponsorship — a hard pin ahead of score(), not a score nudge, since the
-  // product promise is "the top spot," and lib/stripeCheckout.ts already
-  // guarantees at most one active sponsor per category at a time.
-  const now = Date.now();
-  const sponsorIdx = byScore.findIndex(
-    (s) =>
-      s.categorySponsorUntil &&
-      new Date(s.categorySponsorUntil).getTime() > now,
+  // Ranking mirrors lib/servers.relatedRankingScore so ordering is consistent
+  // site-wide. A category_sponsor_7d purchase pins its listing to #1 for the
+  // life of the sponsorship (lib/stripeCheckout.ts allows one per category).
+  const inCategory = orderCategoryListings(
+    categoryServers,
+    relatedRankingScore,
+    Date.now(),
   );
-  const sponsor = sponsorIdx >= 0 ? byScore[sponsorIdx] : null;
-  const inCategory = sponsor
-    ? [
-        sponsor,
-        ...byScore.slice(0, sponsorIdx),
-        ...byScore.slice(sponsorIdx + 1),
-      ]
-    : byScore;
+  const pageCount = pagination ? categoryPageCount(pagination) : 1;
 
   const total = inCategory.length;
   const cards = inCategory.slice(0, MAX_CARDS);
@@ -343,13 +334,24 @@ export default async function CategoryLandingPage({
                     <span className="dir-more-meta tabular">
                       Showing {cards.length} of {total.toLocaleString()}
                     </span>
-                    <Link
-                      href={browseHref}
-                      className="btn btn-secondary btn-md"
-                      rel="nofollow"
-                    >
-                      Browse all {total.toLocaleString()} {label} servers
-                    </Link>
+                    {pageCount > 1 ? (
+                      <HubPagination
+                        base={`/categories/${canonicalSlug}`}
+                        page={1}
+                        pageCount={pageCount}
+                        label={`${label} servers`}
+                      />
+                    ) : (
+                      // No crawlable later pages (nothing indexable past page
+                      // 1, or D1 unavailable): people still get the filter view.
+                      <Link
+                        href={browseHref}
+                        className="btn btn-secondary btn-md"
+                        rel="nofollow"
+                      >
+                        Browse all {total.toLocaleString()} {label} servers
+                      </Link>
+                    )}
                   </div>
                 )}
               </section>

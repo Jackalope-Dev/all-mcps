@@ -73,6 +73,15 @@ export function isCuratedPair(idA: string, idB: string): boolean {
   return PAIR_KEYS.has(pairKey(idA, idB));
 }
 
+/**
+ * The curated pairs a listing belongs to, so its page can link each
+ * head-to-head page. Related ranking alone only linked a pair when the other
+ * side happened to rank in the listing's top 4 related servers.
+ */
+export function curatedPairsFor(id: string): ComparePair[] {
+  return INDEXABLE_COMPARE_PAIRS.filter((p) => p.a === id || p.b === id);
+}
+
 type CompareSide = { status?: string | null; aiDoc?: string | null };
 
 /** True when this pair is curated AND both sides currently have real content. */

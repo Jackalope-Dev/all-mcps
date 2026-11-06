@@ -60,7 +60,7 @@ type Row = {
   tags?: string[];
 };
 
-/** 140 weather listings, so the per-tag id cap (60) and its trimming kick in. */
+/** 140 weather listings: more than one 60-row tag page. */
 const BULK = 140;
 const pad = (n: number) => String(n).padStart(3, '0');
 
@@ -163,15 +163,20 @@ describe('getServersForTag', () => {
     expect(servers[1].githubStars).toBe(1000);
   });
 
-  it('caps the rows at 60 but keeps the true total, ties in catalog order', async () => {
-    const { servers, total } = await getServersForTag('weather');
-    expect(total).toBe(BULK);
-    expect(servers).toHaveLength(60);
+  it('pages the rows 60 at a time, best-first, keeping the true total', async () => {
     const expected: string[] = [];
-    for (let hi = BULK - 1; expected.length < 60; hi -= 2) {
+    for (let hi = BULK - 1; expected.length < BULK; hi -= 2) {
       expected.push(`w-${pad(hi - 1)}`, `w-${pad(hi)}`);
     }
-    expect(servers.map((s) => s.id)).toEqual(expected);
+    const first = await getServersForTag('weather');
+    expect(first.total).toBe(BULK);
+    expect(first.pageCount).toBe(3);
+    expect(first.servers.map((s) => s.id)).toEqual(expected.slice(0, 60));
+    const second = await getServersForTag('weather', 2);
+    expect(second.servers.map((s) => s.id)).toEqual(expected.slice(60, 120));
+    const third = await getServersForTag('weather', 3);
+    expect(third.servers.map((s) => s.id)).toEqual(expected.slice(120));
+    expect((await getServersForTag('weather', 4)).servers).toEqual([]);
   });
 
   it('treats an unknown tag (including object prototype keys) as empty', async () => {

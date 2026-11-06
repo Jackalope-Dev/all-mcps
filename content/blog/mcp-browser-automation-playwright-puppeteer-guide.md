@@ -50,8 +50,8 @@ Giving an agent control of a real browser is a different risk profile than most 
 
 Rather than pinning specific server names and star counts here — which go stale the moment a new release ships — the live, usage-ranked lists are the better source:
 
-- [Browser Automation category](https://allmcps.com/categories/browser-automation) — every browser-driving MCP server in the directory.
-- [Best Browser Automation MCP servers](https://allmcps.com/best/browser-automation) — ranked by real usage.
-- [Best Playwright MCP servers](https://allmcps.com/best/playwright) — if you've already decided Playwright is the engine you want.
+- [Browser Automation category](/categories/browser-automation) — every browser-driving MCP server in the directory.
+- [Best Browser Automation MCP servers](/best/browser-automation) — ranked by real usage.
+- [Best Playwright MCP servers](/best/playwright) — if you've already decided Playwright is the engine you want.
 
 Each listing page shows the install command, runtime, and — where available — a side-by-side alternatives comparison, so once you've picked an approach from the framework above, the last step is just matching it to a specific, currently-maintained server.

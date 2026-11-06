@@ -11,6 +11,7 @@ import { FaqSection } from '../../../components/ui/FaqSection';
 import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
 import type { TocItem } from '../../../components/ui/TableOfContents';
 import { getAllPosts, getPostBySlug, getRelatedPosts } from '../../../lib/blog';
+import { relatedHubsForPost } from '../../../lib/blogHubLinks';
 import { extractToc, withHeadingAnchors } from '../../../lib/blogToc';
 import { truncateDescription, truncateTitle } from '../../../lib/ogHelpers';
 
@@ -87,6 +88,7 @@ export default async function BlogPostPage({
 
   const url = `https://allmcps.com/blog/${post.slug}`;
   const relatedPosts = getRelatedPosts(post);
+  const directoryLinks = relatedHubsForPost(post);
   const rawToc = extractToc(post.content);
   const tocItems: TocItem[] = rawToc.map((entry) => ({
     id: entry.slug,
@@ -210,6 +212,21 @@ export default async function BlogPostPage({
                 }))}
               />
             ) : null}
+
+            <nav aria-labelledby="related-servers">
+              <h2 id="related-servers" className="content-section-title">
+                Browse related servers
+              </h2>
+              <ul className="content-hubs">
+                {directoryLinks.map((link) => (
+                  <li key={link.href}>
+                    <Link href={link.href} className="tint-pill">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
 
             {relatedPosts.length > 0 ? (
               <nav aria-labelledby="related-articles">
