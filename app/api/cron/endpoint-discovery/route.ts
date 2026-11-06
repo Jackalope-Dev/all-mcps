@@ -30,10 +30,11 @@ import { firstUrlToken, normalizeUrl } from '../../../../lib/urlSafety';
 
 const PHASES = ['pending', 'all'] as const;
 type Phase = (typeof PHASES)[number];
-// v2 for pending: its due set grew (dead endpoints, GitHub-only rows), so
-// the walk restarts once to reach the rows the v1 cursor already passed.
+// The pending cursor is versioned: each time its due set grows (v2: dead
+// endpoints and GitHub-only rows; v3: live endpoints with no tool names) the
+// walk restarts once to reach the rows the old cursor already passed.
 const cursorName = (phase: Phase) =>
-  `endpoint-discovery:${phase === 'pending' ? 'v2' : 'v1'}:${phase}`;
+  `endpoint-discovery:${phase === 'pending' ? 'v3' : 'v1'}:${phase}`;
 const REWALK_MS = 30 * 24 * 60 * 60 * 1000;
 const DEFAULT_BATCH_SIZE = 30;
 const MAX_BATCH_SIZE = 100;
@@ -47,6 +48,7 @@ type Row = {
   websiteUrl: string | null;
   description: string | null;
   remoteEndpointUrl: string | null;
+  remoteEndpointHealthy: boolean | null;
 };
 
 const notStdio = or(
@@ -71,17 +73,25 @@ const due = and(
  * to judge them on this evidence: an endpoint that is set but has never
  * answered (a submission stored `…/%20%20Copy%20endpoint`, pasted page text)
  * is re-asked and repaired, and a GitHub-only listing is asked too, because
- * its repo's server.json can name the endpoint.
+ * its repo's server.json can name the endpoint. A live endpoint with no tool
+ * names (submitted before intake read them) only has its tools read, so the
+ * brochure check can see them: Holos33 came back with an endpoint that was
+ * healthy from the start and was never introspected.
  */
 const deadEndpoint = and(
   sql`${servers.remoteEndpointUrl} IS NOT NULL`,
   sql`coalesce(${servers.remoteEndpointHealthy}, 0) = 0`,
 );
+const liveWithoutTools = and(
+  sql`${servers.remoteEndpointUrl} IS NOT NULL`,
+  eq(servers.remoteEndpointHealthy, true),
+  isNull(servers.tools),
+);
 const pendingDue = and(
   eq(servers.status, 'pending'),
   isNull(servers.staleFlaggedAt),
   notStdio,
-  or(isNull(servers.remoteEndpointUrl), deadEndpoint),
+  or(isNull(servers.remoteEndpointUrl), deadEndpoint, liveWithoutTools),
 );
 
 export async function POST(req: Request) {
@@ -156,6 +166,7 @@ export async function POST(req: Request) {
         websiteUrl: servers.websiteUrl,
         description: servers.description,
         remoteEndpointUrl: servers.remoteEndpointUrl,
+        remoteEndpointHealthy: servers.remoteEndpointHealthy,
       })
       .from(servers)
       .where(and(phaseWhere(phase), gt(sql`rowid`, after)))
@@ -163,20 +174,50 @@ export async function POST(req: Request) {
       .limit(batchSize)) as Row[];
 
     let found = 0;
+    let toolsRead = 0;
     const samples: { id: string; url: string; authType: string | null }[] = [];
+
+    // Tool names for the brochure check, unless a handshake already gave them.
+    const storeTools = async (id: string, url: string) => {
+      const toolsJson = await introspectToolsJson(url);
+      if (!toolsJson) return;
+      await db
+        .update(servers)
+        .set({ tools: toolsJson, toolsSource: 'introspected' })
+        .where(
+          and(
+            eq(servers.id, id),
+            or(
+              isNull(servers.toolsSource),
+              sql`${servers.toolsSource} != 'introspected'`,
+            ),
+          ),
+        );
+      toolsRead++;
+    };
 
     for (let i = 0; i < rows.length; i += CONCURRENCY) {
       const wave = rows.slice(i, i + CONCURRENCY);
+      const isLive = (row: Row) =>
+        Boolean(row.remoteEndpointUrl && row.remoteEndpointHealthy);
+      // A live endpoint needs no discovery, only its tool names.
+      await Promise.all(
+        wave
+          .filter(isLive)
+          .map((row) => storeTools(row.id, row.remoteEndpointUrl as string)),
+      );
       const results = await Promise.all(
         wave.map((row) =>
-          discoverRemoteEndpoint({
-            ...row,
-            // The stored (dead) endpoint, cleaned of pasted text, is asked first.
-            stated: row.remoteEndpointUrl
-              ? [normalizeUrl(firstUrlToken(row.remoteEndpointUrl, true))]
-              : [],
-            isClaimedElsewhere: endpointClaimedElsewhere(db, row.id),
-          }),
+          isLive(row)
+            ? null
+            : discoverRemoteEndpoint({
+                ...row,
+                // The stored (dead) endpoint, cleaned of pasted text, is asked first.
+                stated: row.remoteEndpointUrl
+                  ? [normalizeUrl(firstUrlToken(row.remoteEndpointUrl, true))]
+                  : [],
+                isClaimedElsewhere: endpointClaimedElsewhere(db, row.id),
+              }),
         ),
       );
       for (let k = 0; k < wave.length; k++) {
@@ -200,22 +241,7 @@ export async function POST(req: Request) {
               ),
             ),
           );
-        // Tool names for the brochure check, unless a handshake already gave them.
-        const toolsJson = await introspectToolsJson(hit.url);
-        if (toolsJson) {
-          await db
-            .update(servers)
-            .set({ tools: toolsJson, toolsSource: 'introspected' })
-            .where(
-              and(
-                eq(servers.id, wave[k].id),
-                or(
-                  isNull(servers.toolsSource),
-                  sql`${servers.toolsSource} != 'introspected'`,
-                ),
-              ),
-            );
-        }
+        await storeTools(wave[k].id, hit.url);
         found++;
         if (samples.length < SAMPLE_ROWS) {
           samples.push({
@@ -253,6 +279,7 @@ export async function POST(req: Request) {
       phase,
       processed: rows.length,
       found,
+      toolsRead,
       remaining,
       drained: remaining === 0,
       samples,

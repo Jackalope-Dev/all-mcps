@@ -1105,7 +1105,14 @@ function ServerTable({
                         <span className="adm-tag hue-amber">Priority</span>
                       )}
                       {server.reviewFlagged && (
-                        <span className="adm-tag hue-red">Needs a look</span>
+                        <span
+                          className="adm-tag hue-red"
+                          title={
+                            server.gate?.recommendation.flagReason ?? undefined
+                          }
+                        >
+                          Needs a look
+                        </span>
                       )}
                       {server.history?.resubmitted && (
                         <span className="adm-tag hue-blue">Resubmitted</span>
