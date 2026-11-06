@@ -38,10 +38,25 @@ function countMatches(text: string, terms: string[]): number {
  */
 const GENERIC_TOPICS = new Set(['developer-tools']);
 
+/**
+ * Topics whose words have a common protocol meaning on this blog: the HTTP
+ * Location header, agent "memory", "research" as a verb. They count only when
+ * the title, tags or keywords name them, never from body mentions alone.
+ */
+const HEAD_ONLY_TOPICS = new Set([
+  'location-services',
+  'memory-knowledge',
+  'research',
+  'marketing',
+  'legal',
+  'gaming',
+  'travel',
+]);
+
 /** Body mentions count at most this many times, so one long section can't swamp the title. */
 const BODY_MATCH_CAP = 5;
-/** A topic must score at least this to be linked (one title/tag hit, or two body mentions). */
-const MIN_SCORE = 2;
+/** A topic must score at least this to be linked (one title/tag hit, or three body mentions). */
+const MIN_SCORE = 3;
 
 /**
  * Directory hubs a blog post is about: /best/<topic> pages, plus the matching
@@ -56,8 +71,12 @@ export function relatedHubsForPost(post: PostText, maxLinks = 6): HubLink[] {
   const scored = BEST_TOPICS.filter((t) => !GENERIC_TOPICS.has(t.slug))
     .map((topic) => {
       const terms = topicTerms(topic);
+      const headHits = countMatches(head, terms);
+      if (headHits === 0 && HEAD_ONLY_TOPICS.has(topic.slug)) {
+        return { topic, score: 0 };
+      }
       const score =
-        countMatches(head, terms) * 2 +
+        headHits * MIN_SCORE +
         Math.min(BODY_MATCH_CAP, countMatches(post.content, terms));
       return { topic, score };
     })

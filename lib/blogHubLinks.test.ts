@@ -43,6 +43,17 @@ describe('relatedHubsForPost', () => {
     expect(hrefs).not.toContain('/best/gitlab');
   });
 
+  it('needs a title or tag match for words with a protocol meaning', () => {
+    const hrefs = relatedHubsForPost(
+      post({
+        title: 'MCP OAuth redirects',
+        content:
+          'Read the Location header. The Location header points to the authorization server. Follow the Location.',
+      }),
+    ).map((l) => l.href);
+    expect(hrefs).not.toContain('/best/location-services');
+  });
+
   it('falls back to the directory indexes so every post links it', () => {
     expect(
       relatedHubsForPost(post({ title: 'Protocol version notes' })),
