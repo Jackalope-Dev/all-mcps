@@ -34,6 +34,8 @@
     "outreach:badges": "node scripts/badge-outreach.mjs",
     "lint:ratchet:update": "node scripts/lint-ratchet.mjs --update",
     "verify:quick": "biome check --changed --since=origin/main --no-errors-on-unmatched && vitest run --changed origin/main",
+    "worktree": "node scripts/worktree.mjs new",
+    "sync": "node scripts/worktree.mjs sync",
     "worktrees": "node scripts/worktree-report.mjs"
   },
   "dependencies": {

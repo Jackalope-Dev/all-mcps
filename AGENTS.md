@@ -129,7 +129,28 @@ revert their work.
 - Knip (`knip.jsonc`) finds dead files, exports, and dependencies. `scripts/` entries
   are one-off tools run by hand, so they count as entry points.
 - CI (`.github/workflows/ci.yml`) runs the same chain plus an OpenNext build.
-- Concurrent work goes in `.worktrees/<task>` (gitignored), branched from `main`.
+- Concurrent work goes in `.worktrees/<task>` (gitignored): see "Worktrees and keeping
+  main current".
+
+# Worktrees and keeping main current
+
+- Start a task with `bun run worktree <task> [branch]` (`node scripts/worktree.mjs new`).
+  It fast-forwards the local `main` to origin, adds `.worktrees/<task>` on a new branch
+  from it, and copies the main checkout's small gitignored files (env files, generated
+  `cloudflare-env.d.ts` / `next-env.d.ts`, manifests) that a fresh checkout lacks.
+- Don't install in a worktree. It uses the main checkout's `node_modules`, because Node
+  and bun resolve packages up the folder tree, and `new` has just synced the main
+  checkout to the same lockfile. The script installs in the worktree only when the
+  lockfiles differ. If your branch changes dependencies, install inside the worktree,
+  never in the main checkout.
+- Run tools through package scripts or `node scripts/run-bin.mjs <package>/<bin>`, never
+  a hard-coded `node_modules/...` path (missing in a worktree) or `npx` (it can pick up
+  an unrelated global install: on the dev box `npx biome` finds Biome 0.3.3).
+- After you push to `main`, or a PR of yours merges, run `bun run sync` so the local
+  `main` matches origin and the main checkout's `node_modules` match its lockfile. It only
+  fast-forwards: it never resets, stashes or overwrites local edits, and says so when it
+  leaves `main` alone.
+- `bun run worktrees` lists worktrees; `--remove-merged` removes clean, merged ones.
 
 # Committing
 

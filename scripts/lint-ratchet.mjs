@@ -4,9 +4,15 @@
 // Canonical copy: jackalope-digital-hub/templates/scripts/lint-ratchet.mjs
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { join } from 'node:path';
 
 const baselinePath = 'lint-baseline.json';
-const biome = 'node_modules/@biomejs/biome/bin/biome';
+// Resolved up the folder tree, so a worktree sharing the main checkout's
+// node_modules (scripts/worktree.mjs) finds it too.
+const biome = createRequire(join(process.cwd(), 'package.json')).resolve(
+  '@biomejs/biome/bin/biome',
+);
 let out;
 try {
   out = execFileSync(
