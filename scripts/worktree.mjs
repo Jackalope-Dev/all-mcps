@@ -58,6 +58,8 @@ const tryGit = (args, cwd) => {
     return null;
   }
 };
+// stdout without console.log, which some repos' lint config bans.
+const log = (msg) => process.stdout.write(`${msg}\n`);
 const fail = (msg) => {
   console.error(msg);
   process.exit(1);
@@ -112,7 +114,7 @@ function install(dir) {
   if (!existsSync(join(dir, 'package.json'))) return;
   const pm = packageManager(dir);
   const args = pm === 'npm' ? ['ci'] : ['install', '--frozen-lockfile'];
-  console.log(`\n${pm} ${args.join(' ')} in ${dir}`);
+  log(`\n${pm} ${args.join(' ')} in ${dir}`);
   const r = spawnSync(pm, args, {
     cwd: dir,
     stdio: 'inherit',
@@ -149,7 +151,7 @@ function sync() {
         `${(r.stderr || r.stdout || '').trim()}\nLeft as is; nothing was reset or stashed.`,
     );
   } else {
-    console.log(
+    log(
       before === after
         ? `Local ${base} is current.`
         : `Local ${base}: ${before?.slice(0, 7)} -> ${after?.slice(0, 7)}.`,
@@ -224,7 +226,7 @@ function create(task, branch = task) {
     deps = `own node_modules (lockfile differs from the main checkout's)`;
   } else deps = `shares ${join(main, 'node_modules')} (same lockfile)`;
 
-  console.log(
+  log(
     `\nReady: ${dir}\n  branch ${branch}, from origin/${base}\n  dependencies: ${deps}\n` +
       `  copied from the main checkout: ${copied.length ? copied.join(', ') : 'nothing'}`,
   );
