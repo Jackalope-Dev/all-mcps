@@ -143,9 +143,10 @@ revert their work.
   checkout to the same lockfile. The script installs in the worktree only when the
   lockfiles differ. If your branch changes dependencies, install inside the worktree,
   never in the main checkout.
-- Run tools through package scripts or `node scripts/run-bin.mjs <package>/<bin>`, never
+- Run tools through package scripts or `node scripts/run-bin.mjs <package>`, never
   a hard-coded `node_modules/...` path (missing in a worktree) or `npx` (it can pick up
-  an unrelated global install: on the dev box `npx biome` finds Biome 0.3.3).
+  an unrelated global install or download a different version: on the dev box `npx
+  biome` finds Biome 0.3.3).
 - After you push to `main`, or a PR of yours merges, run `bun run sync` so the local
   `main` matches origin and the main checkout's `node_modules` match its lockfile. It only
   fast-forwards: it never resets, stashes or overwrites local edits, and says so when it
