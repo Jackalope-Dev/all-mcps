@@ -6,7 +6,7 @@ import { serializeJsonLd } from '@/lib/jsonLd';
 import { TOOL_CATALOG, TOOL_GROUPS } from '../../components/tools/toolCatalog';
 
 export const metadata: Metadata = {
-  title: 'Free MCP Developer Tools — Generators & Validators',
+  title: 'Free MCP Developer Tools - Generators & Validators',
   description:
     'Free browser-based MCP tools: convert OpenAPI specs to server code, inspect JSON-RPC payloads, validate client configs, and calculate token overhead.',
   alternates: { canonical: 'https://allmcps.com/tools' },
@@ -19,14 +19,14 @@ export const metadata: Metadata = {
         alt: 'AllMCPs',
       },
     ],
-    title: 'Free MCP Developer Tools — Generators & Validators | AllMCPs',
+    title: 'Free MCP Developer Tools - Generators & Validators | AllMCPs',
     description:
       'Free browser-based tools for Model Context Protocol: OpenAPI code generator, JSON-RPC protocol inspector, config validator, and token cost calculator.',
     url: 'https://allmcps.com/tools',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Free MCP Developer Tools — Generators & Validators | AllMCPs',
+    title: 'Free MCP Developer Tools - Generators & Validators | AllMCPs',
     description:
       'Free browser-based tools for Model Context Protocol: OpenAPI code generator, JSON-RPC protocol inspector, config validator, and token cost calculator.',
   },

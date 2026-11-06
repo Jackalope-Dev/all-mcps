@@ -86,6 +86,15 @@ const EMPTY_FACETS: FacetState = {
  *  SSR and hydration render the same tree. */
 const AD_SLOT = 2;
 
+/** After the first sponsor, repeat one every second "Load more" page (every
+ *  60 results) so deep scrollers still see ads without one in every batch.
+ *  Each repeat lands a few rows into its batch, not on the seam. */
+const AD_REPEAT_EVERY = BROWSE_PAGE_SIZE * 2;
+
+function isAdSlot(index: number): boolean {
+  return index >= AD_SLOT && (index - AD_SLOT) % AD_REPEAT_EVERY === 0;
+}
+
 /** Typing pause before a browse search hits the server. */
 const SEARCH_DEBOUNCE_MS = 250;
 
@@ -714,7 +723,7 @@ function BrowseView({
             >
               {servers.map((server, index) => (
                 <Fragment key={server.id}>
-                  {index === AD_SLOT && ad}
+                  {isAdSlot(index) && ad}
                   <ImpressionBeacon
                     serverId={server.id}
                     surface={surface}

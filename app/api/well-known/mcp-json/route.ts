@@ -48,7 +48,11 @@ export async function GET() {
         },
         boost_mcp_server: {
           description:
-            'Initiate a server boost order via Stripe or x402 protocol',
+            'Start a boost order: a Stripe checkout link, plus x402 (USDC) payment instructions when enabled',
+        },
+        quote_sponsor_ad: {
+          description:
+            'Validate a sponsor ad campaign and get its cost, plus x402 (USDC) payment instructions when enabled',
         },
         submit_mcp_server: {
           description:

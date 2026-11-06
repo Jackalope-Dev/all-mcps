@@ -29,8 +29,10 @@ function fakePost(overrides: Partial<BlogPost> = {}): BlogPost {
     slug: 'demo-post',
     title: 'Demo Post Title',
     date: '2026-08-01',
+    updated: '2026-08-01',
     excerpt: 'A one-sentence summary of the demo post.',
-    tags: ['MCP', 'Agents'],
+    tags: ['Using MCP'],
+    keywords: [],
     faq: [{ q: 'Is this a demo?', a: 'Yes.' }],
     readingTime: 4,
     content: 'This is the **full markdown body** of the demo post.',
@@ -61,7 +63,7 @@ assert(
   postMd.includes('This is the **full markdown body**'),
   'Should include the raw post content, not a summary',
 );
-assert(postMd.includes('**Tags:** MCP, Agents'), 'Should list tags');
+assert(postMd.includes('**Tags:** Using MCP'), 'Should list tags');
 assert(
   postMd.includes('## Frequently Asked Questions'),
   'Should render FAQ section when present',

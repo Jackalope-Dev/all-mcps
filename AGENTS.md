@@ -27,7 +27,7 @@ Ship dates live in [`lib/sitemapHelpers.ts`](./lib/sitemapHelpers.ts) as `STATIC
 
 - Pure refactors (imports, formatting, component renames with no user-visible copy change).
 - CSS-only / layout-only tweaks that do not change content.
-- Blog posts — lastmod comes from the `YYYY-MM-DD` filename prefix automatically.
+- Blog posts — lastmod comes from the post's `updated` (else `date`) front matter automatically.
 - MCP listing pages — lastmod comes from the newest genuine content change
   (`aiDocAt` / `aiFaqAt` / `lastCommitAt`), falling back to `createdAt`.
   Deliberately **not** `lastCheckedAt` — the health cron rewrites that every
@@ -47,28 +47,39 @@ Ship dates live in [`lib/sitemapHelpers.ts`](./lib/sitemapHelpers.ts) as `STATIC
 
 # Blog Posts
 
-Blog posts live at `content/blog/YYYY-MM-DD-slug.md` — one markdown file per post. The filename's date prefix and slug are the source of truth; there's no separate `date` field in frontmatter.
+**LopeBase writes and publishes every post** (property `all-mcps`: voice, keywords,
+schedule, images and byline live in its content settings). Do not hand-write
+posts or rebuild an in-repo generation pipeline; change the LopeBase settings.
 
-Frontmatter schema:
+How a post lands: LopeBase opens a pull request from a `lopebase/*` branch that adds,
+edits or removes one `content/blog/<slug>.md`. [`.github/workflows/lopebase-posts.yml`](./.github/workflows/lopebase-posts.yml)
+approves it and queues auto-merge, so it merges once CI passes and deploys with `main`.
+A post that does not parse fails CI and never merges. Unpublishing in LopeBase removes the file.
+
+Front matter (LopeBase's "markdown" format, read by [`lib/blog.ts`](./lib/blog.ts)):
 
 ```yaml
 ---
 title: "Post title"
-excerpt: "One-sentence summary — used in listing cards, the meta description, and the RSS feed."
-tags: ["Building Servers", "Security"]
-faq: # optional — omit if the post has no FAQ section
-  - q: "Question?"
-    a: "Answer."
+description: "One sentence: listing cards, meta description, RSS."
+date: 2026-11-05            # publish day; future dates stay hidden until then
+updated: 2026-11-20         # optional: last real edit, drives dateModified + sitemap lastmod
+slug: "post-slug"           # matches the filename
+tags: ["Building Servers", "mcp oauth"]
+image: "https://..."        # optional: first image (also in the body); JSON-LD only
+image_alt: "..."
+faq: [{"q":"Question?","a":"Answer."}]   # optional, renders FAQ + FAQPage data
 ---
 ```
 
-Guidelines:
-- Long-form and educational, ~800+ words minimum.
-- Structure the body with `##` headings — they auto-build the table of contents. Keep heading text plain (no bold/italic/inline code inside a `##` line) since headings are converted straight to HTML for anchor linking.
-- 1-2 tags, main topic first, only from `BLOG_TOPICS` in [`lib/blogTopics.ts`](./lib/blogTopics.ts) (Building Servers, Deployment, Security, Using MCP, Directory & News). The first tag labels the OG image; topics on 2+ posts become filter chips on `/blog`. Add a topic there only when several posts need it.
-- The `faq` block, if present, renders as a "Frequently asked questions" section on the post and adds `FAQPage` structured data — useful for answer-engine visibility.
-- Everything else (tag filters, search, RSS feed, sitemap entry, JSON-LD) is generated automatically from the file. No other file needs to change to publish a post.
-- Posts are statically generated, so a new file goes live on the next build/deploy, not instantly — run `bun run build` locally to confirm it compiles before pushing.
+- Tags: tags matching `BLOG_TOPICS` in [`lib/blogTopics.ts`](./lib/blogTopics.ts) become the
+  post's 1-2 topics (filter chips, OG label); others are meta keywords only. With no
+  exact match, `postTopics` infers a topic from keyword cues.
+- LopeBase also keeps the FAQ as a `## FAQ` section in the body; the loader strips it so
+  the FAQ renders once.
+- Body: `##` headings build the table of contents; keep heading text plain.
+- Everything else (tag filters, search, RSS, sitemap entry, JSON-LD) is generated from
+  the file. Posts are statically generated: they go live on the next deploy.
 
 # Definition of Done
 
@@ -107,8 +118,12 @@ revert their work.
 - Lint warnings are ratcheted per rule (`lint-baseline.json`, checked by `bun run lint`).
   New warnings fail; after fixing some, run `bun run lint:ratchet:update`.
 - Lefthook (installed by `bun install` via `prepare`): pre-commit runs Biome with
-  `--write` on staged files only; pre-push runs `bun run verify` plus a gitleaks scan
-  of the commits being pushed (skipped if gitleaks is not installed).
+  `--write` on staged files only; pre-push runs `scripts/pre-push.mjs` plus a secret
+  scan of the commits being pushed. The pre-push script lints the changed files, runs
+  the typecheck and only the tests that import a changed file (at most 4 Vitest
+  workers), and skips pushes that touch no code. One push's checks run at a time
+  across the machine's repos. It is not the gate: `bun run verify` is, and CI runs it.
+  Check by hand with `PRE_PUSH_BASE=origin/main node scripts/pre-push.mjs`.
 - Biome is the formatter and linter. Format only files you touch; no repo-wide
   reformat commits (they collide with parallel sessions).
 - Knip (`knip.jsonc`) finds dead files, exports, and dependencies. `scripts/` entries

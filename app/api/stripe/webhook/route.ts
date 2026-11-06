@@ -6,13 +6,10 @@ import type Stripe from 'stripe';
 import { servers, sponsorAds } from '../../../../db/schema';
 import { formatUsdAmount } from '../../../../lib/ads';
 import { attributionFromStripeMetadata } from '../../../../lib/attribution';
-import {
-  recordConversion,
-  submissionTouchFor,
-} from '../../../../lib/conversions';
+import { fulfillBoostPurchase } from '../../../../lib/boostPurchase';
+import { recordConversion } from '../../../../lib/conversions';
 import { sendReceiptEmail } from '../../../../lib/notify';
 import type { PaidSku } from '../../../../lib/pricing';
-import { syncSequenzySubscriber } from '../../../../lib/sequenzy';
 import { getAppUrl, getStripe } from '../../../../lib/stripe';
 
 async function getDb() {
@@ -20,10 +17,6 @@ async function getDb() {
   const env = ctx.env as any;
   if (!env?.DB) throw new Error('DB missing');
   return drizzle(env.DB);
-}
-
-function addDays(from: Date, days: number): Date {
-  return new Date(from.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
 async function applyCheckoutCompleted(
@@ -121,37 +114,11 @@ async function applyCheckoutCompleted(
     return;
   }
 
-  const db = await getDb();
-  const customerId =
-    typeof session.customer === 'string'
-      ? session.customer
-      : session.customer?.id || null;
-  const subscriptionId =
-    typeof session.subscription === 'string'
-      ? session.subscription
-      : session.subscription?.id || null;
-
-  const rows = await db
-    .select()
-    .from(servers)
-    .where(eq(servers.id, serverId))
-    .limit(1);
-  const current = rows[0];
-
-  if (sku === 'priority_review') {
-    await db
-      .update(servers)
-      .set({
-        reviewPriority: true,
-        ...(customerId ? { stripeCustomerId: customerId } : {}),
-      })
-      .where(eq(servers.id, serverId));
-  } else if (sku === 'featured_7d' || sku === 'category_sponsor_7d') {
-    // Both SKUs are sold in weekly blocks priced dynamically via price_data (see
-    // createStripeCheckoutSession) — quantity IS weeks. Re-reading it from the line item
-    // (rather than trusting session.metadata) keeps this correct even if Stripe's own line
-    // item representation ever changes; it's the same value either way today.
-    let weeks = 1;
+  // Weekly SKUs are sold in blocks priced via price_data (see
+  // createStripeCheckoutSession) — quantity IS weeks. Re-read it from the
+  // line item rather than trusting session.metadata.
+  let weeks = 1;
+  if (sku === 'featured_7d' || sku === 'category_sponsor_7d') {
     try {
       const lineItems = await stripe.checkout.sessions.listLineItems(
         session.id,
@@ -164,75 +131,25 @@ async function applyCheckoutCompleted(
         err,
       );
     }
-    const durationDays = 7 * weeks;
-
-    const base =
-      current?.featuredUntil &&
-      new Date(current.featuredUntil).getTime() > Date.now()
-        ? new Date(current.featuredUntil)
-        : new Date();
-    // category_sponsor_7d also gets the featured badge/glow (same as featured_7d),
-    // plus its own categorySponsorUntil — the field the category page actually pins
-    // on. Kept separate so a plain featured_7d purchase never accidentally pins.
-    const categorySponsorBase =
-      sku === 'category_sponsor_7d' &&
-      current?.categorySponsorUntil &&
-      new Date(current.categorySponsorUntil).getTime() > Date.now()
-        ? new Date(current.categorySponsorUntil)
-        : new Date();
-    await db
-      .update(servers)
-      .set({
-        featuredUntil: addDays(base, durationDays),
-        ...(sku === 'category_sponsor_7d'
-          ? { categorySponsorUntil: addDays(categorySponsorBase, durationDays) }
-          : {}),
-        ...(customerId ? { stripeCustomerId: customerId } : {}),
-      })
-      .where(eq(servers.id, serverId));
-  } else if (sku === 'premium_monthly') {
-    await db
-      .update(servers)
-      .set({
-        isPremium: true,
-        premiumStatus: 'active',
-        ...(customerId ? { stripeCustomerId: customerId } : {}),
-        ...(subscriptionId ? { stripeSubscriptionId: subscriptionId } : {}),
-      })
-      .where(eq(servers.id, serverId));
   }
 
-  // Checkouts started without the attribution cookie (agent API, cleared
-  // cookies, consent declined) fall back to the listing's submission touch:
-  // the buyer is nearly always the author who submitted it.
-  const submissionTouch = await submissionTouchFor(db, serverId).catch(
-    () => null,
-  );
-  await recordConversion(db, {
-    kind: 'purchase',
+  await fulfillBoostPurchase(await getDb(), {
     serverId,
     sku,
+    weeks,
     amountCents: session.amount_total,
-    attribution:
-      attributionFromStripeMetadata(session.metadata) ??
-      submissionTouch?.attribution ??
-      null,
-    heardFrom: submissionTouch?.heardFrom ?? null,
-    stripeSessionId: session.id,
+    attribution: attributionFromStripeMetadata(session.metadata),
+    paymentRef: session.id,
+    email: session.customer_details?.email || null,
+    stripeCustomerId:
+      typeof session.customer === 'string'
+        ? session.customer
+        : session.customer?.id || null,
+    stripeSubscriptionId:
+      typeof session.subscription === 'string'
+        ? session.subscription
+        : session.subscription?.id || null,
   });
-
-  const email =
-    session.customer_details?.email || current?.submitterEmail || null;
-  if (email) {
-    try {
-      await syncSequenzySubscriber({
-        email,
-        tags: [`paid-${sku}`],
-      });
-    } catch (err) {
-      console.error(`Failed to sync Sequenzy subscriber for ${email}:`, err);
-    }
-  }
 }
 
 async function applySubscriptionUpdated(sub: Stripe.Subscription) {

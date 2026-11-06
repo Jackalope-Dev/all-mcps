@@ -1,0 +1,88 @@
+name: LopeBase posts
+# LopeBase (the content autopilot, property all-mcps) publishes each blog post as a
+# pull request that adds, edits or removes one content/blog/<slug>.md file. This
+# approves those pull requests and queues them to merge once main's required checks
+# pass; CI builds the site, so a post that does not parse never merges. Merging to
+# main deploys the site through Workers Builds.
+#
+# main requires its checks to pass on an up-to-date branch, so when main moves while a
+# post is waiting, the catch-up job brings the post's branch up to date.
+#
+# Needs the LOPEBASE_MERGE_TOKEN secret: a fine-grained token with Contents and Pull
+# requests write on this repository. The built-in GITHUB_TOKEN is not enough, because
+# pushes it makes (merges, branch updates) never start CI, so a post would wait
+# forever. Set the LOPEBASE_PR_AUTHOR variable if LopeBase opens pull requests as
+# anyone other than lopebase[bot].
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+  pull-requests: read
+concurrency:
+  group: lopebase-posts-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  merge:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'lopebase/') &&
+      github.event.pull_request.user.login == (vars.LOPEBASE_PR_AUTHOR || 'lopebase[bot]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PR: ${{ github.event.pull_request.number }}
+      REPO: ${{ github.repository }}
+    steps:
+      # Nothing is checked out: this job only reads the file list and calls the API,
+      # so the merge token never meets code from the pull request.
+      - name: Confirm the pull request only adds or edits blog posts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          files=$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[] | "\(.status) \(.filename)"')
+          printf '%s\n' "$files"
+          if [ -z "$files" ]; then
+            echo "::error::The pull request changes no files."
+            exit 1
+          fi
+          other=$(printf '%s\n' "$files" | grep -vE '^(added|modified|removed) content/blog/[a-z0-9]+(-[a-z0-9]+)*\.md$' || true)
+          if [ -n "$other" ]; then
+            echo "::error::Only content/blog/*.md changes merge on their own. Review this one by hand."
+            exit 1
+          fi
+      - name: Approve and merge when checks pass
+        env:
+          GH_TOKEN: ${{ secrets.LOPEBASE_MERGE_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::Add the LOPEBASE_MERGE_TOKEN secret so LopeBase posts can merge."
+            exit 1
+          fi
+          gh pr review "$PR" --repo "$REPO" --approve --body "LopeBase post: only blog Markdown changed. Merging when checks pass."
+          gh pr merge "$PR" --repo "$REPO" --squash --auto
+
+  catch-up:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.LOPEBASE_MERGE_TOKEN }}
+      REPO: ${{ github.repository }}
+    steps:
+      # Auto-merge is only ever switched on by the merge job above, after it has
+      # checked the author and the file list, so that is the filter here.
+      - name: Update LopeBase posts that fell behind main
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "No LOPEBASE_MERGE_TOKEN secret; nothing to update."
+            exit 0
+          fi
+          prs=$(gh pr list --repo "$REPO" --state open --base main --limit 50 --json number,headRefName,autoMergeRequest --jq '.[] | select((.headRefName | startswith("lopebase/")) and .autoMergeRequest != null) | .number')
+          for pr in $prs; do
+            echo "Updating #$pr"
+            gh api -X PUT "repos/$REPO/pulls/$pr/update-branch" --silent || echo "::warning::Could not update #$pr"
+          done

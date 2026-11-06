@@ -4,7 +4,7 @@ import { serializeJsonLd } from '@/lib/jsonLd';
 import { getCuratedStarterServers } from '@/lib/servers';
 
 export const metadata: Metadata = {
-  title: 'Top MCP Servers for Cline & Roo Code — Setup Guide',
+  title: 'Top MCP Servers for Cline & Roo Code - Setup Guide',
   description:
     'Discover top Model Context Protocol (MCP) tools for Cline and Roo Code in VS Code. Setup guide and configuration for cline_mcp_settings.json.',
   alternates: { canonical: 'https://allmcps.com/mcp-for-cline' },

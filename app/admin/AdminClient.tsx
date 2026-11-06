@@ -7,7 +7,6 @@ import {
   ChevronRight,
   Clock,
   Compass,
-  FileText,
   History,
   List,
   Mail,
@@ -34,7 +33,6 @@ import { AdminAcquisitionView } from './AdminAcquisitionView';
 import { AdminAdsControl } from './AdminAdsControl';
 import { AdminAnalyticsView } from './AdminAnalyticsView';
 import { AdminAutomationPanel } from './AdminAutomationPanel';
-import { AdminBlogDrafts } from './AdminBlogDrafts';
 import { AdminToolsControl } from './AdminCronsControl';
 import { AdminTriageQueue } from './AdminTriageQueue';
 import { AdminEmpty, AdminModal, AdminSectionHead } from './AdminUi';
@@ -140,7 +138,6 @@ export default function AdminClient({
   initialPendingReviewComments = [],
   recentlyAdded = [],
   initialAds = [],
-  initialBlogReadyCount = 0,
   stats,
 }: {
   initialPending: Server[];
@@ -152,7 +149,6 @@ export default function AdminClient({
   initialPendingReviewComments?: ReviewCommentItem[];
   recentlyAdded?: RecentServer[];
   initialAds?: any[];
-  initialBlogReadyCount?: number;
   stats: AdminStats;
 }) {
   const [pending, setPending] = useState<Server[]>(initialPending);
@@ -171,7 +167,6 @@ export default function AdminClient({
     ReviewCommentItem[]
   >(initialPendingReviewComments);
   const [loadingId, setLoadingId] = useState<string | null>(null);
-  const [blogReadyCount, setBlogReadyCount] = useState(initialBlogReadyCount);
 
   // Rejection Reason Modal State
   const [rejectingItem, setRejectingItem] = useState<{
@@ -216,7 +211,6 @@ export default function AdminClient({
     | 'listings'
     | 'triage'
     | 'ads'
-    | 'blog'
     | 'acquisition'
     | 'analytics'
     | 'crons'
@@ -396,13 +390,6 @@ export default function AdminClient({
         initialAds.filter((a) => a.status === 'pending_approval').length ||
         undefined,
       badgeHue: 'hue-cyan',
-    },
-    {
-      id: 'blog',
-      label: 'Blog drafts',
-      icon: FileText,
-      badge: blogReadyCount > 0 ? blogReadyCount : undefined,
-      badgeHue: 'hue-green',
     },
     { id: 'acquisition', label: 'Acquisition', icon: Compass },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
@@ -740,17 +727,6 @@ export default function AdminClient({
             description="Review sponsor campaigns, approve submissions, monitor impression delivery, and track click-through."
           />
           <AdminAdsControl initialAds={initialAds} />
-        </section>
-      )}
-
-      {/* TAB: BLOG DRAFTS */}
-      {activeTab === 'blog' && (
-        <section className="adm-section">
-          <AdminSectionHead
-            title="Blog drafts"
-            description="Posts written and self-reviewed by the blog pipeline. Read one, then approve to commit it to main and deploy."
-          />
-          <AdminBlogDrafts onCountChange={setBlogReadyCount} />
         </section>
       )}
 

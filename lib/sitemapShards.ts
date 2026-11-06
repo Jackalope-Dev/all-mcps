@@ -89,15 +89,13 @@ export async function buildCoreSitemap(
     staticEntry('/advertise', 'weekly', 0.85),
   ];
 
-  // Blog posts — real publish dates
+  // Blog posts — last real edit (LopeBase `updated`), else publish date
   try {
     const posts = getAllPosts();
     for (const post of posts) {
       entries.push({
         url: `${BASE}/blog/${post.slug}`,
-        lastModified: safeDateISO(
-          post.date ? `${post.date}T12:00:00.000Z` : undefined,
-        ),
+        lastModified: safeDateISO(`${post.updated}T12:00:00.000Z`),
         changeFrequency: 'monthly',
         priority: 0.7,
       });

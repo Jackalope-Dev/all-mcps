@@ -1,5 +1,6 @@
 # Lefthook git hooks. Installed by `bun install` (prepare). Docs: https://lefthook.dev
-# pre-commit touches only staged files; pre-push runs the full `verify` gate.
+# pre-commit touches only staged files; pre-push checks what the pushed commits
+# can break (scripts/pre-push.mjs). CI runs the full `verify` gate.
 
 pre-commit:
   parallel: true
@@ -13,6 +14,6 @@ pre-push:
   parallel: true
   commands:
     verify:
-      run: bun run verify
+      run: node scripts/pre-push.mjs
     secrets:
       run: node scripts/check-secrets.mjs

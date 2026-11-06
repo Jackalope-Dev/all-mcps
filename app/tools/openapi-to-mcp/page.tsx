@@ -3,7 +3,7 @@ import { OpenApiToMcpTool } from '../../../components/tools/OpenApiToMcpTool';
 import { ToolPage } from '../../../components/tools/ToolPage';
 
 export const metadata: Metadata = {
-  title: 'Free OpenAPI to MCP Code Generator — TS & Python',
+  title: 'Free OpenAPI to MCP Code Generator - TS & Python',
   description:
     'Convert OpenAPI 3.0/3.1 or Swagger specs into runnable Model Context Protocol (MCP) servers. Generates TypeScript SDK or Python FastMCP tool handlers.',
   alternates: { canonical: 'https://allmcps.com/tools/openapi-to-mcp' },

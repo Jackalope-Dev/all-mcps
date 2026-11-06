@@ -3,7 +3,7 @@ import { PageShell } from '../../../components/PageShell';
 import { AdvertiseStudioClient } from './AdvertiseStudioClient';
 
 export const metadata: Metadata = {
-  title: 'Ad Creation Studio — Sponsor AllMCPs',
+  title: 'Ad Creation Studio - Sponsor AllMCPs',
   description:
     'Create, preview, and launch your sponsored advertisement on AllMCPs with live multi-format preview and weighted CPM bidding.',
   robots: {

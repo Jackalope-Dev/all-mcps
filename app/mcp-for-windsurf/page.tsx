@@ -4,7 +4,7 @@ import { serializeJsonLd } from '@/lib/jsonLd';
 import { getCuratedStarterServers } from '@/lib/servers';
 
 export const metadata: Metadata = {
-  title: 'Top MCP Servers for Windsurf Cascade — Setup Guide',
+  title: 'Top MCP Servers for Windsurf Cascade - Setup Guide',
   description:
     'Discover top Model Context Protocol (MCP) tools for Codeium Windsurf. Setup guide and configuration for mcp_config.json.',
   alternates: { canonical: 'https://allmcps.com/mcp-for-windsurf' },

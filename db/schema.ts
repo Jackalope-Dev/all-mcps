@@ -1146,7 +1146,10 @@ export const adminAudit = sqliteTable(
 );
 
 /**
- * Blog content pipeline (lib/blogPipeline). Three tables:
+ * RETIRED (Nov 2026): the in-repo blog pipeline was removed when LopeBase took
+ * over writing and publishing posts (see lib/blog.ts). Nothing reads or writes
+ * these three tables any more; they are kept only until a migration drops them.
+ * What they held:
  *
  * - `content_index`: every indexable page the pipeline must not cannibalize or
  *   duplicate — published posts, guides, /best and /clients hubs, and in-flight
@@ -1300,5 +1303,53 @@ export const conversions = sqliteTable(
     stripeSessionIdx: uniqueIndex('idx_conversions_stripe_session').on(
       table.stripeSessionId,
     ),
+  }),
+);
+
+/**
+ * Agentic Commerce Protocol checkout sessions (lib/acp.ts). Line items are
+ * stored as the agent asked for them; prices are recomputed on every read so
+ * a stale session can never charge an old price.
+ */
+export const acpCheckoutSessions = sqliteTable(
+  'acp_checkout_sessions',
+  {
+    id: text('id').primaryKey(),
+    /** sha256 of the agent token that created it; only that agent can see or change it. */
+    agentTokenHash: text('agent_token_hash').notNull(),
+    /** not_ready_for_payment | ready_for_payment | complete_in_progress | completed | canceled */
+    status: text('status').notNull(),
+    /** JSON [{ id, quantity }] as requested. */
+    items: text('items').notNull(),
+    /** JSON ACP Buyer, if given. */
+    buyer: text('buyer'),
+    stripePaymentIntentId: text('stripe_payment_intent_id'),
+    /** Cents charged, set on completion. */
+    amountPaidCents: integer('amount_paid_cents'),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => ({
+    agentIdx: index('idx_acp_sessions_agent').on(table.agentTokenHash),
+  }),
+);
+
+/** ACP Idempotency-Key replay store: one row per (agent, key), kept 24h. */
+export const acpIdempotencyKeys = sqliteTable(
+  'acp_idempotency_keys',
+  {
+    agentTokenHash: text('agent_token_hash').notNull(),
+    key: text('key').notNull(),
+    /** sha256 of method + path + body, to spot a key reused for a different request. */
+    requestHash: text('request_hash').notNull(),
+    /** Null while the first request is still running. */
+    responseStatus: integer('response_status'),
+    responseBody: text('response_body'),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.agentTokenHash, table.key] }),
+    createdIdx: index('idx_acp_idempotency_created').on(table.createdAt),
   }),
 );

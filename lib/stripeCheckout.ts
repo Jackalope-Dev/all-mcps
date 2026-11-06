@@ -1,7 +1,9 @@
-import { and, eq, gt, ne } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers } from '@/db/schema';
+import { boostEligibilityError } from '@/lib/boostPurchase';
 import {
+  clampWeeks,
   getPriceId,
   getProductId,
   PAID_PRODUCTS,
@@ -27,6 +29,10 @@ export type CreateCheckoutResult = {
   success: boolean;
   url?: string;
   sessionId?: string;
+  /** What Stripe will charge, after any promotion code it applied. */
+  amountTotalCents?: number | null;
+  /** True when the coupon was attached to the session; false means it was only prefilled for the buyer to apply. */
+  promoApplied?: boolean;
   error?: string;
   hint?: string;
   status?: number;
@@ -78,28 +84,8 @@ export async function createStripeCheckoutSession(
     return { success: false, status: 404, error: 'Listing not found' };
   }
 
-  if (sku === 'priority_review' && server.status !== 'pending') {
-    return {
-      success: false,
-      status: 400,
-      error:
-        'Priority review is only available for listings still awaiting approval.',
-    };
-  }
-
-  if (
-    (sku === 'featured_7d' ||
-      sku === 'category_sponsor_7d' ||
-      sku === 'premium_monthly') &&
-    server.status !== 'active'
-  ) {
-    return {
-      success: false,
-      status: 400,
-      error:
-        'Featured, Category Sponsor, and Premium are available after your listing is approved.',
-    };
-  }
+  const ineligible = await boostEligibilityError(db, server, sku);
+  if (ineligible) return { success: false, ...ineligible };
 
   const secretKey = env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
   if (!secretKey) {
@@ -145,48 +131,6 @@ export async function createStripeCheckoutSession(
     };
   }
 
-  if (
-    sku === 'premium_monthly' &&
-    server.isPremium &&
-    server.premiumStatus === 'active'
-  ) {
-    return {
-      success: false,
-      status: 400,
-      error: 'This listing already has an active Premium subscription.',
-    };
-  }
-
-  if (sku === 'category_sponsor_7d') {
-    const now = new Date();
-    const existingSponsor = await db
-      .select({
-        id: servers.id,
-        name: servers.name,
-        categorySponsorUntil: servers.categorySponsorUntil,
-      })
-      .from(servers)
-      .where(
-        and(
-          eq(servers.category, server.category),
-          ne(servers.id, server.id),
-          gt(servers.categorySponsorUntil, now),
-        ),
-      )
-      .limit(1);
-
-    if (existingSponsor.length > 0) {
-      const until = existingSponsor[0].categorySponsorUntil
-        ? new Date(existingSponsor[0].categorySponsorUntil).toLocaleDateString()
-        : 'soon';
-      return {
-        success: false,
-        status: 409,
-        error: `"${server.category}" is already sponsored by another listing until ${until}. Only one category sponsor runs at a time — check back after it expires.`,
-      };
-    }
-  }
-
   const stripe = getStripe(secretKey);
   const appUrl = getAppUrl();
   const successPath =
@@ -200,9 +144,7 @@ export async function createStripeCheckoutSession(
   // inline via price_data rather than a pre-created Price — the charge can never drift from
   // what was shown. No adjustable_quantity: changing weeks means picking a new quantity on our
   // own page (which creates a fresh, correctly-priced session), not adjusting on Stripe's page.
-  const initialWeeks = isWeeklyTiered
-    ? Math.min(product.maxWeeks || 8, Math.max(1, Math.round(weeks || 1)))
-    : 1;
+  const initialWeeks = clampWeeks(product, weeks);
 
   const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
     mode: product.mode,
@@ -291,5 +233,7 @@ export async function createStripeCheckoutSession(
     success: true,
     url: finalUrl,
     sessionId: session.id,
+    amountTotalCents: session.amount_total,
+    promoApplied: promoFound,
   };
 }

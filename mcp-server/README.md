@@ -63,7 +63,8 @@ runs as the MCP stdio server described below (the default `npx allmcps-server` b
 | `recommend_mcp_stack`   | `role`                | A small stack of complementary servers for a role or workflow.           |
 | `list_mcp_categories`   | —                     | List all categories with server counts.                                  |
 | `get_boost_pricing`     | —                     | Get pricing and features for boosting/featuring a listing.               |
-| `boost_mcp_server`      | `id`                  | Start a sponsorship/boost order — returns a Stripe checkout URL and x402 invoice. |
+| `boost_mcp_server`      | `id`                  | Start a boost order — returns a Stripe checkout URL, plus x402 (USDC) payment instructions when enabled. |
+| `quote_sponsor_ad`      | `title`, `description`, `targetUrl`, `logoUrl`, `advertiserEmail` | Validate a sponsor ad and get its cost, plus x402 (USDC) payment instructions when enabled. |
 | `get_boost_status`      | `id`                  | Check boost and verified-badge status for a listing.                     |
 | `submit_mcp_server`     | `name`, `url`, `email`| Submit a new MCP server to the directory.                                |
 | `verify_mcp_claim`      | `id`                  | Verify ownership and claim a listing via GitHub README, site badge, or DNS. |

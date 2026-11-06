@@ -31,14 +31,14 @@ const CPM_TIER_HUE: Record<string, Hue> = {
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Advertise on AllMCPs — Sponsor the MCP Directory',
+  title: 'Advertise on AllMCPs - Sponsor the MCP Directory',
   description:
     'Sponsor AllMCPs with logo and copy ads across the MCP server directory, search results, and our MCP server. Transparent CPM pricing, every ad reviewed by hand.',
   alternates: {
     canonical: 'https://allmcps.com/advertise',
   },
   openGraph: {
-    title: 'Advertise on AllMCPs — Sponsor the MCP Directory',
+    title: 'Advertise on AllMCPs - Sponsor the MCP Directory',
     description:
       'Sponsor AllMCPs with logo and copy ads across the MCP server directory, search results, and our MCP server.',
     images: [
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
 const AD_FAQS = [
   {
     q: 'Do I need to buy each placement separately?',
-    a: 'No! All 4 website placements and AI agent query feeds are included automatically with every campaign. Your ad rotates seamlessly across directory listings, tool inspector sidebars, category headers, guide tutorials, and MCP protocol responses — you simply choose how many impressions you want.',
+    a: 'No! All 4 website placements and AI agent query feeds are included automatically with every campaign. Your ad rotates seamlessly across the homepage, directory listings, tool inspector sidebars, category headers, guide tutorials, and MCP protocol responses — you simply choose how many impressions you want.',
   },
   {
     q: 'Who visits AllMCPs?',
@@ -233,8 +233,9 @@ export default async function AdvertiseLandingPage() {
         <div className="section-head section-head--center">
           <h2 className="section-title">Every placement, one campaign</h2>
           <p className="section-sub">
-            No per-spot setup. Your ad rotates across directory listings, tool
-            sidebars, category headers, guides and AI protocol responses.
+            No per-spot setup. Your ad rotates across the homepage, directory
+            listings, tool sidebars, category headers, guides and AI protocol
+            responses.
           </p>
         </div>
         <PlacementShowcase />
