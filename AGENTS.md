@@ -118,8 +118,12 @@ revert their work.
 - Lint warnings are ratcheted per rule (`lint-baseline.json`, checked by `bun run lint`).
   New warnings fail; after fixing some, run `bun run lint:ratchet:update`.
 - Lefthook (installed by `bun install` via `prepare`): pre-commit runs Biome with
-  `--write` on staged files only; pre-push runs `bun run verify` plus a gitleaks scan
-  of the commits being pushed (skipped if gitleaks is not installed).
+  `--write` on staged files only; pre-push runs `scripts/pre-push.mjs` plus a secret
+  scan of the commits being pushed. The pre-push script lints the changed files, runs
+  the typecheck and only the tests that import a changed file (at most 4 Vitest
+  workers), and skips pushes that touch no code. One push's checks run at a time
+  across the machine's repos. It is not the gate: `bun run verify` is, and CI runs it.
+  Check by hand with `PRE_PUSH_BASE=origin/main node scripts/pre-push.mjs`.
 - Biome is the formatter and linter. Format only files you touch; no repo-wide
   reformat commits (they collide with parallel sessions).
 - Knip (`knip.jsonc`) finds dead files, exports, and dependencies. `scripts/` entries
