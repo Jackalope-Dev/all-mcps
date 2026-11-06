@@ -59,6 +59,12 @@ export function GateCall({
           </span>
         </div>
       )}
+      {recommendation?.flagReason && (
+        <div className="adm-verdict">
+          <span className="adm-tag hue-red">Flagged</span>
+          <span className="adm-muted">{recommendation.flagReason}</span>
+        </div>
+      )}
       {v ? (
         <div className="adm-verdict">
           <span className={`adm-tag ${v.hue}`}>

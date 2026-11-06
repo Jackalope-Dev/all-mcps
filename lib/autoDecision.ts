@@ -511,7 +511,27 @@ export async function submitterSignals(
 export type PendingRecommendation = {
   decision: AutoDecision;
   reasons: string[];
+  /** Why the card says "Needs a look", or null when it isn't flagged. */
+  flagReason: string | null;
 };
+
+const INTAKE_GUESS =
+  'intake text check: may not be an MCP server, or thin copy';
+
+/**
+ * Why a listing carries review_flagged. The flag itself stores no reason, so
+ * a card said "Needs a look" on listings (AIBIMTool, Paperzilla) whose live
+ * endpoint and Jev approve had already answered it. Policy flags are read
+ * live; anything else was the one-off text guess at intake.
+ */
+export function flagReason(e: GateEvidence): string | null {
+  if (!e.reviewFlagged) return null;
+  if (e.policyFlags.length > 0)
+    return e.policyFlags.map((f) => POLICY_FLAG_LABEL[f]).join('; ');
+  if (e.liveEndpoint && e.triageVerdict === 'approve')
+    return `${INTAKE_GUESS} (since answered: endpoint live, Jev approves)`;
+  return INTAKE_GUESS;
+}
 
 /**
  * What the gate would do with a pending listing right now, so a review card
@@ -528,9 +548,12 @@ export function recommendPending(
   const result = row.submitterEmail
     ? decideSubmission(evidence)
     : decideIngestPromote(evidence);
-  return result
-    ? { decision: result.decision, reasons: result.reasons }
-    : { decision: 'hold', reasons: ['still gathering evidence'] };
+  return {
+    ...(result
+      ? { decision: result.decision, reasons: result.reasons }
+      : { decision: 'hold', reasons: ['still gathering evidence'] }),
+    flagReason: flagReason(evidence),
+  };
 }
 
 /**

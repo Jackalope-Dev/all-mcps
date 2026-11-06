@@ -103,6 +103,35 @@ describe('isBrochureToolset', () => {
     expect(isBrochureToolset(['get_faq', 'get_contact_info'])).toBe(false);
   });
 
+  it('flags a company site served as a knowledge base', () => {
+    expect(
+      isBrochureToolset([
+        'get_overview',
+        'list_modules',
+        'get_module',
+        'search_content',
+        'get_article',
+        'get_page',
+        'get_faq',
+        'get_access_and_pricing',
+        'get_privacy_and_data',
+        'get_partner_info',
+        'get_contact_and_links',
+      ]),
+    ).toBe(true);
+  });
+
+  it('leaves pricing and partner-data APIs', () => {
+    expect(
+      isBrochureToolset([
+        'get_pricing',
+        'get_partner_orders',
+        'list_partners',
+        'get_partner_balance',
+      ]),
+    ).toBe(false);
+  });
+
   it('leaves analytics tools that happen to say overview', () => {
     expect(
       isBrochureToolset([

@@ -72,9 +72,12 @@ const LEAD_GEN_RE =
  * (AIAgentCycle, Holos33) answers the handshake and passes every text check,
  * but its tools are an "about us" page. "contacts" and "cases" alone are left
  * out: CRMs, case-law and incident-response servers use them legitimately.
+ * Holos33's resubmission (Nov 2026) matched only overview and faq, two of its
+ * 11 tools, so contact-and-links, partner info and access-and-pricing count
+ * too. Bare "pricing" does not: pricing and quote APIs are real tools.
  */
 const COMPANY_INFO_TOOL_RE =
-  /\b((company|business|brand)\s+(profile|overview|info|facts|story)|about(\s+us)?$|^(get\s+)?overview$|contact\s+(info|details|and\s+support)|faqs?$|case\s+stud(y|ies)|testimonials?|team$|official\s+links?)\b/;
+  /\b((company|business|brand)\s+(profile|overview|info|facts|story)|about(\s+us)?$|^(get\s+)?overview$|contact\s+(and\s+)?(info|details|links|support)|partners?\s+(info|program)$|access\s+and\s+pricing$|faqs?$|case\s+stud(y|ies)|testimonials?|team$|official\s+links?)\b/;
 
 /** Splits snake/camel tool names into words so `get_company_profile` matches. */
 function toolWords(name: string): string {

@@ -3,6 +3,7 @@ import {
   decideIngestPromote,
   decideSubmission,
   decideSubmissionFromStored,
+  flagReason,
   type GateEvidence,
   NO_USAGE_YET,
 } from './autoDecision';
@@ -274,6 +275,31 @@ describe('decideIngestPromote', () => {
     expect(decideIngestPromote({ ...site, packageAlive: true })?.decision).toBe(
       'approve',
     );
+  });
+});
+
+describe('flagReason', () => {
+  it('is null for an unflagged listing', () => {
+    expect(flagReason(strong)).toBeNull();
+  });
+
+  it('names the policy flags behind a flag', () => {
+    expect(
+      flagReason({ ...strong, reviewFlagged: true, policyFlags: ['brochure'] }),
+    ).toMatch(/brochure/);
+  });
+
+  it('says when a live endpoint and Jev approve answered the intake guess', () => {
+    expect(
+      flagReason({ ...strong, reviewFlagged: true, liveEndpoint: true }),
+    ).toMatch(/since answered/);
+    expect(
+      flagReason({
+        ...strong,
+        reviewFlagged: true,
+        triageVerdict: 'needs_review',
+      }),
+    ).toMatch(/^intake text check/);
   });
 });
 
