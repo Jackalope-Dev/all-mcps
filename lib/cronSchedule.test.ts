@@ -45,18 +45,20 @@ describe('jobsForTick', () => {
     }
   });
 
-  it('sends one batch-24 AI run plus install-only runs from the site, but keeps the default batch on a single Worker', () => {
+  it('sends one batch-24 AI run plus install-only and setup-steps runs from the site, but keeps the default batch on a single Worker', () => {
     expect(paths(AI_CONTENT_JOBS_DEDICATED)).toEqual([
       '/api/cron/ai-content?batchSize=24',
       ...Array(16).fill('/api/cron/ai-content?pass=install&batchSize=24'),
+      '/api/cron/setup-steps?batchSize=24',
     ]);
     for (const job of AI_CONTENT_JOBS_DEDICATED) {
       expect(isOffloadedCronPath(job.path)).toBe(true);
     }
-    // Only the install-only runs stop early once one reports the backlog empty.
+    // Backlog runs stop early once one reports the backlog empty.
     expect(AI_CONTENT_JOBS_DEDICATED.map((j) => Boolean(j.drainable))).toEqual([
       false,
       ...Array(16).fill(true),
+      true,
     ]);
     expect(jobsForTick('*/20 * * * *', 'all')).toBe(AI_CONTENT_JOBS);
   });

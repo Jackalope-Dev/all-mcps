@@ -124,6 +124,11 @@ const AI_CONTENT_DEDICATED_RUNS = 1;
 // write-ups: ~36/h against a backlog of ~11.7k. Measured 7-16s per run vs ~90s
 // for the write-up run, so 16 fit well inside the tick (~6 min of 15).
 const AI_CONTENT_INSTALL_RUNS = 16;
+// Setup-steps runs (/api/cron/setup-steps): README/docs fetch + one Jev call
+// per listing, no OpenAI. Backlog at launch (2026-11-07): ~13.7k active
+// listings with no install config. Started at 1 run (24/tick) to review real
+// output before raising it.
+const SETUP_STEPS_RUNS = 1;
 export const AI_CONTENT_JOBS_DEDICATED: CronJob[] = [
   ...Array.from({ length: AI_CONTENT_DEDICATED_RUNS }, () => ({
     path: '/api/cron/ai-content?batchSize=24',
@@ -131,6 +136,11 @@ export const AI_CONTENT_JOBS_DEDICATED: CronJob[] = [
   })),
   ...Array.from({ length: AI_CONTENT_INSTALL_RUNS }, () => ({
     path: '/api/cron/ai-content?pass=install&batchSize=24',
+    secretVar: 'CRON_SECRET' as const,
+    drainable: true,
+  })),
+  ...Array.from({ length: SETUP_STEPS_RUNS }, () => ({
+    path: '/api/cron/setup-steps?batchSize=24',
     secretVar: 'CRON_SECRET' as const,
     drainable: true,
   })),
