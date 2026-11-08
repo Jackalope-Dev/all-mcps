@@ -9,6 +9,7 @@ import {
   getServerAnalyticsBatch,
 } from '@/lib/analytics';
 import { auth } from '@/lib/auth';
+import { parseSetupSteps, setupStepsToText } from '@/lib/setupSteps';
 import { getMySubmissions, type MySubmission } from '@/lib/submissions';
 import DashboardClient from './DashboardClient';
 import { SubmissionsPanel } from './SubmissionsPanel';
@@ -81,6 +82,10 @@ type OwnedServer = {
   supportUrl?: string | null;
   suggestedInstallCommand?: string | null;
   suggestedInstallArgs?: string[] | null;
+  /** Setup steps in the owner form's text format (lib/setupSteps.ts). */
+  setupStepsText?: string;
+  setupNote?: string | null;
+  setupSourceUrl?: string | null;
 };
 
 async function getOwnedServers(userId: string): Promise<{
@@ -132,6 +137,9 @@ async function getOwnedServers(userId: string): Promise<{
           supportUrl: servers.supportUrl,
           suggestedInstallCommand: servers.suggestedInstallCommand,
           suggestedInstallArgs: servers.suggestedInstallArgs,
+          setupSteps: servers.setupSteps,
+          setupNote: servers.setupNote,
+          setupSourceUrl: servers.setupSourceUrl,
           screenshotUrl: servers.screenshotUrl,
           pendingScreenshotKey: servers.pendingScreenshotKey,
         })
@@ -182,8 +190,9 @@ async function getOwnedServers(userId: string): Promise<{
         }
       }
 
-      const normalized = rows.map((r) => ({
+      const normalized = rows.map(({ setupSteps, ...r }) => ({
         ...r,
+        setupStepsText: setupStepsToText(parseSetupSteps(setupSteps)),
         tags: parseStringArray(r.tags),
         compatibleClients: parseStringArray(r.compatibleClients),
         suggestedInstallArgs: parseStringArray(r.suggestedInstallArgs),

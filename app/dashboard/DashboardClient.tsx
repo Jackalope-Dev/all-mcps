@@ -127,6 +127,9 @@ type Server = {
   remoteEndpointUrl?: string | null;
   suggestedInstallCommand?: string | null;
   suggestedInstallArgs?: string[] | null;
+  setupStepsText?: string;
+  setupNote?: string | null;
+  setupSourceUrl?: string | null;
 };
 
 type EditFormState = {
@@ -145,6 +148,9 @@ type EditFormState = {
   remoteEndpointUrl: string;
   suggestedInstallCommand: string;
   suggestedInstallArgsInput: string;
+  setupSteps: string;
+  setupNote: string;
+  setupSourceUrl: string;
 };
 
 const emptyEditForm = (): EditFormState => ({
@@ -163,6 +169,9 @@ const emptyEditForm = (): EditFormState => ({
   remoteEndpointUrl: '',
   suggestedInstallCommand: '',
   suggestedInstallArgsInput: '',
+  setupSteps: '',
+  setupNote: '',
+  setupSourceUrl: '',
 });
 
 type Ad = {
@@ -323,6 +332,13 @@ export default function DashboardClient({
         server.suggestedInstallArgs ||
         []
       ).join(' '),
+      setupSteps:
+        (p?.setupSteps as string | undefined) ?? server.setupStepsText ?? '',
+      setupNote: (p?.setupNote as string | undefined) ?? server.setupNote ?? '',
+      setupSourceUrl:
+        (p?.setupSourceUrl as string | undefined) ??
+        server.setupSourceUrl ??
+        '',
     });
     setActiveTabMap((prev) => ({ ...prev, [server.id]: 'edit' }));
   }, []);
@@ -389,6 +405,10 @@ export default function DashboardClient({
           .split(/\s+/)
           .map((s) => s.trim())
           .filter(Boolean),
+        // Sent even when empty: clearing the steps is how an owner removes them.
+        setupSteps: form.setupSteps,
+        setupNote: form.setupNote,
+        setupSourceUrl: form.setupSourceUrl,
       };
       const res = await fetch('/api/dashboard/edit', {
         method: 'POST',
@@ -1501,6 +1521,85 @@ export default function DashboardClient({
                           }))
                         }
                         placeholder="-y @scope/pkg"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor={`edit-${server.id}-setup-steps`}
+                      style={fieldLabelStyle}
+                    >
+                      Setup steps
+                    </label>
+                    <p
+                      style={{
+                        margin: '0 0 0.4rem',
+                        fontSize: '0.8rem',
+                        color: 'var(--text-secondary)',
+                      }}
+                    >
+                      For servers that install through their own commands (an
+                      installer script, a CLI, then <code>claude mcp add</code>)
+                      rather than one <code>npx</code>/<code>uvx</code> command.
+                      Copy them from your docs: an optional <code># Label</code>{' '}
+                      line, the command, then a blank line before the next step.
+                      Shown word for word on your listing.
+                    </p>
+                    <textarea
+                      id={`edit-${server.id}-setup-steps`}
+                      className="form-input"
+                      rows={8}
+                      spellCheck={false}
+                      value={form.setupSteps}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, setupSteps: e.target.value }))
+                      }
+                      placeholder={
+                        '# Install\ncurl -fsSL https://example.com/install.sh | bash\n\n# Add to Claude Code\nclaude mcp add example -- example-server'
+                      }
+                      style={{ fontFamily: 'var(--font-mono, monospace)' }}
+                    />
+                  </div>
+
+                  <div className="submit-optional-grid">
+                    <div>
+                      <label
+                        htmlFor={`edit-${server.id}-setup-note`}
+                        style={fieldLabelStyle}
+                      >
+                        Setup note
+                      </label>
+                      <input
+                        id={`edit-${server.id}-setup-note`}
+                        className="form-input"
+                        maxLength={400}
+                        value={form.setupNote}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, setupNote: e.target.value }))
+                        }
+                        placeholder="macOS and Linux; Windows through WSL2"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor={`edit-${server.id}-setup-source`}
+                        style={fieldLabelStyle}
+                      >
+                        Setup guide URL
+                      </label>
+                      <input
+                        id={`edit-${server.id}-setup-source`}
+                        className="form-input"
+                        type="url"
+                        value={form.setupSourceUrl}
+                        onChange={(e) =>
+                          setForm((f) => ({
+                            ...f,
+                            setupSourceUrl: e.target.value,
+                          }))
+                        }
+                        placeholder="https://example.com/docs/setup"
                       />
                     </div>
                   </div>

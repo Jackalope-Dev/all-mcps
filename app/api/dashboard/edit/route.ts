@@ -20,6 +20,11 @@ import {
   PRICING_MODELS,
   TAG_LIMITS,
 } from '@/lib/serverEnums';
+import {
+  parseSetupSteps,
+  setupStepsFromText,
+  setupStepsToText,
+} from '@/lib/setupSteps';
 import { getAppUrl } from '@/lib/stripe';
 import { isSafeSubmissionUrl } from '@/lib/urlSafety';
 import { formatZodError } from '@/lib/zodError';
@@ -51,6 +56,10 @@ const editSchema = z.object({
   remoteEndpointUrl: z.string().url().optional().or(z.literal('')).or(z.null()),
   suggestedInstallCommand: z.string().max(80).optional().or(z.literal('')),
   suggestedInstallArgs: z.array(z.string()).max(20).optional(),
+  /** lib/setupSteps.ts text format; '' clears the steps. */
+  setupSteps: z.string().max(12_000).optional(),
+  setupNote: z.string().max(400).optional().or(z.literal('')),
+  setupSourceUrl: z.string().url().optional().or(z.literal('')).or(z.null()),
 });
 
 export async function POST(req: Request) {
@@ -89,6 +98,14 @@ export async function POST(req: Request) {
     if (remoteEndpointUrl && !isSafeSubmissionUrl(remoteEndpointUrl)) {
       return NextResponse.json(
         { error: 'Remote MCP endpoint must be a public http(s) address.' },
+        { status: 400 },
+      );
+    }
+
+    const setupSourceUrl = (data.setupSourceUrl || '').trim();
+    if (setupSourceUrl && !isSafeSubmissionUrl(setupSourceUrl)) {
+      return NextResponse.json(
+        { error: 'Setup source URL must be a public http(s) address.' },
         { status: 400 },
       );
     }
@@ -154,6 +171,17 @@ export async function POST(req: Request) {
       remoteEndpointUrl,
       suggestedInstallCommand: (data.suggestedInstallCommand || '').trim(),
       suggestedInstallArgs,
+      // Round-trip through the parser so whitespace-only differences in the
+      // form don't read as an edit.
+      setupSteps:
+        data.setupSteps === undefined
+          ? setupStepsToText(parseSetupSteps(server.setupSteps))
+          : setupStepsToText(setupStepsFromText(data.setupSteps)),
+      setupNote: (data.setupNote ?? server.setupNote ?? '').trim(),
+      setupSourceUrl:
+        data.setupSourceUrl === undefined
+          ? server.setupSourceUrl || ''
+          : setupSourceUrl,
     };
 
     const current: EditableServerFields = {
@@ -172,6 +200,9 @@ export async function POST(req: Request) {
       remoteEndpointUrl: server.remoteEndpointUrl || '',
       suggestedInstallCommand: server.suggestedInstallCommand || '',
       suggestedInstallArgs: parseStringArray(server.suggestedInstallArgs),
+      setupSteps: setupStepsToText(parseSetupSteps(server.setupSteps)),
+      setupNote: server.setupNote || '',
+      setupSourceUrl: server.setupSourceUrl || '',
     };
 
     const diff = diffEditableFields(current, submitted);

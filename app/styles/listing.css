@@ -1184,6 +1184,46 @@ details[open] > summary .lst-chevron {
   max-width: 40rem;
 }
 
+/* Setup steps: the project's own commands, shown verbatim */
+.lst-setup-intro {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.lst-setup-title {
+  margin: 0;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+
+.lst-setup-text {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  max-width: 44rem;
+}
+
+.lst-setup-text a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--accent-color);
+}
+
+.lst-setup-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.lst-setup-steps > li {
+  min-width: 0;
+}
+
 /* Env var editor */
 .lst-env {
   border-top: 1px solid var(--border-color);

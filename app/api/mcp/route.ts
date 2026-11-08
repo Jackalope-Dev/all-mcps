@@ -437,7 +437,7 @@ export async function POST(request: Request) {
         );
       }
 
-      const textOutput = `${formatServerAsMarkdown(server)}\n${formatClientConfigsMarkdown(configs)}`;
+      const textOutput = `${formatServerAsMarkdown(server)}\n${formatClientConfigsMarkdown(configs, (server.setupSteps?.length ?? 0) > 0)}`;
       await logMcp(serverId, 'get_mcp_install_config');
       return toolResult([{ type: 'text', text: textOutput }], {
         structuredContent: {

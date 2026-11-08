@@ -4,6 +4,8 @@
  * compatibleClients, suggestedInstallArgs).
  */
 
+import { setupStepsEditPatch } from './setupSteps';
+
 type EditableFieldValue = string | string[];
 
 export type EditableServerFields = {
@@ -26,6 +28,10 @@ export type EditableServerFields = {
   remoteEndpointUrl: string;
   suggestedInstallCommand: string;
   suggestedInstallArgs: string[];
+  /** Setup steps in lib/setupSteps.ts text format (`# Label` + command per block). */
+  setupSteps: string;
+  setupNote: string;
+  setupSourceUrl: string;
 };
 
 export type PendingRevision = {
@@ -49,6 +55,9 @@ export const EDITABLE_KEYS: (keyof EditableServerFields)[] = [
   'remoteEndpointUrl',
   'suggestedInstallCommand',
   'suggestedInstallArgs',
+  'setupSteps',
+  'setupNote',
+  'setupSourceUrl',
 ];
 
 const ARRAY_KEYS = new Set<keyof EditableServerFields>([
@@ -145,8 +154,9 @@ export function parsePendingRevision(
  */
 export function pendingRevisionToDbPatch(
   proposed: Partial<EditableServerFields>,
-): Record<string, string | null> {
-  const patch: Record<string, string | null> = {};
+  now: Date = new Date(),
+): Record<string, string | Date | null> {
+  const patch: Record<string, string | Date | null> = {};
   for (const [key, value] of Object.entries(proposed) as [
     keyof EditableServerFields,
     EditableFieldValue,
@@ -158,6 +168,27 @@ export function pendingRevisionToDbPatch(
     } else {
       const s = String(value ?? '').trim();
       patch[key] = s.length > 0 ? s : null;
+    }
+  }
+  // Steps are stored as JSON and owned by whoever wrote them, not as the raw
+  // form text the owner typed. A note/source edited alongside comes through
+  // the plain-string handling above; clearing the steps clears all three.
+  if (typeof proposed.setupSteps === 'string') {
+    const steps = setupStepsEditPatch(
+      {
+        text: proposed.setupSteps,
+        note: proposed.setupNote,
+        sourceUrl: proposed.setupSourceUrl,
+      },
+      'owner',
+      now,
+    );
+    patch.setupSteps = steps.setupSteps;
+    patch.setupSource = steps.setupSource;
+    patch.setupExtractedAt = steps.setupExtractedAt;
+    if (steps.setupSteps === null) {
+      patch.setupNote = null;
+      patch.setupSourceUrl = null;
     }
   }
   return patch;

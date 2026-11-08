@@ -24,6 +24,9 @@ const base: EditableServerFields = {
   remoteEndpointUrl: 'https://example.dev',
   suggestedInstallCommand: '',
   suggestedInstallArgs: [],
+  setupSteps: '',
+  setupNote: '',
+  setupSourceUrl: '',
 };
 
 describe('owner-editable remote endpoint', () => {
@@ -62,5 +65,38 @@ describe('owner-editable remote endpoint', () => {
     expect(
       pendingRevisionToDbPatch({ ownerUserId: 'someone-else' } as never),
     ).toEqual({});
+  });
+});
+
+describe('owner-editable setup steps', () => {
+  it('stores steps as JSON owned by the owner, not the raw form text', () => {
+    const now = new Date('2026-11-07T00:00:00Z');
+    const patch = pendingRevisionToDbPatch(
+      {
+        setupSteps: '# Install\nuvx brainscanner',
+        setupSourceUrl: 'https://brainscanner.dev/docs',
+      },
+      now,
+    );
+    expect(patch).toMatchObject({
+      setupSteps: JSON.stringify([
+        { label: 'Install', command: 'uvx brainscanner' },
+      ]),
+      setupSourceUrl: 'https://brainscanner.dev/docs',
+      setupSource: 'owner',
+      setupExtractedAt: now,
+    });
+  });
+
+  it('clearing the steps clears the note and source too', () => {
+    expect(
+      pendingRevisionToDbPatch({ setupSteps: '', setupNote: 'WSL2 only' }),
+    ).toMatchObject({
+      setupSteps: null,
+      setupNote: null,
+      setupSourceUrl: null,
+      setupSource: null,
+      setupExtractedAt: null,
+    });
   });
 });

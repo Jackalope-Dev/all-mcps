@@ -63,6 +63,7 @@ import {
   AdminInlineLinkPopover,
   AdminInlineName,
   AdminProvider,
+  AdminSetupSteps,
   AdminTopBar,
 } from '../../../components/ui/AdminListingControls';
 import { AdoptionSignals } from '../../../components/ui/AdoptionSignals';
@@ -518,8 +519,11 @@ export default async function MCPDetail({
   });
   const detailTransport = transportLabel(fallbackInstall);
   const detailRuntime = runtimeLabel(fallbackInstall);
+  const setupStepCount = server.setupSteps?.length ?? 0;
   const fallbackInstallAnswer = isUnverifiedInstall(fallbackInstall)
-    ? `We don't have a confirmed install command for ${server.name} yet, so we don't publish a generated one — a guessed package name would point at the wrong package or none at all. Follow the project's own README or setup instructions (${server.url}) for the current steps.`
+    ? setupStepCount > 0
+      ? `${server.name} installs with its own setup commands rather than a generated mcpServers config. Run the ${setupStepCount} step${setupStepCount === 1 ? '' : 's'} in the Install section in order — they are copied as-is from ${server.setupSourceUrl || server.url}.${server.setupNote ? ` ${server.setupNote}` : ''}`
+      : `We don't have a confirmed install command for ${server.name} yet, so we don't publish a generated one — a guessed package name would point at the wrong package or none at all. Follow the project's own README or setup instructions (${server.url}) for the current steps.`
     : fallbackInstall.kind === 'remote'
       ? `${server.name} is a hosted MCP server. Add it as a remote server in your client's config: "mcpServers": { "${installSlug}": { "url": "${fallbackInstall.url}" } }`
       : `Add the following block to your claude_desktop_config.json under mcpServers: "mcpServers": { "${installSlug}": { "command": "${fallbackInstall.command}", "args": ${JSON.stringify(fallbackInstall.args)} } }`;
@@ -1233,8 +1237,10 @@ export default async function MCPDetail({
                       Install {displayName}
                     </h2>
                     <p>
-                      Pick your client, then add it in one click or paste the
-                      config.
+                      {isUnverifiedInstall(fallbackInstall) &&
+                      setupStepCount > 0
+                        ? 'Run the project’s own setup commands, in order.'
+                        : 'Pick your client, then add it in one click or paste the config.'}
                     </p>
                   </div>
                   {(detailTransport || detailRuntime) && (
@@ -1257,6 +1263,13 @@ export default async function MCPDetail({
                       ? `Open setup steps on ${repoHost || 'the repository'}`
                       : 'Open the project’s setup instructions'
                   }
+                />
+                <AdminSetupSteps
+                  serverId={server.id}
+                  initialSteps={server.setupSteps ?? []}
+                  initialNote={server.setupNote ?? ''}
+                  initialSourceUrl={server.setupSourceUrl ?? ''}
+                  source={server.setupSource ?? null}
                 />
 
                 {server.remoteEndpointUrl && (

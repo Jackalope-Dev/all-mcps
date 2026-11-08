@@ -365,6 +365,13 @@
       "when": 1793920550647,
       "tag": "0070_acp_checkout",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "6",
+      "when": 1794113206464,
+      "tag": "0071_setup_steps",
+      "breakpoints": true
     }
   ]
 }

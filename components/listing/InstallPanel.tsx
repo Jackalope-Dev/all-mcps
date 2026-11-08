@@ -22,6 +22,7 @@ import {
   type ResolvedInstall,
   resolveInstallConfig,
 } from '../../lib/installConfig';
+import type { SetupStep } from '../../lib/setupSteps';
 import { isServerInStack, toggleServerInStack } from '../../lib/stackStore';
 import { CopyBlock } from '../ui/CopyBlock';
 import { signalConfigCopied } from '../ui/ReviewNudge';
@@ -43,6 +44,19 @@ interface InstallPanelServer {
   aiEnvVars?: string[] | null;
   installNote?: string | null;
   installNoteHref?: string | null;
+  /** The project's own commands, shown verbatim when no config can be generated. */
+  setupSteps?: SetupStep[] | null;
+  setupNote?: string | null;
+  setupSourceUrl?: string | null;
+  setupSource?: string | null;
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
 }
 
 /** Shown as tabs; every other client sits in the "More" picker. */
@@ -349,6 +363,57 @@ export function InstallPanel({
       </button>
     </div>
   );
+
+  const setupSteps = server.setupSteps ?? [];
+  if (unverified && setupSteps.length > 0) {
+    const sourceUrl = server.setupSourceUrl || setupUrl || null;
+    const fromOwner =
+      server.setupSource === 'owner' || server.setupSource === 'admin';
+    return (
+      <div className="lst-install-body">
+        <div className="lst-setup-intro">
+          <p className="lst-setup-title">Setup steps from the project</p>
+          <p className="lst-setup-text">
+            {server.name} installs with its own commands rather than a config we
+            can generate, so these are copied as-is
+            {fromOwner ? ' from its maintainers’ setup guide' : ''}. Run them in
+            order in a terminal.
+            {sourceUrl ? (
+              <>
+                {' '}
+                Source:{' '}
+                <a href={sourceUrl} target="_blank" rel="noopener noreferrer">
+                  {hostOf(sourceUrl)}
+                  <ExternalLink size={12} aria-hidden="true" />
+                </a>
+              </>
+            ) : null}
+          </p>
+          {server.setupNote ? (
+            <div className="lst-callout">
+              <Info size={16} aria-hidden="true" />
+              <p>{server.setupNote}</p>
+            </div>
+          ) : null}
+        </div>
+        <ol className="lst-setup-steps">
+          {setupSteps.map((step, i) => (
+            <li key={`${step.label ?? ''}|${step.command}`}>
+              <CopyBlock
+                code={step.command}
+                title={`${i + 1}. ${step.label ?? 'Run'}`}
+                language="bash"
+                serverId={server.id}
+                snippetType="setup-step"
+                toastMessage="Command copied"
+              />
+            </li>
+          ))}
+        </ol>
+        {footer}
+      </div>
+    );
+  }
 
   if (unverified) {
     return (

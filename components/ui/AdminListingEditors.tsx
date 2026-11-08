@@ -22,6 +22,11 @@ import { useRouter } from 'next/navigation';
 import type React from 'react';
 import { useState } from 'react';
 import { DIRECTORY_CATEGORIES } from '../../lib/categories';
+import {
+  type SetupStep,
+  setupStepsFromText,
+  setupStepsToText,
+} from '../../lib/setupSteps';
 import { toast } from './Toast';
 
 /* -------------------------------------------------------------------------- */
@@ -1065,5 +1070,169 @@ export function AdminInlineLinkPopoverEditor({
         </div>
       )}
     </span>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                             SETUP STEPS EDITOR                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Edits the listing's verbatim setup steps (lib/setupSteps.ts text format:
+ * optional `# Label` line, the command, a blank line between steps). Saving
+ * marks them admin-written, so the extraction pass never overwrites them;
+ * clearing every field hands the listing back to extraction.
+ */
+export function AdminSetupStepsEditor({
+  serverId,
+  initialSteps,
+  initialNote,
+  initialSourceUrl,
+  source,
+}: {
+  serverId: string;
+  initialSteps: SetupStep[];
+  initialNote: string;
+  initialSourceUrl: string;
+  source: string | null;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState(setupStepsToText(initialSteps));
+  const [note, setNote] = useState(initialNote);
+  const [sourceUrl, setSourceUrl] = useState(initialSourceUrl);
+  const [saving, setSaving] = useState(false);
+  const parsed = setupStepsFromText(text);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: serverId,
+          action: 'edit',
+          fields: {
+            setupSteps: text,
+            setupNote: note.trim(),
+            setupSourceUrl: sourceUrl.trim(),
+          },
+        }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error || 'Failed to save setup steps');
+      toast.success(
+        parsed.length > 0 ? 'Setup steps saved' : 'Setup steps cleared',
+      );
+      setOpen(false);
+      router.refresh();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save setup steps');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const field: React.CSSProperties = {
+    width: '100%',
+    background: 'var(--surface-1)',
+    color: 'var(--text-primary)',
+    border: '1px solid var(--border-color)',
+    borderRadius: '6px',
+    padding: '0.45rem 0.6rem',
+    fontSize: '0.82rem',
+  };
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        title="Admin: edit setup steps"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.35rem',
+          marginTop: '0.6rem',
+          padding: '0.3rem 0.6rem',
+          borderRadius: '6px',
+          background: 'rgba(239, 68, 68, 0.12)',
+          color: 'var(--admin-bad)',
+          border: '1px solid rgba(239, 68, 68, 0.25)',
+          cursor: 'pointer',
+          fontSize: '0.75rem',
+          fontWeight: 600,
+        }}
+      >
+        <Edit2 size={12} />
+        Setup steps{source ? ` (${source})` : ''}
+      </button>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        marginTop: '0.75rem',
+        padding: '0.9rem',
+        borderRadius: '10px',
+        border: '1px solid rgba(239, 68, 68, 0.35)',
+        background: 'var(--bg-muted)',
+        display: 'grid',
+        gap: '0.55rem',
+      }}
+    >
+      <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>
+        Setup steps — copy commands verbatim from the project&rsquo;s docs
+      </span>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={12}
+        spellCheck={false}
+        placeholder={
+          '# Install\ncurl -fsSL https://example.com/install.sh | bash\n\n# Add to Claude Code\nclaude mcp add example -- example-server'
+        }
+        style={{ ...field, fontFamily: 'var(--font-mono, monospace)' }}
+      />
+      <input
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        maxLength={400}
+        placeholder="Note (platforms, account or credit requirements)"
+        style={field}
+      />
+      <input
+        type="url"
+        value={sourceUrl}
+        onChange={(e) => setSourceUrl(e.target.value)}
+        placeholder="Source URL (the page the commands come from)"
+        style={field}
+      />
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <button
+          type="button"
+          onClick={save}
+          disabled={saving}
+          className="btn btn-primary btn-sm"
+        >
+          {saving ? (
+            <Loader2 size={13} className="spin" />
+          ) : (
+            <Check size={13} />
+          )}
+          Save {parsed.length} step{parsed.length === 1 ? '' : 's'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          disabled={saving}
+          className="btn btn-ghost btn-sm"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
   );
 }

@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
   index,
   integer,
@@ -299,6 +300,26 @@ export const servers = sqliteTable(
     suggestedInstallCommand: text('suggested_install_command'),
     /** JSON string array of args paired with `suggestedInstallCommand`. */
     suggestedInstallArgs: text('suggested_install_args'),
+    /**
+     * The project's own setup commands, shown verbatim when there is no
+     * confirmed runner + package to generate a client config from (vendor
+     * installer scripts, brew + binary, "install our CLI, then `claude mcp
+     * add`"). JSON array of {label, command}; see lib/setupSteps.ts. Never
+     * converted into an mcpServers config.
+     */
+    setupSteps: text('setup_steps'),
+    /** Short prerequisite/platform note shown with the steps (e.g. "Windows via WSL2"). */
+    setupNote: text('setup_note'),
+    /** The README or docs page the steps were copied from. */
+    setupSourceUrl: text('setup_source_url'),
+    /** extracted | owner | admin. Extraction never overwrites owner/admin steps. */
+    setupSource: text('setup_source'),
+    /**
+     * When the setup-steps pass last looked at this listing (found steps or
+     * not). Null = never checked; the partial index idx_servers_setup_due
+     * holds exactly the active, install-less, unchecked rows it claims from.
+     */
+    setupExtractedAt: integer('setup_extracted_at', { mode: 'timestamp' }),
     /** Canonical server id to 308-redirect to when this listing is retired or merged as a duplicate. */
     redirectTo: text('redirect_to'),
     /**
@@ -335,6 +356,14 @@ export const servers = sqliteTable(
       table.copies,
       table.upvotes,
     ),
+    // The setup-steps pass claims from exactly these rows, most viewed first.
+    // Partial, so the claim reads only the remaining backlog (it shrinks as
+    // the pass drains it) instead of walking the active catalog.
+    setupDueIdx: index('idx_servers_setup_due')
+      .on(table.views)
+      .where(
+        sql`status = 'active' AND install_kind IS NULL AND setup_extracted_at IS NULL`,
+      ),
     statusLastCheckedIdx: index('idx_servers_status_last_checked').on(
       table.status,
       table.lastCheckedAt,

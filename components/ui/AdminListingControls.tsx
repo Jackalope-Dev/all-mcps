@@ -14,6 +14,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import type React from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
+import type { SetupStep } from '../../lib/setupSteps';
 import type { AdminTopBarProps } from './AdminListingEditors';
 
 /* -------------------------------------------------------------------------- */
@@ -97,6 +98,10 @@ const AdminInlineDescriptionEditor = dynamic(
 );
 const AdminInlineLinkPopoverEditor = dynamic(
   () => loadEditors().then((m) => m.AdminInlineLinkPopoverEditor),
+  { ssr: false },
+);
+const AdminSetupStepsEditor = dynamic(
+  () => loadEditors().then((m) => m.AdminSetupStepsEditor),
   { ssr: false },
 );
 
@@ -206,4 +211,17 @@ export function AdminInlineLinkPopover({
       currentUrl={currentUrl}
     />
   );
+}
+
+/** Admin-only editor for the listing's verbatim setup steps (below the install panel). */
+export function AdminSetupSteps(props: {
+  serverId: string;
+  initialSteps: SetupStep[];
+  initialNote: string;
+  initialSourceUrl: string;
+  source: string | null;
+}) {
+  const { isAdmin } = useAdmin();
+  if (!isAdmin) return null;
+  return <AdminSetupStepsEditor {...props} />;
 }

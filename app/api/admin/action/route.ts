@@ -43,6 +43,7 @@ import {
 } from '../../../../lib/pendingRevision';
 import { WITHDRAWN_STATUS } from '../../../../lib/servability';
 import { parseServerTools } from '../../../../lib/servers';
+import { setupStepsEditPatch } from '../../../../lib/setupSteps';
 import { upsertSignals } from '../../../../lib/signalStore';
 import { getAppUrl } from '../../../../lib/stripe';
 import { classifyTags } from '../../../../lib/tagClassifier';
@@ -90,6 +91,10 @@ const actionSchema = z.object({
       url: z.string().trim().min(1).optional(),
       websiteUrl: z.string().trim().optional(),
       targetId: z.string().trim().min(1).optional(),
+      /** lib/setupSteps.ts text format; '' clears the steps. */
+      setupSteps: z.string().max(12_000).optional(),
+      setupNote: z.string().trim().max(400).optional(),
+      setupSourceUrl: z.string().trim().max(2000).optional(),
     })
     .optional(),
   days: z.number().int().min(1).max(365).optional(),
@@ -300,6 +305,28 @@ export async function POST(req: Request) {
           .limit(1);
         updates.websiteBacklinkOk = false;
         updates.reciprocalBadgeOk = badgeRows[0]?.readmeBadgeOk ?? false;
+      }
+
+      if (fields.setupSteps !== undefined) {
+        const sourceUrl = fields.setupSourceUrl ?? '';
+        if (sourceUrl && !isSafeSubmissionUrl(sourceUrl)) {
+          return NextResponse.json(
+            { error: 'Setup source URL must be a public http(s) address.' },
+            { status: 400 },
+          );
+        }
+        Object.assign(
+          updates,
+          setupStepsEditPatch(
+            {
+              text: fields.setupSteps,
+              note: fields.setupNote,
+              sourceUrl,
+            },
+            'admin',
+            new Date(),
+          ),
+        );
       }
 
       if (Object.keys(updates).length === 0) {

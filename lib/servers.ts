@@ -63,6 +63,11 @@ import {
   SEARCH_FTS_READY_CURSOR,
 } from './searchFts';
 import { isPubliclyHidden, servableSql } from './servability';
+import {
+  parseSetupSteps,
+  type SetupStep,
+  setupStepsMarkdown,
+} from './setupSteps';
 import { rankShowcaseServers } from './showcase';
 import { computeTrustTier, type TrustTierInput } from './trustTier';
 
@@ -143,6 +148,7 @@ function normalizeServer<
     tags?: unknown;
     compatibleClients?: unknown;
     suggestedInstallArgs?: unknown;
+    setupSteps?: unknown;
   };
   return {
     ...server,
@@ -163,6 +169,7 @@ function normalizeServer<
     tags: parseStringArray(s.tags),
     compatibleClients: parseStringArray(s.compatibleClients),
     suggestedInstallArgs: parseStringArray(s.suggestedInstallArgs),
+    setupSteps: parseSetupSteps(s.setupSteps),
   };
 }
 
@@ -242,6 +249,10 @@ export const PUBLIC_SERVER_COLUMNS = {
   screenshotUrl: serversTable.screenshotUrl,
   suggestedInstallCommand: serversTable.suggestedInstallCommand,
   suggestedInstallArgs: serversTable.suggestedInstallArgs,
+  setupSteps: serversTable.setupSteps,
+  setupNote: serversTable.setupNote,
+  setupSourceUrl: serversTable.setupSourceUrl,
+  setupSource: serversTable.setupSource,
   redirectTo: serversTable.redirectTo,
 } as const;
 
@@ -387,6 +398,12 @@ export type Server = {
   suggestedInstallCommand?: string | null;
   /** Parsed by normalizeServer from the `suggested_install_args` JSON column. */
   suggestedInstallArgs?: string[];
+  /** Parsed by normalizeServer from the `setup_steps` JSON column. See lib/setupSteps.ts. */
+  setupSteps?: SetupStep[];
+  setupNote?: string | null;
+  setupSourceUrl?: string | null;
+  /** extracted | owner | admin. */
+  setupSource?: string | null;
 };
 
 /** Columns needed for homepage-wide ranking/counts — see getActiveServersLight. */
@@ -3057,7 +3074,10 @@ export function formatServerAsMarkdown(
   if (isUnverifiedInstall(install)) {
     // Same rule as the listing page's config tabs: a package guessed from the
     // listing name may not exist or may be someone else's, so print no config.
-    md += `No confirmed install details yet, so no config is published. Follow the setup steps in the repository above.\n\n`;
+    const steps = setupStepsMarkdown(server);
+    md += steps
+      ? `No generated config for this server: it installs through its own setup steps.\n\n${steps}`
+      : `No confirmed install details yet, so no config is published. Follow the setup steps in the repository above.\n\n`;
   } else if (install.kind === 'remote') {
     md += `Remote MCP endpoint (confidence: ${install.confidence}). ${confNote} Add as a URL/SSE server in your client:\n\n`;
     md += `\`\`\`json\n`;

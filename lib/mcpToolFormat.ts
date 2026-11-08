@@ -23,9 +23,12 @@ const FENCE: Record<ClientConfig['format'], string> = {
 /** Markdown for every client's config, or a note when none is published. */
 export function formatClientConfigsMarkdown(
   configs: ClientConfig[] | null,
+  hasSetupSteps = false,
 ): string {
   if (!configs) {
-    return '## Setup\nNo confirmed install details for this listing yet, so no client config is published. Follow the setup steps in the project repository.\n';
+    return hasSetupSteps
+      ? '## Setup\nNo per-client config is generated for this listing. Run the setup steps above instead.\n'
+      : '## Setup\nNo confirmed install details for this listing yet, so no client config is published. Follow the setup steps in the project repository.\n';
   }
   let md = '## Setup by client\n';
   for (const c of configs) {
