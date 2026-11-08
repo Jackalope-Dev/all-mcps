@@ -256,11 +256,16 @@ export function looksLikeCommand(
   const line = command.split('\n')[0].trim();
   // `X=$(mktemp -d)`, `ARR=()`, `ARR+=(…)`: setting a variable, not running anything.
   if (/^[A-Za-z_]\w*\+?=(?:\$\(.*\)|\(.*\)|\S*)$/.test(line)) return false;
+  if (!isRunnableAsShown(command)) return false;
   const first = commandHead(line);
   if (!first) return false;
   if (inShellBlock) {
     const word = first.split(/\s+/)[0].toLowerCase();
-    if (!SHELL_NOISE.has(word) && /^[\w"'~.$/-]/.test(first)) return true;
+    // Lowercase start: a capitalized line in a shell block is prose
+    // ("Add --yes to …"), not a command. `$s = irm …`, `.\x.exe` still pass.
+    if (!SHELL_NOISE.has(word) && /^(?:[a-z0-9_~./$-]|"\$)/.test(first)) {
+      return true;
+    }
   }
   if (/^(?:\.{1,2}\/|~\/|"?\$\{?HOME\}?\/|\/(?:usr|opt)\/)/.test(first)) {
     // A lone path is a file or folder to look at, unless it's clearly a
@@ -271,6 +276,23 @@ export function looksLikeCommand(
   }
   const word = first.split(/\s+/)[0].replace(/^["']|["']$/g, '');
   return COMMAND_STARTERS.has(word.toLowerCase());
+}
+
+/**
+ * Rejects text that sits in a code block but can't be pasted and run: a line
+ * of a JSON config (`"command": "npx",`, `{`), usage syntax with optional
+ * flags (`start [--port=3000]`), an elided command (`curl … | sh`), or
+ * markdown that leaked in (backticks).
+ */
+function isRunnableAsShown(command: string): boolean {
+  const line = command.split('\n')[0].trim();
+  if (/^[{}[\]]/.test(line)) return false;
+  // A quoted first word is fine only as a quoted path ("$HOME/…", "./x").
+  if (/^["']/.test(line) && !/^["'](?:\$|~|\.{0,2}\/)/.test(line)) return false;
+  if (/^"[^"]*"\s*:/.test(line)) return false;
+  if (command.includes('…') || command.includes('`')) return false;
+  if (/\s\[--?[\w-]/.test(command)) return false;
+  return true;
 }
 
 /** True while a line run leaves a quote open (so the command continues). */

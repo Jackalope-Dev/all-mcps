@@ -99,7 +99,7 @@ export async function pickSetupSteps(listing: {
       type: 'noul',
       instructions:
         `Command c${i} is one a user runs to install, sign in to, configure, start, or connect THIS project's own MCP server ` +
-        "(including the CLI or app that provides it; building from source counts when that is how users install it). Not: a command for a different project, a contributor's dev/test/lint step, an example of calling the server's tools, or an uninstall.",
+        "(including the CLI or app that provides it; building from source counts when that is how users install it). Not: a command for a different project, a contributor's dev/test/lint step, an example of calling the server's tools, an uninstall, or a second alternative way to do a step an earlier command already does (e.g. a brew or go install offered as another option after a curl installer).",
       criteria: {
         true: 'A setup step for this server',
         false: 'Not a setup step for this server',

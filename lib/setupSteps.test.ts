@@ -69,6 +69,29 @@ describe('looksLikeCommand', () => {
     expect(looksLikeCommand(cmd)).toBe(false);
   });
 
+  // Junk seen in the first production batch (2026-11-07), shapes kept, names fictional.
+  it.each([
+    '"mcpServers": {',
+    '"command": "npx",',
+    '"args": ["-y", "@acme/brainscanner@latest"]',
+    '{',
+    'Add `--yes` to configure every detected client without asking.',
+    'npm start -- [--transport=http|stdio] [--port=3000]',
+    'curl … install.sh | sh',
+  ])('rejects %s even in a shell block', (cmd) => {
+    expect(looksLikeCommand(cmd, true)).toBe(false);
+  });
+
+  it('keeps quoted paths and PowerShell installers', () => {
+    expect(looksLikeCommand('"$HOME/.brainscanner/bin/bs" login', true)).toBe(
+      true,
+    );
+    expect(
+      looksLikeCommand('$s = irm https://brainscanner.dev/install.ps1', true),
+    ).toBe(true);
+    expect(looksLikeCommand('.\\bs-bridge.exe --port 8765', true)).toBe(true);
+  });
+
   it('takes any command line inside a shell-tagged block', () => {
     expect(looksLikeCommand('brainscanner login', true)).toBe(true);
     expect(looksLikeCommand('brainscanner login')).toBe(false);
