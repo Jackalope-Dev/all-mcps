@@ -25,7 +25,7 @@ export type SetupStep = {
 /** Who wrote the steps. Extraction never overwrites an owner's or admin's. */
 export type SetupStepsSource = 'extracted' | 'owner' | 'admin';
 
-export const SETUP_LIMITS = {
+const SETUP_LIMITS = {
   maxSteps: 8,
   maxCommandChars: 1200,
   maxLabelChars: 60,
@@ -287,6 +287,8 @@ export function looksLikeCommand(
 function isRunnableAsShown(command: string): boolean {
   const line = command.split('\n')[0].trim();
   if (/^[{}[\]]/.test(line)) return false;
+  // A markdown list item that landed in a code block (`- clone the repo`).
+  if (/^[-*•]\s/.test(line)) return false;
   // A quoted first word is fine only as a quoted path ("$HOME/…", "./x").
   if (/^["']/.test(line) && !/^["'](?:\$|~|\.{0,2}\/)/.test(line)) return false;
   if (/^"[^"]*"\s*:/.test(line)) return false;

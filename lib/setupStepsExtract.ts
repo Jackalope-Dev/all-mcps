@@ -12,7 +12,6 @@ import { fetchGithubReadme, parseGithubUrl } from './listingEnrich';
 import {
   extractCommandCandidates,
   htmlToText,
-  SETUP_LIMITS,
   type SetupStep,
 } from './setupSteps';
 import { askJev, confidentChoice, type JevQuestion } from './typesafe';
@@ -20,6 +19,12 @@ import { isSafeSubmissionUrl, safeFetch } from './urlSafety';
 
 /** Jev's truth probability for "this command is a setup step for this server". */
 const STEP_FLOOR = 0.7;
+/**
+ * Extracted lists stop here (owners and admins get 8, lib/setupSteps.ts).
+ * READMEs list every alternative (brew, scoop, winget, go install, a server
+ * started three ways); in document order the first six hold the real path.
+ */
+const EXTRACTED_MAX_STEPS = 6;
 /** Below this the role is a guess, and the step goes unlabeled. */
 const ROLE_FLOOR = 0.45;
 
@@ -140,7 +145,7 @@ export async function pickSetupSteps(listing: {
     steps.push({ label: stepLabel(knownRole, command), command });
   });
   if (!essential || steps.length === 0) return { status: 'none' };
-  return { status: 'ok', steps: steps.slice(0, SETUP_LIMITS.maxSteps) };
+  return { status: 'ok', steps: steps.slice(0, EXTRACTED_MAX_STEPS) };
 }
 
 const DOCS_MAX_BYTES = 600_000;

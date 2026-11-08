@@ -49,7 +49,7 @@ describe('jobsForTick', () => {
     expect(paths(AI_CONTENT_JOBS_DEDICATED)).toEqual([
       '/api/cron/ai-content?batchSize=24',
       ...Array(16).fill('/api/cron/ai-content?pass=install&batchSize=24'),
-      '/api/cron/setup-steps?batchSize=24',
+      ...Array(6).fill('/api/cron/setup-steps?batchSize=24'),
     ]);
     for (const job of AI_CONTENT_JOBS_DEDICATED) {
       expect(isOffloadedCronPath(job.path)).toBe(true);
@@ -58,7 +58,7 @@ describe('jobsForTick', () => {
     expect(AI_CONTENT_JOBS_DEDICATED.map((j) => Boolean(j.drainable))).toEqual([
       false,
       ...Array(16).fill(true),
-      true,
+      ...Array(6).fill(true),
     ]);
     expect(jobsForTick('*/20 * * * *', 'all')).toBe(AI_CONTENT_JOBS);
   });

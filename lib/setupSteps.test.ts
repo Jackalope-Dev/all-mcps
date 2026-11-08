@@ -78,6 +78,8 @@ describe('looksLikeCommand', () => {
     'Add `--yes` to configure every detected client without asking.',
     'npm start -- [--transport=http|stdio] [--port=3000]',
     'curl … install.sh | sh',
+    '- clone the repository',
+    '* 安装相关依赖',
   ])('rejects %s even in a shell block', (cmd) => {
     expect(looksLikeCommand(cmd, true)).toBe(false);
   });

@@ -126,9 +126,9 @@ const AI_CONTENT_DEDICATED_RUNS = 1;
 const AI_CONTENT_INSTALL_RUNS = 16;
 // Setup-steps runs (/api/cron/setup-steps): README/docs fetch + one Jev call
 // per listing, no OpenAI. Backlog at launch (2026-11-07): ~13.7k active
-// listings with no install config. Started at 1 run (24/tick) to review real
-// output before raising it.
-const SETUP_STEPS_RUNS = 1;
+// listings with no install config. Ran at 1 run (24/tick) while the first
+// batches were reviewed; 6 runs is ~430/h, so the backlog drains in ~1.5 days.
+const SETUP_STEPS_RUNS = 6;
 export const AI_CONTENT_JOBS_DEDICATED: CronJob[] = [
   ...Array.from({ length: AI_CONTENT_DEDICATED_RUNS }, () => ({
     path: '/api/cron/ai-content?batchSize=24',
