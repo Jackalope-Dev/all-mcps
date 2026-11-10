@@ -67,13 +67,16 @@ import {
 import { upsertSignals } from '../../../../lib/signalStore';
 import {
   assessStaleness,
+  downFromHistory,
   evidenceReasons,
   type HealthHistorySummary,
+  isRepoAlive,
   JEV_REJECT_MCP_CEILING,
+  mayHideListing,
   parseStaleReasons,
   pendingAutoRemoveReason,
+  type StalenessInput,
   shouldAutoRemove,
-  siteDownFromHistory,
 } from '../../../../lib/staleness';
 import { checkEndpoint } from '../../../../lib/tools/discoverRemoteEndpoint';
 import {
@@ -82,8 +85,9 @@ import {
 } from '../../../../lib/typosquat';
 
 /**
- * Keeps dead, abandoned and fake listings out of the catalog, in stages — see
- * lib/staleness.ts for the rules and why removal is never immediate.
+ * Keeps unavailable, fake and unsafe listings out of the catalog, in stages —
+ * see lib/staleness.ts for the rules (stale means unavailable, never old) and
+ * why removal is never immediate. Paying listings are never hidden.
  *
  * Bounded phases per tick, cheapest first so a slow registry or Jev never
  * starves the assessment that does the actual work:
@@ -228,24 +232,26 @@ async function countMaliciousReporters(
 
 /**
  * The current run of failed health checks per listing: everything after its
- * newest healthy check (lib/staleness.ts siteDownFromHistory). Listings
- * without a failure since their last healthy check are absent.
+ * newest healthy check (lib/staleness.ts downFromHistory). Listings without a
+ * failure since their last healthy check are absent. `column` 'healthy' is
+ * the listing's own site; 'remoteHealthy' its remote endpoint, where checks
+ * that didn't probe one (null) count as neither.
  */
 async function loadFailureStreaks(
   db: any,
   ids: string[],
+  column: 'healthy' | 'remoteHealthy' = 'healthy',
 ): Promise<Map<string, HealthHistorySummary>> {
   const out = new Map<string, HealthHistorySummary>();
   const c = serverHealthChecks;
+  const col = c[column];
   for (let i = 0; i < ids.length; i += REPORT_ID_CHUNK) {
     const last = db
       .select({
         sid: c.serverId,
         lastOk: sql<
           number | null
-        >`max(case when ${c.healthy} = 1 then ${c.checkedAt} end)`.as(
-          'last_ok',
-        ),
+        >`max(case when ${col} = 1 then ${c.checkedAt} end)`.as('last_ok'),
       })
       .from(c)
       .where(inArray(c.serverId, ids.slice(i, i + REPORT_ID_CHUNK)))
@@ -268,7 +274,7 @@ async function loadFailureStreaks(
       .innerJoin(last, eq(last.sid, c.serverId))
       .where(
         and(
-          eq(c.healthy, false),
+          eq(col, false),
           or(isNull(last.lastOk), sql`${c.checkedAt} > ${last.lastOk}`),
         ),
       )
@@ -478,26 +484,25 @@ export async function POST(req: Request) {
         isPremium: servers.isPremium,
         isOfficial: servers.isOfficial,
         featuredUntil: servers.featuredUntil,
+        categorySponsorUntil: servers.categorySponsorUntil,
         ownerUserId: servers.ownerUserId,
-        lastCommitAt: servers.lastCommitAt,
-        githubStars: servers.githubStars,
         npmDownloads: servers.npmDownloads,
+        healthStatus: servers.healthStatus,
         toolsSource: servers.toolsSource,
         installNeedsConfig: servers.installNeedsConfig,
         remoteEndpointHealthy: servers.remoteEndpointHealthy,
         installKind: servers.installKind,
         staleFlaggedAt: servers.staleFlaggedAt,
         curatorKeptAt: listingSignals.curatorKeptAt,
-        packageDeprecated: listingSignals.packageDeprecated,
         packageMissingAt: listingSignals.packageMissingAt,
         repoForkOf: listingSignals.repoForkOf,
         mcpProbability: listingSignals.mcpProbability,
         staleReasons: listingSignals.staleReasons,
         registryCheckedAt: listingSignals.registryCheckedAt,
+        repoStatus: listingSignals.repoStatus,
         repoGoneCount: listingSignals.repoGoneCount,
         repoFirstGoneAt: listingSignals.repoFirstGoneAt,
         triageVerdict: listingSignals.triageVerdict,
-        installFailures: stdioVerifications.installFailures,
         url: servers.url,
         installCommand: servers.installCommand,
         installArgs: servers.installArgs,
@@ -510,7 +515,6 @@ export async function POST(req: Request) {
       })
       .from(servers)
       .leftJoin(listingSignals, eq(listingSignals.serverId, servers.id))
-      .leftJoin(stdioVerifications, eq(stdioVerifications.serverId, servers.id))
       .where(
         and(
           eq(servers.status, 'active'),
@@ -526,20 +530,29 @@ export async function POST(req: Request) {
       .orderBy(asc(listingSignals.staleCheckedAt))
       .limit(ASSESS_BATCH);
 
-    const [popularPackages, maliciousReporters, failureStreaks] =
-      await Promise.all([
-        loadPopularNpmPackages(db),
-        countMaliciousReporters(
-          db,
-          assessRows.map((r) => r.id),
-          now,
-        ),
-        // A GitHub listing's health is its repo, which 'repo-gone' covers.
-        loadFailureStreaks(
-          db,
-          assessRows.filter((r) => !githubRepoSlug(r.url)).map((r) => r.id),
-        ),
-      ]);
+    const [
+      popularPackages,
+      maliciousReporters,
+      failureStreaks,
+      endpointStreaks,
+    ] = await Promise.all([
+      loadPopularNpmPackages(db),
+      countMaliciousReporters(
+        db,
+        assessRows.map((r) => r.id),
+        now,
+      ),
+      // A GitHub listing's health is its repo, which 'repo-gone' covers.
+      loadFailureStreaks(
+        db,
+        assessRows.filter((r) => !githubRepoSlug(r.url)).map((r) => r.id),
+      ),
+      loadFailureStreaks(
+        db,
+        assessRows.filter((r) => r.installKind === 'remote').map((r) => r.id),
+        'remoteHealthy',
+      ),
+    ]);
 
     let flagged = 0;
     let unflagged = 0;
@@ -548,35 +561,30 @@ export async function POST(req: Request) {
     for (const r of assessRows) {
       const npmName = npmPackageFor(r);
       const listingRepo = githubRepoSlug(r.url);
-      const reasons = assessStaleness({
+      const input: StalenessInput = {
         now,
         isPremium: r.isPremium,
         isOfficial: r.isOfficial,
         featuredUntil: r.featuredUntil,
+        categorySponsorUntil: r.categorySponsorUntil,
         ownerUserId: r.ownerUserId,
         curatorKeptAt: r.curatorKeptAt,
-        lastCommitAt: r.lastCommitAt,
-        githubStars: r.githubStars,
-        npmDownloads: r.npmDownloads,
         toolsSource: r.toolsSource,
         installNeedsConfig: r.installNeedsConfig,
         remoteEndpointHealthy: r.remoteEndpointHealthy,
         installKind: r.installKind,
-        packageDeprecated: r.packageDeprecated,
         packageMissing: r.packageMissingAt != null,
-        installFailures: r.installFailures,
-        repoForkOf: r.repoForkOf,
         mcpProbability: r.mcpProbability,
         repoGoneConfirmed: isRepoGoneConfirmed(
           r.repoGoneCount,
           r.repoFirstGoneAt,
           now,
         ),
-        packageAlive:
-          r.registryCheckedAt != null &&
-          r.packageMissingAt == null &&
-          !r.packageDeprecated,
-        siteDown: siteDownFromHistory(failureStreaks.get(r.id), now),
+        repoAlive: isRepoAlive(r.repoStatus, r.healthStatus),
+        // A deprecated package still installs, so it still counts as alive.
+        packageAlive: r.registryCheckedAt != null && r.packageMissingAt == null,
+        siteDown: downFromHistory(failureStreaks.get(r.id), now),
+        endpointDown: downFromHistory(endpointStreaks.get(r.id), now),
         triageVerdict: r.triageVerdict,
         toolPoisoning: hasStrongPoisoning(
           r.poisoning ? safeParseArray(r.poisoning) : null,
@@ -591,7 +599,33 @@ export async function POST(req: Request) {
           r.repoForkOf,
         ),
         maliciousReporters: maliciousReporters.get(r.id) ?? 0,
-      });
+      };
+      const reasons = assessStaleness(input);
+
+      // Paid for right now: never hidden (Caden, Nov 2026). Findings are
+      // kept on the signals row and logged for an admin, and a flag set
+      // before the payment started is lifted.
+      if (reasons.length > 0 && !mayHideListing(input)) {
+        console.warn(
+          `[stale-sweep] paying listing ${r.id} not hidden despite: ${reasons.join(',')}`,
+        );
+        assessStatements.push(
+          upsertSignals(db, r.id, {
+            staleCheckedAt: now,
+            staleReasons: reasons.join(','),
+          }),
+        );
+        if (r.staleFlaggedAt) {
+          unflagged++;
+          assessStatements.push(
+            db
+              .update(servers)
+              .set({ staleFlaggedAt: null })
+              .where(eq(servers.id, r.id)),
+          );
+        }
+        continue;
+      }
 
       if (reasons.length === 0) {
         assessStatements.push(

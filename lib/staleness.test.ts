@@ -1,77 +1,111 @@
 import { describe, expect, it } from 'vitest';
 import {
   assessStaleness,
+  downFromHistory,
   evidenceReasons,
+  isPayingListing,
+  isRepoAlive,
+  mayHideListing,
   pendingAutoRemoveReason,
   STALE_GRACE_MS,
   type StalenessInput,
   shouldAutoRemove,
-  siteDownFromHistory,
 } from './staleness';
 
 const now = new Date('2026-10-13T00:00:00Z');
-const twoYearsAgo = new Date('2024-10-01T00:00:00Z');
 const base: StalenessInput = { now };
+const daysAgo = (d: number) => new Date(now.getTime() - d * 86_400_000);
+const inDays = (d: number) => new Date(now.getTime() + d * 86_400_000);
 
-describe('assessStaleness', () => {
-  it('never flags age alone', () => {
+describe('assessStaleness: stale means unavailable', () => {
+  it('never flags age, low activity, forks, deprecation or a failed sandbox', () => {
+    // The retired rules ('abandoned', 'unmodified-fork', 'install-broken',
+    // 'package-deprecated') have no inputs any more; a listing with none of
+    // the availability signals is never stale, however quiet it is.
+    expect(assessStaleness(base)).toEqual([]);
+    expect(assessStaleness({ ...base, toolsSource: 'readme' })).toEqual([]);
+  });
+
+  it('calls a missing package stale only when no source repo is left', () => {
     expect(
-      assessStaleness({ ...base, lastCommitAt: twoYearsAgo, githubStars: 400 }),
+      assessStaleness({ ...base, packageMissing: true, repoAlive: true }),
     ).toEqual([]);
-  });
-
-  it('flags an old, unverified listing with no traction as abandoned', () => {
-    expect(
-      assessStaleness({ ...base, lastCommitAt: twoYearsAgo, githubStars: 2 }),
-    ).toEqual(['abandoned']);
-  });
-
-  it('does not call a verified server abandoned or broken', () => {
+    expect(assessStaleness({ ...base, packageMissing: true })).toEqual([
+      'package-missing',
+    ]);
+    // Something else still runs it.
     expect(
       assessStaleness({
         ...base,
-        lastCommitAt: twoYearsAgo,
-        toolsSource: 'introspected',
-        installFailures: 3,
         packageMissing: true,
+        remoteEndpointHealthy: true,
+      }),
+    ).toEqual([]);
+    expect(
+      assessStaleness({
+        ...base,
+        packageMissing: true,
+        toolsSource: 'introspected',
       }),
     ).toEqual([]);
   });
 
-  it('needs two install failures before calling an install broken', () => {
-    expect(assessStaleness({ ...base, installFailures: 1 })).toEqual([]);
-    expect(assessStaleness({ ...base, installFailures: 2 })).toEqual([
-      'install-broken',
-    ]);
-  });
-
-  it('flags a registry deprecation on its own', () => {
-    expect(assessStaleness({ ...base, packageDeprecated: 'use @x/y' })).toEqual(
-      ['package-deprecated'],
+  it('flags a remote endpoint down for weeks when no package runs it', () => {
+    const down = { ...base, installKind: 'remote', endpointDown: true };
+    expect(assessStaleness(down)).toEqual(['endpoint-down']);
+    expect(assessStaleness({ ...down, packageAlive: true })).toEqual([]);
+    expect(assessStaleness({ ...down, remoteEndpointHealthy: true })).toEqual(
+      [],
     );
-  });
-
-  it('flags forks without their own traction', () => {
-    expect(
-      assessStaleness({ ...base, repoForkOf: 'a/b', githubStars: 1 }),
-    ).toEqual(['unmodified-fork']);
-    expect(
-      assessStaleness({ ...base, repoForkOf: 'a/b', githubStars: 50 }),
-    ).toEqual([]);
+    // Only remote listings are judged on their endpoint.
+    expect(assessStaleness({ ...down, installKind: 'stdio' })).toEqual([]);
   });
 
   it('leaves paid, claimed, official and featured listings to their owners', () => {
-    const dead = { ...base, packageDeprecated: 'x', installFailures: 5 };
+    const dead = { ...base, packageMissing: true, repoGoneConfirmed: true };
     expect(assessStaleness({ ...dead, isPremium: true })).toEqual([]);
     expect(assessStaleness({ ...dead, isOfficial: true })).toEqual([]);
     expect(assessStaleness({ ...dead, ownerUserId: 'u1' })).toEqual([]);
     expect(assessStaleness({ ...dead, curatorKeptAt: now })).toEqual([]);
+    expect(assessStaleness({ ...dead, featuredUntil: inDays(1) })).toEqual([]);
     expect(
-      assessStaleness({
-        ...dead,
-        featuredUntil: new Date(now.getTime() + 1000),
-      }),
+      assessStaleness({ ...dead, categorySponsorUntil: inDays(1) }),
     ).toEqual([]);
+    // A lapsed payment no longer protects it.
+    expect(
+      assessStaleness({ ...dead, categorySponsorUntil: daysAgo(1) }),
+    ).toEqual(['package-missing', 'repo-gone']);
+  });
+});
+
+describe('paying listings', () => {
+  it('counts active Premium, Featured and category sponsorship only', () => {
+    expect(isPayingListing({ now, isPremium: true })).toBe(true);
+    expect(isPayingListing({ now, featuredUntil: inDays(3) })).toBe(true);
+    expect(isPayingListing({ now, categorySponsorUntil: inDays(3) })).toBe(
+      true,
+    );
+    expect(isPayingListing({ now, featuredUntil: daysAgo(3) })).toBe(false);
+    expect(isPayingListing({ now })).toBe(false);
+  });
+
+  it('are never hidden by the sweep, even on a security finding', () => {
+    const paid = { ...base, isPremium: true, toolPoisoning: true };
+    expect(assessStaleness(paid)).toEqual(['tool-poisoning']);
+    expect(mayHideListing(paid)).toBe(false);
+    expect(mayHideListing({ ...base, toolPoisoning: true })).toBe(true);
+  });
+});
+
+describe('isRepoAlive', () => {
+  it('trusts the repo check, then the health cron', () => {
+    expect(isRepoAlive('ok', null)).toBe(true);
+    expect(isRepoAlive('archived', 'archived')).toBe(true);
+    expect(isRepoAlive('gone', 'healthy')).toBe(false);
+    expect(isRepoAlive('site_only', 'healthy')).toBe(false);
+    expect(isRepoAlive(null, 'healthy')).toBe(true);
+    expect(isRepoAlive('unknown', 'archived')).toBe(true);
+    expect(isRepoAlive(null, 'offline')).toBe(false);
   });
 });
 
@@ -80,21 +114,25 @@ describe('shouldAutoRemove', () => {
 
   it('waits out the grace period', () => {
     expect(
-      shouldAutoRemove(['abandoned'], new Date(now.getTime() - 1000), now),
+      shouldAutoRemove(
+        ['package-missing'],
+        new Date(now.getTime() - 1000),
+        now,
+      ),
     ).toBe(false);
-    expect(shouldAutoRemove(['abandoned'], flagged, now)).toBe(true);
+    expect(shouldAutoRemove(['package-missing'], flagged, now)).toBe(true);
   });
 
   it('never auto-removes on a model judgment, even mixed with hard signals', () => {
     expect(shouldAutoRemove(['not-mcp'], flagged, now)).toBe(false);
-    expect(shouldAutoRemove(['abandoned', 'not-mcp'], flagged, now)).toBe(
+    expect(shouldAutoRemove(['package-missing', 'not-mcp'], flagged, now)).toBe(
       false,
     );
   });
 
   it('does nothing without reasons or a flag date', () => {
     expect(shouldAutoRemove([], flagged, now)).toBe(false);
-    expect(shouldAutoRemove(['abandoned'], null, now)).toBe(false);
+    expect(shouldAutoRemove(['package-missing'], null, now)).toBe(false);
   });
 });
 
@@ -118,7 +156,7 @@ describe('repo and Jev rules', () => {
   it('removes a gone repo after a week, not a month', () => {
     const eightDays = new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000);
     expect(shouldAutoRemove(['repo-gone'], eightDays, now)).toBe(true);
-    expect(shouldAutoRemove(['abandoned'], eightDays, now)).toBe(false);
+    expect(shouldAutoRemove(['package-missing'], eightDays, now)).toBe(false);
   });
 
   it('hides on a Jev reject only when the MCP probability agrees, and never removes on it', () => {
@@ -216,8 +254,7 @@ describe('security reasons', () => {
         ...base,
         isPremium: true,
         ownerUserId: 'u1',
-        lastCommitAt: twoYearsAgo,
-        githubStars: 0,
+        packageMissing: true,
         installRisk: true,
       }),
     ).toEqual(['risky-install']);
@@ -240,7 +277,7 @@ describe('security reasons', () => {
     const longAgo = new Date(now.getTime() - 10 * STALE_GRACE_MS);
     expect(shouldAutoRemove(['risky-install'], longAgo, now)).toBe(false);
     expect(
-      shouldAutoRemove(['package-deprecated', 'typosquat'], longAgo, now),
+      shouldAutoRemove(['package-missing', 'typosquat'], longAgo, now),
     ).toBe(false);
   });
 });
@@ -251,36 +288,41 @@ describe('malicious reports', () => {
       assessStaleness({ ...base, isPremium: true, maliciousReporters: 9 }),
     ).toEqual([]);
     expect(
+      assessStaleness({
+        ...base,
+        categorySponsorUntil: inDays(5),
+        maliciousReporters: 9,
+      }),
+    ).toEqual([]);
+    expect(
       assessStaleness({ ...base, ownerUserId: 'u1', maliciousReporters: 9 }),
     ).toEqual([]);
   });
 });
 
-describe('site-down', () => {
-  const daysAgo = (d: number) => new Date(now.getTime() - d * 86_400_000);
-
+describe('site-down and endpoint-down history', () => {
   it('needs two weeks of unbroken failures, not a couple of bad checks', () => {
     expect(
-      siteDownFromHistory(
+      downFromHistory(
         { lastHealthyAt: daysAgo(20), firstFailAt: daysAgo(15), fails: 40 },
         now,
       ),
     ).toBe(true);
     // Recent outage: still inside the window.
     expect(
-      siteDownFromHistory(
+      downFromHistory(
         { lastHealthyAt: daysAgo(4), firstFailAt: daysAgo(3), fails: 12 },
         now,
       ),
     ).toBe(false);
     // Old but thin evidence: a single stale reading never counts.
     expect(
-      siteDownFromHistory(
+      downFromHistory(
         { lastHealthyAt: null, firstFailAt: daysAgo(30), fails: 2 },
         now,
       ),
     ).toBe(false);
-    expect(siteDownFromHistory(undefined, now)).toBe(false);
+    expect(downFromHistory(undefined, now)).toBe(false);
   });
 
   it('flags a down site only when nothing else runs it', () => {

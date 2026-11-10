@@ -1,6 +1,6 @@
 /**
- * Which listings are dead, abandoned or fake — decided as a pure function so
- * the rules that lead to removal are tested, not buried in a cron.
+ * Which listings are unavailable, fake or unsafe — decided as a pure function
+ * so the rules that lead to removal are tested, not buried in a cron.
  *
  * Removal is staged (see /api/cron/stale-sweep):
  *   1. a listing that matches any rule is flagged: noindexed straight away and
@@ -9,9 +9,24 @@
  *      the sweep moves it to 'removed';
  *   3. a listing that stops matching is unflagged on the next sweep.
  *
- * Every rule needs at least two independent signals or one that is definitive
- * on its own (a registry deprecation notice). Being old is never enough:
- * plenty of finished, working servers have not needed a commit in a year.
+ * Stale means unavailable, nothing else (Caden, Nov 2026): the source is gone
+ * (the repo confirmed 404, or the package deleted with no repo left to build
+ * from), the listing's own site has been down for weeks, or its remote
+ * endpoint has failed every health check for weeks — and nothing else runs
+ * it. Age, activity and upkeep never count: a stable server can go a year
+ * without a commit or a release. So 'abandoned' (no commit in a year),
+ * 'unmodified-fork', 'install-broken' (our sandbox couldn't install it) and
+ * 'package-deprecated' (the package still installs) were retired, and an
+ * archived GitHub repo is not stale either: its code and package are still
+ * there to run, read-only. It ranks lower instead (lib/search.ts).
+ *
+ * Two other families hide a listing through the same flag but are not about
+ * staleness: Jev's not-an-MCP-server verdicts ('not-mcp', 'jev-reject'), which
+ * never auto-remove, and the security findings below.
+ *
+ * Paying listings (active Premium, Featured or category sponsorship) are never
+ * hidden by the sweep or by anonymous reports while the payment is active
+ * (mayHideListing); their findings are recorded for an admin instead.
  *
  * Security reasons (tool poisoning, risky install, typosquat, package/repo
  * mismatch, repeated malicious reports) hide a listing the same way but are
@@ -19,21 +34,21 @@
  */
 
 export type StaleReason =
-  /** The registry marks the package deprecated. */
-  | 'package-deprecated'
-  /** The registry no longer has the package and there is no other way to run it. */
+  /**
+   * The registry no longer has the package, no source repo is left to build
+   * it from, and nothing else runs it.
+   */
   | 'package-missing'
-  /** Two separate sandbox runs failed to install it, and nothing has ever introspected it. */
-  | 'install-broken'
-  /** No commit in a year, never verified, and no traction. */
-  | 'abandoned'
-  /** A fork with no traction of its own, never verified. */
-  | 'unmodified-fork'
   /** Our own check found the source repo gone (404/410/451) twice, a day apart, and nothing else runs it. */
   | 'repo-gone'
   /**
+   * A remote listing's endpoint has failed every health check for
+   * DOWN_AFTER_MS (see downFromHistory), and no package runs it instead.
+   */
+  | 'endpoint-down'
+  /**
    * A non-GitHub listing's site has failed every health check for
-   * SITE_DOWN_AFTER_MS (see siteDownFromHistory), and nothing else runs it.
+   * DOWN_AFTER_MS (see downFromHistory), and nothing else runs it.
    */
   | 'site-down'
   /** Jev is confident this is not an MCP server. Flag-only: always needs a human. */
@@ -62,13 +77,10 @@ export type StaleReason =
 
 /** Reasons the sweep may act on without a human. 'not-mcp' is a model judgment, so it never is. */
 const AUTO_REMOVABLE_REASONS: ReadonlySet<StaleReason> = new Set([
-  'package-deprecated',
   'package-missing',
-  'install-broken',
-  'abandoned',
-  'unmodified-fork',
   'repo-gone',
   'site-down',
+  'endpoint-down',
 ]);
 
 /**
@@ -90,19 +102,20 @@ export const STALE_GRACE_MS = 30 * 24 * 60 * 60 * 1000;
  */
 const GRACE_BY_REASON: Partial<Record<StaleReason, number>> = {
   'repo-gone': 7 * 24 * 60 * 60 * 1000,
-  // Already down for SITE_DOWN_AFTER_MS before it is flagged, so ~4 weeks of
+  // Already down for DOWN_AFTER_MS before it is flagged, so ~4 weeks of
   // continuous failure in all before removal.
   'site-down': 14 * 24 * 60 * 60 * 1000,
+  'endpoint-down': 14 * 24 * 60 * 60 * 1000,
 };
 
 /**
- * How long a site must fail every check before it counts as down. Failing
- * listings are rechecked every 6h (lib/healthTier.ts), so this is dozens of
- * failed checks, not a couple of unlucky ones.
+ * How long a site or endpoint must fail every check before it counts as
+ * down. Failing listings are rechecked every 6h (lib/healthTier.ts), so this
+ * is dozens of failed checks, not a couple of unlucky ones.
  */
-const SITE_DOWN_AFTER_MS = 14 * 24 * 60 * 60 * 1000;
+const DOWN_AFTER_MS = 14 * 24 * 60 * 60 * 1000;
 /** Failed checks needed inside that window, so one stale reading never counts. */
-const SITE_DOWN_MIN_FAILS = 4;
+const DOWN_MIN_FAILS = 4;
 
 export type HealthHistorySummary = {
   /** Newest healthy check, or null when the history holds none. */
@@ -113,18 +126,32 @@ export type HealthHistorySummary = {
   fails: number;
 };
 
-/** The listing's own site has been down continuously for SITE_DOWN_AFTER_MS. */
-export function siteDownFromHistory(
+/**
+ * The checked thing (a listing's own site, or its remote endpoint) has failed
+ * every check for DOWN_AFTER_MS: no healthy check since the first failure of
+ * the streak, and at least DOWN_MIN_FAILS of them.
+ */
+export function downFromHistory(
   h: HealthHistorySummary | undefined,
   now: Date,
 ): boolean {
-  if (!h?.firstFailAt || h.fails < SITE_DOWN_MIN_FAILS) return false;
-  return now.getTime() - h.firstFailAt.getTime() >= SITE_DOWN_AFTER_MS;
+  if (!h?.firstFailAt || h.fails < DOWN_MIN_FAILS) return false;
+  return now.getTime() - h.firstFailAt.getTime() >= DOWN_AFTER_MS;
 }
+/**
+ * The source repo is still there to build from: our repo check last found it
+ * live or archived, or (never checked) the health cron last saw it so.
+ */
+export function isRepoAlive(
+  repoStatus: string | null | undefined,
+  healthStatus: string | null | undefined,
+): boolean {
+  if (repoStatus === 'ok' || repoStatus === 'archived') return true;
+  if (repoStatus && repoStatus !== 'unknown') return false;
+  return healthStatus === 'healthy' || healthStatus === 'archived';
+}
+
 export const JEV_REJECT_MCP_CEILING = 0.3;
-const ABANDONED_AFTER_MS = 365 * 24 * 60 * 60 * 1000;
-const TRACTION_STARS = 10;
-const TRACTION_NPM = 100;
 const NOT_MCP_FLOOR = 0.15;
 
 export type StalenessInput = {
@@ -132,29 +159,30 @@ export type StalenessInput = {
   isPremium?: boolean | null;
   isOfficial?: boolean | null;
   featuredUntil?: Date | null;
+  categorySponsorUntil?: Date | null;
   ownerUserId?: string | null;
   /** An admin chose to keep this listing from the triage queue. */
   curatorKeptAt?: Date | null;
-  lastCommitAt?: Date | null;
-  githubStars?: number | null;
-  npmDownloads?: number | null;
   toolsSource?: string | null;
   installNeedsConfig?: Date | null;
   remoteEndpointHealthy?: boolean | null;
   installKind?: string | null;
-  packageDeprecated?: string | null;
   /** True only when the registry answered and said the package does not exist. */
   packageMissing?: boolean | null;
-  /** Consecutive E2B install_failed results. */
-  installFailures?: number | null;
-  repoForkOf?: string | null;
   mcpProbability?: number | null;
   /** Source repo confirmed gone by lib/repoCheck.ts (two sightings a day apart). */
   repoGoneConfirmed?: boolean | null;
-  /** The registry answered and the package exists and is not deprecated. */
+  /**
+   * Our repo check last found the source repo there (live or archived), so
+   * the code can still be built and run even when the package is not.
+   */
+  repoAlive?: boolean | null;
+  /** The registry answered and the package exists (deprecated still installs). */
   packageAlive?: boolean | null;
-  /** siteDownFromHistory for a listing whose url is not a GitHub repo. */
+  /** downFromHistory for a listing whose url is not a GitHub repo. */
   siteDown?: boolean | null;
+  /** downFromHistory over the remote endpoint's own checks. */
+  endpointDown?: boolean | null;
   /** Jev's settled triage verdict (lib/listingReview.ts). */
   triageVerdict?: string | null;
   /** The security profile holds a strong tool-poisoning finding (lib/securityProfile.ts hasStrongPoisoning). */
@@ -169,6 +197,33 @@ export type StalenessInput = {
   maliciousReporters?: number | null;
 };
 
+function activeUntil(until: Date | null | undefined, now: Date): boolean {
+  return !!until && until.getTime() > now.getTime();
+}
+
+/** Active Premium, Featured or category sponsorship: someone is paying for it right now. */
+export function isPayingListing(
+  s: Pick<
+    StalenessInput,
+    'now' | 'isPremium' | 'featuredUntil' | 'categorySponsorUntil'
+  >,
+): boolean {
+  return (
+    !!s.isPremium ||
+    activeUntil(s.featuredUntil, s.now) ||
+    activeUntil(s.categorySponsorUntil, s.now)
+  );
+}
+
+/**
+ * Whether the sweep may act on a listing's reasons (flag, noindex, remove).
+ * Never while it is paid for (Caden, Nov 2026): the reasons are recorded and
+ * left to an admin instead.
+ */
+export function mayHideListing(s: StalenessInput): boolean {
+  return !isPayingListing(s);
+}
+
 /** Security findings, assessed for every listing except official and curator-kept ones. */
 function securityReasons(s: StalenessInput): StaleReason[] {
   if (s.curatorKeptAt || s.isOfficial) return [];
@@ -179,10 +234,7 @@ function securityReasons(s: StalenessInput): StaleReason[] {
   if (s.packageRepoMismatch) out.push('package-repo-mismatch');
   // Anonymous reports alone never hide a paid or claimed listing (a cheap
   // way to knock out a competitor); an admin is emailed on every report.
-  const hasOwner =
-    s.isPremium ||
-    s.ownerUserId ||
-    (s.featuredUntil && s.featuredUntil > s.now);
+  const hasOwner = isPayingListing(s) || !!s.ownerUserId;
   if (!hasOwner && (s.maliciousReporters ?? 0) >= MALICIOUS_REPORT_THRESHOLD)
     out.push('reported-malicious');
   return out;
@@ -192,13 +244,7 @@ export function assessStaleness(s: StalenessInput): StaleReason[] {
   const security = securityReasons(s);
   // Paid, claimed, official and curator-kept listings have a human who
   // answers for them — for staleness. Security findings still apply.
-  if (
-    s.curatorKeptAt ||
-    s.isPremium ||
-    s.isOfficial ||
-    s.ownerUserId ||
-    (s.featuredUntil && s.featuredUntil > s.now)
-  ) {
+  if (s.curatorKeptAt || s.isOfficial || s.ownerUserId || isPayingListing(s)) {
     return security;
   }
 
@@ -206,32 +252,33 @@ export function assessStaleness(s: StalenessInput): StaleReason[] {
     s.toolsSource === 'introspected' ||
     s.installNeedsConfig != null ||
     s.remoteEndpointHealthy === true;
-  const hasTraction =
-    (s.githubStars ?? 0) >= TRACTION_STARS ||
-    (s.npmDownloads ?? 0) >= TRACTION_NPM;
   const reasons: StaleReason[] = [];
 
-  if (s.packageDeprecated) reasons.push('package-deprecated');
-  if (s.packageMissing && s.remoteEndpointHealthy !== true && !verified)
-    reasons.push('package-missing');
-  if ((s.installFailures ?? 0) >= 2 && !verified)
-    reasons.push('install-broken');
+  // A package missing from the registry is only the source gone when there
+  // is no repo left to build it from; with the repo there, it's our install
+  // hint that's wrong, not the server.
   if (
-    !verified &&
-    !hasTraction &&
-    s.lastCommitAt != null &&
-    s.now.getTime() - s.lastCommitAt.getTime() > ABANDONED_AFTER_MS
-  ) {
-    reasons.push('abandoned');
-  }
-  if (s.repoForkOf && !verified && (s.githubStars ?? 0) < TRACTION_STARS)
-    reasons.push('unmodified-fork');
+    s.packageMissing &&
+    !s.repoAlive &&
+    s.remoteEndpointHealthy !== true &&
+    !verified
+  )
+    reasons.push('package-missing');
   // A deleted repo whose package still installs is still usable, so the
   // package has to be gone or absent too.
   if (s.repoGoneConfirmed && !verified && !s.packageAlive)
     reasons.push('repo-gone');
   // Same bar for a dead website: a live package or endpoint still serves it.
   if (s.siteDown && !verified && !s.packageAlive) reasons.push('site-down');
+  // A hosted server that has answered no check for weeks, with no package to
+  // run instead. remoteEndpointHealthy true means the latest check passed.
+  if (
+    s.installKind === 'remote' &&
+    s.endpointDown &&
+    s.remoteEndpointHealthy !== true &&
+    !s.packageAlive
+  )
+    reasons.push('endpoint-down');
   if (typeof s.mcpProbability === 'number' && s.mcpProbability < NOT_MCP_FLOOR)
     reasons.push('not-mcp');
   if (
@@ -269,13 +316,10 @@ export function parseStaleReasons(
 }
 
 export const STALE_REASON_LABEL: Record<StaleReason, string> = {
-  'package-deprecated': 'Package deprecated on the registry',
-  'package-missing': 'Package no longer on the registry',
-  'install-broken': 'Failed to install in two sandbox runs',
-  abandoned: 'No commits in a year, never verified, no traction',
-  'unmodified-fork': 'Fork with no traction of its own',
+  'package-missing': 'Package and source repo both gone',
   'repo-gone': 'Source repo gone (404), nothing else runs it',
   'site-down': 'Website down for 2+ weeks, nothing else runs it',
+  'endpoint-down': 'Remote endpoint down for 2+ weeks, nothing else runs it',
   'not-mcp': 'Jev: probably not an MCP server',
   'jev-reject': 'Jev: reject, and probably not an MCP server',
   'tool-poisoning': 'A tool description tries to instruct the AI assistant',
