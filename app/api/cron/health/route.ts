@@ -457,12 +457,9 @@ async function checkListing(
 
   // The website backlink is a separate public-content check from the repo
   // README badge above, so it writes its own signal and never overwrites the
-  // README result. Premium is skipped since it's already dofollow.
-  if (
-    !server.isPremium &&
-    server.websiteUrl &&
-    isSafeSubmissionUrl(server.websiteUrl)
-  ) {
+  // README result. Premium listings are checked too: payment doesn't earn
+  // dofollow, only the live badge does (lib/linkRel.ts).
+  if (server.websiteUrl && isSafeSubmissionUrl(server.websiteUrl)) {
     try {
       const siteRes = await fetch(server.websiteUrl, {
         method: 'GET',

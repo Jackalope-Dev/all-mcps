@@ -1132,7 +1132,7 @@ export default async function MCPDetail({
                   destinationType="github"
                   serverId={server.id}
                   target="_blank"
-                  rel={repoLinkRel(!!server.isPremium, !!server.isOfficial)}
+                  rel={repoLinkRel(server)}
                   className="btn btn-secondary btn-sm"
                   aria-label={`${repoHost || 'Source'} repository`}
                 >
@@ -1701,10 +1701,7 @@ export default async function MCPDetail({
                         destinationType="github"
                         serverId={server.id}
                         target="_blank"
-                        rel={repoLinkRel(
-                          !!server.isPremium,
-                          !!server.isOfficial,
-                        )}
+                        rel={repoLinkRel(server)}
                         className="link-arrow"
                       >
                         View source on {repoHost || 'the source repository'}{' '}
@@ -2065,10 +2062,7 @@ export default async function MCPDetail({
                         destinationType="github"
                         serverId={server.id}
                         target="_blank"
-                        rel={repoLinkRel(
-                          !!server.isPremium,
-                          !!server.isOfficial,
-                        )}
+                        rel={repoLinkRel(server)}
                       >
                         <FolderGit2 size={14} aria-hidden="true" />
                         <span>{repoHost || 'Repository'}</span>

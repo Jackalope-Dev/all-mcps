@@ -104,7 +104,7 @@ export default async function ListingReadmePage({
             destinationType="github"
             serverId={server.id}
             target="_blank"
-            rel={repoLinkRel(!!server.isPremium, !!server.isOfficial)}
+            rel={repoLinkRel(server)}
             className="btn btn-ghost btn-sm"
           >
             <FolderGit2 size={15} aria-hidden="true" /> View source on {host}
@@ -129,7 +129,7 @@ export default async function ListingReadmePage({
                 destinationType="github"
                 serverId={server.id}
                 target="_blank"
-                rel={repoLinkRel(!!server.isPremium, !!server.isOfficial)}
+                rel={repoLinkRel(server)}
               >
                 source repository
               </OutboundLink>{' '}

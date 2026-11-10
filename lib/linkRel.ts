@@ -1,30 +1,44 @@
 /**
- * SEO link policy for outbound listing links.
- * - Premium/paid listings: dofollow website (and repo when claimed)
- * - Free listings: dofollow website only while a reciprocal AllMCPs backlink is
- *   confirmed live *on that website* (rechecked periodically by the health
- *   cron); nofollow otherwise
- * Claimed/official free listings still use nofollow on the website unless premium
- * or the website itself links back.
+ * SEO link policy for outbound listing links. Payment never buys a dofollow
+ * link: Google treats paid links without rel="sponsored" as link schemes.
  *
- * NOTE: this is gated on `websiteBacklinkOk`, not the `reciprocalBadgeOk`
- * aggregate — a badge that only lives in the repo README must not earn ranking
- * credit for an unrelated marketing site. The README badge is a separate
- * verification (see db/schema.ts `readmeBadgeOk`).
+ * - Website: dofollow only while a reciprocal AllMCPs backlink is confirmed
+ *   live *on that website* (the free badge program, rechecked by the health
+ *   cron). A Premium listing without one gets rel="sponsored" (paid
+ *   relationship, disclosed); everything else is nofollow.
+ * - Repo: dofollow when the listing is vendor-official or owner-verified (an
+ *   approved claim), never because of Premium.
+ * - Support: follows the website rule, and only earns dofollow when it points
+ *   at the listing's own website.
+ * - README/description markdown links: rel="ugc nofollow" (MARKDOWN_LINK_REL),
+ *   since that text comes from the listing's source, not from us.
+ *
+ * NOTE: the website rule is gated on `websiteBacklinkOk`, not the
+ * `reciprocalBadgeOk` aggregate: a badge that only lives in the repo README
+ * must not earn ranking credit for an unrelated marketing site. The README
+ * badge is a separate verification (see db/schema.ts `readmeBadgeOk`).
  */
+
+const DOFOLLOW = 'noopener noreferrer';
+const NOFOLLOW = 'noopener noreferrer nofollow';
+const SPONSORED = 'noopener noreferrer sponsored';
+
+/** rel for links inside README / description markdown (third-party text). */
+export const MARKDOWN_LINK_REL = 'ugc nofollow noopener noreferrer';
+
 export function websiteLinkRel(
   isPremium: boolean,
   websiteBacklinkOk: boolean,
 ): string {
-  return isPremium || websiteBacklinkOk
-    ? 'noopener noreferrer'
-    : 'noopener noreferrer nofollow';
+  if (websiteBacklinkOk) return DOFOLLOW;
+  return isPremium ? SPONSORED : NOFOLLOW;
 }
 
-export function repoLinkRel(isPremium: boolean, isOfficial: boolean): string {
-  // Paid listings always dofollow; free claimed listings keep historical dofollow on repo.
-  if (isPremium || isOfficial) return 'noopener noreferrer';
-  return 'noopener noreferrer nofollow';
+export function repoLinkRel(listing: {
+  isOfficial?: boolean | null;
+  ownerVerified?: boolean | null;
+}): string {
+  return listing.isOfficial || listing.ownerVerified ? DOFOLLOW : NOFOLLOW;
 }
 
 function sameHost(a?: string | null, b?: string | null): boolean {
@@ -39,11 +53,10 @@ function sameHost(a?: string | null, b?: string | null): boolean {
 }
 
 /**
- * Support links only earn dofollow when the listing has earned it (premium or a
- * live website backlink) AND the support URL points at their own verified
- * website — an unrelated help-desk/Discord/third-party domain stays nofollow
- * regardless of listing status. Like `websiteLinkRel`, gated on the
- * website-specific `websiteBacklinkOk`, not the README badge.
+ * Support links follow the website rule: dofollow only with a live website
+ * backlink AND when the support URL is on that same website (an unrelated
+ * help desk, Discord or third-party domain stays nofollow). A Premium listing
+ * without the backlink gets rel="sponsored" on its own-site support link.
  */
 export function supportLinkRel(
   isPremium: boolean,
@@ -51,7 +64,6 @@ export function supportLinkRel(
   supportUrl?: string | null,
   websiteUrl?: string | null,
 ): string {
-  const earned =
-    (isPremium || websiteBacklinkOk) && sameHost(supportUrl, websiteUrl);
-  return earned ? 'noopener noreferrer' : 'noopener noreferrer nofollow';
+  if (!sameHost(supportUrl, websiteUrl)) return NOFOLLOW;
+  return websiteLinkRel(isPremium, websiteBacklinkOk);
 }

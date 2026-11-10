@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
+import { MARKDOWN_LINK_REL } from '../../lib/linkRel';
 import { isOutboundHttpUrl, withAllMcpsUtm } from '../../lib/outboundLinks';
 import { CopyBlock } from './CopyBlock';
 import { MarkdownImage } from './MarkdownImage';
@@ -68,7 +69,10 @@ function MarkdownLink({
     : resolvedHref;
 
   return (
-    <a href={trackedHref} target="_blank" rel="noopener noreferrer" {...rest}>
+    // README / description text comes from the listing's source, not from us,
+    // so its links carry ugc nofollow (set after `rest` so raw HTML can't
+    // override it). See lib/linkRel.ts.
+    <a {...rest} href={trackedHref} target="_blank" rel={MARKDOWN_LINK_REL}>
       {children}
     </a>
   );
