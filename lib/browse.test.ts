@@ -208,6 +208,47 @@ describe('browseCatalog against real SQLite', () => {
     ]);
   });
 
+  it('lifts Official, then owner-verified, on near-ties; payment never', async () => {
+    // Four listings identical in text and engagement except for trust and
+    // payment. Same views, same age, same description.
+    const trust: Record<string, Record<string, number>> = {
+      'zz-plain': {},
+      'zz-paid': { is_premium: 1 },
+      'zz-owner': { owner_verified: 1 },
+      'zz-official': { is_official: 1 },
+    };
+    const insert = sqlite.prepare(
+      `INSERT INTO servers (id, name, url, status, category, description, views, copies, upvotes, is_premium, is_official, owner_verified, created_at)
+       VALUES (?, 'Zebra Tracker', ?, 'active', '🎮 Gaming', 'Zebra migration tracker.', 20, 0, 0, ?, ?, ?, ?)`,
+    );
+    for (const [id, t] of Object.entries(trust)) {
+      insert.run(
+        id,
+        `https://github.com/acme/${id}`,
+        t.is_premium ?? 0,
+        t.is_official ?? 0,
+        t.owner_verified ?? 0,
+        nowSec - 10 * DAY,
+      );
+    }
+    const gaming = `category=${encodeURIComponent('🎮 Gaming')}`;
+    try {
+      for (const qs of [
+        gaming,
+        `${gaming}&sort=popular`,
+        `${gaming}&sort=trending`,
+        'q=zebra',
+      ]) {
+        const order = ids(await browse(qs));
+        expect(order.slice(0, 2)).toEqual(['zz-official', 'zz-owner']);
+        // Premium ranks like any unverified listing: no organic lift.
+        expect(order.slice(2).sort()).toEqual(['zz-paid', 'zz-plain']);
+      }
+    } finally {
+      sqlite.prepare("DELETE FROM servers WHERE id LIKE 'zz-%'").run();
+    }
+  });
+
   it('records a text search that found nothing', async () => {
     const r = await browse('q=quantum+teleporter');
     expect(r.total).toBe(0);
