@@ -100,13 +100,13 @@ export const FAST_JOBS: CronJob[] = [
   // 30h catch-up once a day; the other sources daily, an hour apart.
   ...CATALOG_SOURCING_JOBS,
   // Rebuilds the stored /llms-full.txt, /data.json and /llms.txt in R2
-  // (app/api/cron/exports); the routes only serve those copies. Every 2h on
-  // the :45 tick, which no */20 batch shares.
+  // (app/api/cron/exports); the routes only serve those copies. Hourly on
+  // the :45 tick, which no */20 batch shares; the route skips copies under
+  // ~2h old, so a good export is rebuilt every 2h and a failed one next hour.
   {
     path: '/api/cron/exports',
     secretVar: 'CRON_SECRET',
-    shouldRun: (now) =>
-      now.getUTCMinutes() === 45 && now.getUTCHours() % 2 === 1,
+    shouldRun: (now) => now.getUTCMinutes() === 45,
   },
 ];
 

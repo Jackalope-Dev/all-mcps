@@ -5,6 +5,7 @@ import {
   acquireExportLock,
   type CatalogExportName,
   exportBucket,
+  exportKey,
   releaseExportLock,
   writeExport,
 } from '../../../../lib/catalogExportStore';
@@ -19,10 +20,15 @@ import { isCronAuthorized } from '../../../../lib/cronAuth';
  *
  * One build at a time (an R2 lock). Each export is built and uploaded on its
  * own, so one failing (D1 down mid-build) leaves the others fresh and its own
- * last good copy in place.
+ * last good copy in place. It is scheduled hourly but rebuilds only exports
+ * whose stored copy is older than REBUILD_AFTER_MS (or missing), so a failed
+ * or missing export is retried within the hour while a good one is rebuilt
+ * every two hours. `?force=1` rebuilds everything.
  */
 const BUILD_ATTEMPTS = 3;
 const RETRY_PAUSE_MS = 15_000;
+/** A little under 2 h, so the hourly tick rebuilds every other run. */
+const REBUILD_AFTER_MS = 110 * 60 * 1000;
 
 export async function POST(req: Request) {
   if (!(await isCronAuthorized(req))) {
@@ -42,12 +48,21 @@ export async function POST(req: Request) {
     });
   }
 
+  const force = new URL(req.url).searchParams.get('force') === '1';
   const results: Record<string, unknown> = {};
   let failed = 0;
+  let attempted = 0;
   try {
     const catalog = await getCatalogCount();
     for (const name of Object.keys(EXPORT_BUILDERS) as CatalogExportName[]) {
       const startedAt = Date.now();
+      const stored = await bucket.head(exportKey(name)).catch(() => null);
+      const generatedAt = Date.parse(stored?.customMetadata?.generatedAt ?? '');
+      if (!force && Date.now() - generatedAt < REBUILD_AFTER_MS) {
+        results[name] = { skipped: true, ms: 0 };
+        continue;
+      }
+      attempted++;
       // The build pages the whole catalog, so it runs into D1's 10 s
       // overload window when the tick's other crons are busy (seen on the
       // first run). Each page already retries once; a failed export is
@@ -92,11 +107,13 @@ export async function POST(req: Request) {
   const summary = Object.entries(results)
     .map(([name, r]) => {
       const x = r as {
+        skipped?: boolean;
         rows?: number;
         bytes?: number;
         ms: number;
         error?: string;
       };
+      if (x.skipped) return `${name} fresh`;
       return x.error
         ? `${name} failed (${x.error.slice(0, 120)})`
         : `${name} ${x.rows} rows ${(x.bytes ?? 0) >> 20} MiB in ${Math.round(x.ms / 1000)}s`;
@@ -104,6 +121,6 @@ export async function POST(req: Request) {
     .join('; ');
   return NextResponse.json(
     { success: failed === 0, message: summary, results },
-    { status: failed === Object.keys(results).length ? 500 : 200 },
+    { status: attempted > 0 && failed === attempted ? 500 : 200 },
   );
 }
