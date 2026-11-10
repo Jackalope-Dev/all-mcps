@@ -38,6 +38,7 @@ import {
   workerRole,
 } from './lib/cronSchedule';
 import { withReadReplicaDb } from './lib/d1Replicas';
+import { softenPageError } from './lib/pageErrorStatus';
 
 /**
  * RPC entrypoint on the site Worker that hands the jobs Worker its secrets
@@ -172,7 +173,10 @@ export default {
       await withRelayedSecrets(env),
       request,
     );
-    const response = await handler.fetch(request, requestEnv, ctx);
+    const response = softenPageError(
+      request,
+      await handler.fetch(request, requestEnv, ctx),
+    );
     return isVerifiedCrawler(request)
       ? bufferForCrawler(request, response)
       : response;

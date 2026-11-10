@@ -35,6 +35,7 @@ import {
   processLogoUpload,
 } from '../../../../lib/logoImage';
 import { upsertSignals } from '../../../../lib/signalStore';
+import { isPayingListing } from '../../../../lib/staleness';
 
 function isGithubUrl(urlString: string): boolean {
   if (!urlString) return false;
@@ -428,7 +429,10 @@ export async function POST(req: Request) {
           if (data.archived || data.disabled) {
             healthStatus = 'archived';
             isVerifiedActive = false;
-            githubDead = true;
+            // Archived is read-only, not gone: its code and package are still
+            // there to run, so it is not stale (lib/staleness.ts). A repo
+            // GitHub disabled can't be read at all, which is.
+            githubDead = Boolean(data.disabled);
           } else {
             healthStatus = 'healthy';
             isVerifiedActive = true;
@@ -634,18 +638,20 @@ export async function POST(req: Request) {
       updates.isVerifiedActive = isVerifiedActive;
       if (githubStars != null) updates.githubStars = githubStars;
 
-      const unpublish = githubDead
-        ? await isListingTrulyDead({
-            githubDead,
-            remoteEndpointHealthy: server.remoteEndpointHealthy,
-            installCommand:
-              (updates.installCommand as string | undefined) ??
-              server.installCommand,
-            installPackage:
-              (updates.installPackage as string | undefined) ??
-              server.installPackage,
-          })
-        : false;
+      // Never while someone is paying for the listing (Caden, Nov 2026).
+      const unpublish =
+        githubDead && !isPayingListing({ ...server, now })
+          ? await isListingTrulyDead({
+              githubDead,
+              remoteEndpointHealthy: server.remoteEndpointHealthy,
+              installCommand:
+                (updates.installCommand as string | undefined) ??
+                server.installCommand,
+              installPackage:
+                (updates.installPackage as string | undefined) ??
+                server.installPackage,
+            })
+          : false;
 
       if (unpublish) {
         updates.status = 'removed';

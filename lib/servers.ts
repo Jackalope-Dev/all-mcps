@@ -31,6 +31,7 @@ import {
 } from './aiContent';
 import type { BestTopic } from './bestTopics';
 import { categoryFromSlug } from './categories';
+import { withD1Retry } from './d1Retry';
 import { cleanListingDescription } from './description';
 import { readEdgeCache, swrEdgeCache, writeEdgeCache } from './edgeCache';
 import {
@@ -1135,12 +1136,15 @@ export async function* iterateActiveServers(
   }
   let after = '';
   for (;;) {
-    const rows = await searchDb.db
-      .select(SCORING_SERVER_COLUMNS)
-      .from(serversTable)
-      .where(servableAfterIdFilter(after))
-      .orderBy(serversTable.id)
-      .limit(pageSize);
+    const from = after;
+    const rows = await withD1Retry('export page', () =>
+      searchDb.db
+        .select(SCORING_SERVER_COLUMNS)
+        .from(serversTable)
+        .where(servableAfterIdFilter(from))
+        .orderBy(serversTable.id)
+        .limit(pageSize),
+    );
     if (rows.length === 0) break;
     yield rows.map((r) => normalizeServer(r as unknown as Server));
     after = rows[rows.length - 1].id;
@@ -1163,7 +1167,11 @@ async function collectExportPages<T extends { id: string }>(
   const out: T[] = [];
   let after = '';
   for (;;) {
-    const rows = await fetchPage(after, pageSize);
+    // One page out of ~16 failing used to fail the whole export.
+    const from = after;
+    const rows = await withD1Retry('export page', () =>
+      fetchPage(from, pageSize),
+    );
     for (const r of rows) out.push(r);
     if (rows.length < pageSize) break;
     after = rows[rows.length - 1].id;
@@ -1231,28 +1239,47 @@ export async function getCatalogIndexRows({
   }));
 }
 
-/** Category counts computed via lightweight SQL GROUP BY for category sidebar links. */
+/**
+ * Category counts for the category sidebar, hubs and agent views. A GROUP BY
+ * over every servable row (~35k rows read, ~0.3 s of D1 time) that ran
+ * uncached ~1k times a day, so it is cached like the catalog count: fresh
+ * for 30 minutes, the last good copy served while one reloads.
+ */
+const CATEGORY_COUNTS_CACHE = {
+  freshMs: 30 * 60 * 1000,
+  maxAgeSeconds: 2 * 24 * 60 * 60,
+};
+
 export async function getCategoryCounts(): Promise<Record<string, number>> {
-  try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const ctx = await getCloudflareContext();
-    if (ctx?.env && (ctx.env as any).DB) {
-      const db = drizzle((ctx.env as any).DB);
-      const rows = await db
-        .select({
-          category: serversTable.category,
-          count: sql<number>`count(*)`,
-        })
-        .from(serversTable)
-        .where(servableFilter())
-        .groupBy(serversTable.category);
-      const counts: Record<string, number> = {};
-      for (const r of rows) {
-        if (r.category) counts[r.category] = Number(r.count);
+  const cached = await swrEdgeCache<Record<string, number>>(
+    'category-counts/v1',
+    CATEGORY_COUNTS_CACHE,
+    async () => {
+      try {
+        const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+        const ctx = await getCloudflareContext();
+        if (!ctx?.env || !(ctx.env as any).DB) return null;
+        const db = drizzle((ctx.env as any).DB);
+        const rows = await db
+          .select({
+            category: serversTable.category,
+            count: sql<number>`count(*)`,
+          })
+          .from(serversTable)
+          .where(servableFilter())
+          .groupBy(serversTable.category);
+        const counts: Record<string, number> = {};
+        for (const r of rows) {
+          if (r.category) counts[r.category] = Number(r.count);
+        }
+        return Object.keys(counts).length > 0 ? counts : null;
+      } catch (e) {
+        console.error('[servers] category counts read failed:', e);
+        return null;
       }
-      if (Object.keys(counts).length > 0) return counts;
-    }
-  } catch (_e) {}
+    },
+  );
+  if (cached) return cached;
 
   const counts: Record<string, number> = {};
   for (const s of snapshotCatalogServers()) {
@@ -2405,11 +2432,14 @@ export async function getServerById(id: string): Promise<Server | undefined> {
     const ctx = await getCloudflareContext();
     if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
-      const dbServers = await db
-        .select(PUBLIC_SERVER_COLUMNS)
-        .from(serversTable)
-        .where(eq(serversTable.id, id))
-        .limit(1);
+      // One transient D1 error here used to 500 a fresh render outright.
+      const dbServers = await withD1Retry(`getServerById(${id})`, () =>
+        db
+          .select(PUBLIC_SERVER_COLUMNS)
+          .from(serversTable)
+          .where(eq(serversTable.id, id))
+          .limit(1),
+      );
       if (dbServers.length > 0) {
         // Withdrawn at the owner's request, or a rejected submission waiting
         // on its submitter: no public surface may serve it.

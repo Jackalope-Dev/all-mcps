@@ -132,9 +132,33 @@ async function loadAndStore<T>(
   return data;
 }
 
+/**
+ * The global copy when another colo already refreshed it inside `freshMs`,
+ * written into this colo's cache, else null. A stale colo copy used to send
+ * every colo (and every isolate past SWR_REFRESH_RETRY_MS) back to D1 on its
+ * own: newest-in-category, a ~1 s scan, ran ~2.4k times a day for ~25 keys
+ * on a 6 h refresh, and those scans pile onto D1 at the cron ticks.
+ */
+async function freshSharedEntry<T>(
+  key: string,
+  opts: { freshMs: number; maxAgeSeconds: number },
+): Promise<SwrEntry<T> | null> {
+  try {
+    const obj = await (await sharedBucket())?.get(SHARED_PREFIX + key);
+    if (!obj) return null;
+    const entry = JSON.parse(await obj.text(), reviveDates) as SwrEntry<T>;
+    const ageMs = Date.now() - entry.timestamp;
+    if (!(ageMs < opts.freshMs)) return null;
+    await writeEdgeCache(key, entry, opts.maxAgeSeconds - ageMs / 1000);
+    return entry;
+  } catch {
+    return null;
+  }
+}
+
 async function refreshInBackground<T>(
   key: string,
-  opts: { maxAgeSeconds: number },
+  opts: { freshMs: number; maxAgeSeconds: number },
   load: () => Promise<T | null>,
 ): Promise<void> {
   if (Date.now() - (swrRefreshStartedAt.get(key) ?? 0) < SWR_REFRESH_RETRY_MS) {
@@ -145,9 +169,16 @@ async function refreshInBackground<T>(
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const { ctx } = getCloudflareContext();
     ctx.waitUntil(
-      loadAndStore(key, opts, load).catch((err) => {
-        console.error(`[edgeCache] background refresh of ${key} failed:`, err);
-      }),
+      freshSharedEntry<T>(key, opts)
+        .then((shared) =>
+          shared ? shared.data : loadAndStore(key, opts, load),
+        )
+        .catch((err) => {
+          console.error(
+            `[edgeCache] background refresh of ${key} failed:`,
+            err,
+          );
+        }),
     );
   } catch {
     // No request context (build, tests): the stale copy stands until next time.
