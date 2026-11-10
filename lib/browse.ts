@@ -2,6 +2,7 @@ import { type SQL, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import type { BrowseParams } from './browseParams';
 import { swrEdgeCache } from './edgeCache';
+import { OFFICIAL_BOOST, OWNER_VERIFIED_BOOST } from './search';
 import { recordSearchMiss } from './searchMisses';
 import { servableSql } from './servability';
 import {
@@ -61,6 +62,9 @@ function hasFacets(p: BrowseParams): boolean {
 const VERIFIED_SQL =
   "(s.tools_source = 'introspected' OR s.remote_endpoint_healthy = 1 OR s.install_needs_config IS NOT NULL)";
 
+/** trustMultiplier in lib/search.ts: Official, else owner-verified. Never paid status. */
+const TRUST_SQL = `(CASE WHEN s.is_official = 1 THEN ${OFFICIAL_BOOST} WHEN s.owner_verified = 1 THEN ${OWNER_VERIFIED_BOOST} ELSE 1.0 END)`;
+
 function facetConditions(p: BrowseParams): SQL[] {
   const out: SQL[] = [sql.raw(servableSql('s'))];
   if (p.category) out.push(sql`s.category = ${p.category}`);
@@ -104,14 +108,15 @@ function featuredSql(nowSec: number): SQL {
  * (with step functions standing in for the logs, which SQLite lacks);
  * trending divides raw engagement by listing age in days + 2 so newer
  * listings with activity rise. Both are weighted by the same quality
- * multiplier. Literal metrics (most viewed/upvoted, newest, A-Z) stay literal.
+ * multiplier (trust lift included), and so is relevance with no text query
+ * (views). Literal metrics (most viewed/upvoted, newest, A-Z) stay literal.
  * Paid status is not an input: Featured listings get the labelled slot
  * (selectFeatured), never a better organic position.
  */
 function orderBy(p: BrowseParams, nowSec: number, ranked: boolean): SQL {
   const quality =
     sql.raw(`(CASE WHEN s.health_status = 'archived' THEN 0.6 WHEN s.health_status = 'offline' THEN 0.5 ELSE 1.0 END)
-    * (CASE WHEN ${VERIFIED_SQL} THEN 1.15 ELSE 1.0 END)`);
+    * (CASE WHEN ${VERIFIED_SQL} THEN 1.15 ELSE 1.0 END) * ${TRUST_SQL}`);
   const starPoints =
     sql.raw(`(CASE WHEN coalesce(s.github_stars, 0) >= 10000 THEN 12
     WHEN coalesce(s.github_stars, 0) >= 1000 THEN 9
@@ -125,7 +130,11 @@ function orderBy(p: BrowseParams, nowSec: number, ranked: boolean): SQL {
     WHEN coalesce(s.npm_downloads, 0) >= 10 THEN 2 ELSE 0 END)`);
   switch (p.sort) {
     case 'relevance':
-      return ranked ? sql`j.key ASC` : sql`s.views DESC, s.id`;
+      // A text search arrives ranked (the trust lift is already in that
+      // order); with no query, relevance is views with the same lift.
+      return ranked
+        ? sql`j.key ASC`
+        : sql`s.views * ${sql.raw(TRUST_SQL)} DESC, s.views DESC, s.id`;
     case 'popular':
       return sql`(s.upvotes * 5 + s.copies + s.views * 0.05 + ${starPoints} + ${npmPoints}) * ${quality} DESC, s.created_at DESC, s.id`;
     case 'trending':
@@ -189,8 +198,9 @@ async function selectPage(
 }
 
 function cacheKey(p: BrowseParams): string {
-  // v3: organic order no longer puts paid listings first; v2 entries did.
-  return `browse/v3/${JSON.stringify(p)}`;
+  // v4: Official / owner-verified trust lift in relevance, popular and
+  // trending. v3: organic order no longer puts paid listings first.
+  return `browse/v4/${JSON.stringify(p)}`;
 }
 
 async function getDb(): Promise<ReturnType<typeof drizzle> | null> {

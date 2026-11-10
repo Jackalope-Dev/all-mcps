@@ -1410,6 +1410,7 @@ const SEARCH_CANDIDATE_SELECT_SQL = `s.id AS id, s.name AS name, s.description A
   s.github_stars AS githubStars, s.npm_downloads AS npmDownloads,
   s.health_status AS healthStatus, s.tools_source AS toolsSource,
   s.install_needs_config AS installNeedsConfig, s.remote_endpoint_healthy AS remoteEndpointHealthy,
+  s.is_official AS isOfficial, s.owner_verified AS ownerVerified,
   CASE WHEN json_valid(s.tools) THEN (
     SELECT group_concat(json_extract(je.value, '$.name'), ' ') FROM json_each(s.tools) AS je
   ) END AS toolText`;
@@ -1437,6 +1438,8 @@ type SearchCandidateRow = {
   toolsSource: string | null;
   installNeedsConfig: number | null;
   remoteEndpointHealthy: number | null;
+  isOfficial: number | null;
+  ownerVerified: number | null;
   toolText: string | null;
 };
 
@@ -1472,6 +1475,8 @@ function toSearchCandidate(row: SearchCandidateRow): SearchCandidate {
     toolsSource: row.toolsSource,
     installNeedsConfig: row.installNeedsConfig,
     remoteEndpointHealthy: row.remoteEndpointHealthy,
+    isOfficial: row.isOfficial,
+    ownerVerified: row.ownerVerified,
   };
 }
 
@@ -1862,9 +1867,11 @@ async function rankSearch(opts: SearchOpts): Promise<RankedSearch> {
   // (not the rows) skips the embedding call and the prefilter query,
   // while hydrateSearchResults still reads current listing data by id.
   const normalizedQuery = query.trim().toLowerCase().replace(/\s+/g, ' ');
+  // v2: Official and owner-verified listings get a small trust lift, so v1
+  // orders are stale.
   const cacheKey =
     normalizedQuery.length <= SEARCH_CACHE_MAX_QUERY
-      ? `search/v1/${category ?? ''}/${limit}/${vectorTopK}/${normalizedQuery}`
+      ? `search/v2/${category ?? ''}/${limit}/${vectorTopK}/${normalizedQuery}`
       : null;
   if (cacheKey) {
     const cachedIds = await readEdgeCache<string[]>(cacheKey);
