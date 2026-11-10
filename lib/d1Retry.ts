@@ -1,23 +1,23 @@
 /**
  * One retry for a D1 read that failed on a transient error.
  *
- * D1 answers some requests with an error instead of a result while it is busy:
- * "D1 DB is overloaded", "Network connection lost", or an in-flight query cut
- * off when the database resets after "exceeded its CPU time limit". Those come
- * in bursts around the cron ticks (the :00 tick runs health, enrich, the stale
- * sweep and the ai-content batches together), and they made fresh /mcp/[id]
- * renders 500 and the paged exports 503 (Nov 2026). They clear within a
- * moment, so one retry after a short pause rides most of them out; a second
- * failure is thrown for the caller to degrade.
+ * At the cron ticks D1 answers reads with "D1 DB is overloaded. Too many
+ * resources consumed within a 10 second window" (also seen: "Network
+ * connection lost"), and that made fresh /mcp/[id] renders 500 and the paged
+ * exports 503 (Nov 2026). The limit is over a 10 s window, so a retry a few
+ * hundred ms later lands in the same window and fails the same way (seen in
+ * production): the one retry waits 1.5-3 s. A second failure is thrown for
+ * the caller to degrade.
  */
 
-const RETRY_DELAY_MS = 300;
-const RETRY_JITTER_MS = 300;
+const RETRY_DELAY_MS = 1500;
+const RETRY_JITTER_MS = 1500;
 
+/** The innermost cause: Drizzle wraps D1's error in "Failed query: <the whole SQL>". */
 function errorMessage(err: unknown): string {
   if (!(err instanceof Error)) return String(err);
   const cause = (err as { cause?: unknown }).cause;
-  return cause ? `${err.message} (cause: ${errorMessage(cause)})` : err.message;
+  return cause ? errorMessage(cause) : err.message.slice(0, 300);
 }
 
 export async function withD1Retry<T>(

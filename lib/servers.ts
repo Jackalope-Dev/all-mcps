@@ -1239,28 +1239,47 @@ export async function getCatalogIndexRows({
   }));
 }
 
-/** Category counts computed via lightweight SQL GROUP BY for category sidebar links. */
+/**
+ * Category counts for the category sidebar, hubs and agent views. A GROUP BY
+ * over every servable row (~35k rows read, ~0.3 s of D1 time) that ran
+ * uncached ~1k times a day, so it is cached like the catalog count: fresh
+ * for 30 minutes, the last good copy served while one reloads.
+ */
+const CATEGORY_COUNTS_CACHE = {
+  freshMs: 30 * 60 * 1000,
+  maxAgeSeconds: 2 * 24 * 60 * 60,
+};
+
 export async function getCategoryCounts(): Promise<Record<string, number>> {
-  try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const ctx = await getCloudflareContext();
-    if (ctx?.env && (ctx.env as any).DB) {
-      const db = drizzle((ctx.env as any).DB);
-      const rows = await db
-        .select({
-          category: serversTable.category,
-          count: sql<number>`count(*)`,
-        })
-        .from(serversTable)
-        .where(servableFilter())
-        .groupBy(serversTable.category);
-      const counts: Record<string, number> = {};
-      for (const r of rows) {
-        if (r.category) counts[r.category] = Number(r.count);
+  const cached = await swrEdgeCache<Record<string, number>>(
+    'category-counts/v1',
+    CATEGORY_COUNTS_CACHE,
+    async () => {
+      try {
+        const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+        const ctx = await getCloudflareContext();
+        if (!ctx?.env || !(ctx.env as any).DB) return null;
+        const db = drizzle((ctx.env as any).DB);
+        const rows = await db
+          .select({
+            category: serversTable.category,
+            count: sql<number>`count(*)`,
+          })
+          .from(serversTable)
+          .where(servableFilter())
+          .groupBy(serversTable.category);
+        const counts: Record<string, number> = {};
+        for (const r of rows) {
+          if (r.category) counts[r.category] = Number(r.count);
+        }
+        return Object.keys(counts).length > 0 ? counts : null;
+      } catch (e) {
+        console.error('[servers] category counts read failed:', e);
+        return null;
       }
-      if (Object.keys(counts).length > 0) return counts;
-    }
-  } catch (_e) {}
+    },
+  );
+  if (cached) return cached;
 
   const counts: Record<string, number> = {};
   for (const s of snapshotCatalogServers()) {

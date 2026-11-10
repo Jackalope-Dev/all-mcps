@@ -52,6 +52,15 @@ const d1Shim = {
   },
 };
 
+// The real retry waits 1.5-3 s for D1's 10 s window; these tests fail on purpose.
+vi.mock('./d1Retry', async (importOriginal) => {
+  const real = await importOriginal<typeof import('./d1Retry')>();
+  return {
+    withD1Retry: <T>(label: string, run: () => Promise<T>) =>
+      real.withD1Retry(label, run, { delayMs: 0 }),
+  };
+});
+
 vi.mock('@opennextjs/cloudflare', () => ({
   getCloudflareContext: async () => ({ env: { DB: d1Shim }, ctx: {} }),
 }));
