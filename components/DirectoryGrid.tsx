@@ -113,7 +113,13 @@ export default function DirectoryGrid({
    * `params`, and every search, filter, sort and "Load more" asks
    * /api/browse for the next page instead of filtering in the browser.
    */
-  serverResults: { params: BrowseParams; total: number; capped: boolean };
+  serverResults: {
+    params: BrowseParams;
+    total: number;
+    capped: boolean;
+    /** The labelled Featured row for page one (lib/browse.ts). */
+    featured: Server[];
+  };
 }) {
   return (
     <BrowseView
@@ -136,7 +142,12 @@ function BrowseView({
   initialServers: Server[];
   initialCategory: string | null;
   initialQuery: string;
-  serverResults: { params: BrowseParams; total: number; capped: boolean };
+  serverResults: {
+    params: BrowseParams;
+    total: number;
+    capped: boolean;
+    featured: Server[];
+  };
 }) {
   const initialParams = serverResults.params;
   // Working dataset: the server-rendered page, replaced by each /api/browse
@@ -144,6 +155,9 @@ function BrowseView({
   const [servers, setServers] = useState<Server[]>(initialServers);
   const [browseTotal, setBrowseTotal] = useState(serverResults.total);
   const [browseCapped, setBrowseCapped] = useState(serverResults.capped);
+  // Paid listings matching the current filters, shown in their own labelled
+  // row; the organic list below is never reordered by payment.
+  const [featured, setFeatured] = useState<Server[]>(serverResults.featured);
   const [browseStatus, setBrowseStatus] = useState<
     'idle' | 'loading' | 'error'
   >('idle');
@@ -201,6 +215,7 @@ function BrowseView({
     setBrowseNextOffset(BROWSE_PAGE_SIZE);
     setBrowseTotal(serverResults.total);
     setBrowseCapped(serverResults.capped);
+    setFeatured(serverResults.featured);
   }, [initialServers, serverResults]);
 
   // The current filters as /api/browse params (page one).
@@ -237,9 +252,11 @@ function BrowseView({
       if (!res.ok) throw new Error(`browse ${res.status}`);
       const data = (await res.json()) as {
         items: Server[];
+        featured?: Server[];
         total: number | null;
         capped: boolean;
       };
+      if (!append) setFeatured(data.featured ?? []);
       setServers((prev) => {
         if (!append) return data.items;
         const seen = new Set(prev.map((s) => s.id));
@@ -717,38 +734,69 @@ function BrowseView({
               </div>
             </div>
           ) : (
-            <div
-              className={`${viewMode === 'grid' ? 'dir-grid' : 'dir-list'}${refreshing ? ' is-refreshing' : ''}`}
-              aria-busy={browseStatus === 'loading'}
-            >
-              {servers.map((server, index) => (
-                <Fragment key={server.id}>
-                  {isAdSlot(index) && ad}
-                  <ImpressionBeacon
-                    serverId={server.id}
-                    surface={surface}
-                    className="dir-beacon"
+            <>
+              {featured.length > 0 && (
+                <section
+                  className="dir-featured-slot"
+                  aria-labelledby="dir-featured-slot-title"
+                >
+                  <p
+                    id="dir-featured-slot-title"
+                    className="dir-featured-slot-title"
                   >
-                    {viewMode === 'grid' ? (
-                      <ServerCard server={server} />
-                    ) : (
+                    Featured
+                    <span className="dir-featured-slot-note">
+                      Paid placement. Results below are ranked without it.
+                    </span>
+                  </p>
+                  <div className="dir-list">
+                    {featured.map((server) => (
                       <ServerRow
+                        key={server.id}
                         server={server}
                         hideCategory={Boolean(selectedCategory)}
                       />
-                    )}
-                  </ImpressionBeacon>
-                </Fragment>
-              ))}
-              {appending && viewMode === 'list' && (
-                <ServerRowSkeleton count={4} />
+                    ))}
+                  </div>
+                </section>
               )}
-              {appending &&
-                viewMode === 'grid' &&
-                skeletonKeys(3).map((k) => (
-                  <div key={k} className="skeleton dir-card-skel" aria-hidden />
+              <div
+                className={`${viewMode === 'grid' ? 'dir-grid' : 'dir-list'}${refreshing ? ' is-refreshing' : ''}`}
+                aria-busy={browseStatus === 'loading'}
+              >
+                {servers.map((server, index) => (
+                  <Fragment key={server.id}>
+                    {isAdSlot(index) && ad}
+                    <ImpressionBeacon
+                      serverId={server.id}
+                      surface={surface}
+                      className="dir-beacon"
+                    >
+                      {viewMode === 'grid' ? (
+                        <ServerCard server={server} />
+                      ) : (
+                        <ServerRow
+                          server={server}
+                          hideCategory={Boolean(selectedCategory)}
+                        />
+                      )}
+                    </ImpressionBeacon>
+                  </Fragment>
                 ))}
-            </div>
+                {appending && viewMode === 'list' && (
+                  <ServerRowSkeleton count={4} />
+                )}
+                {appending &&
+                  viewMode === 'grid' &&
+                  skeletonKeys(3).map((k) => (
+                    <div
+                      key={k}
+                      className="skeleton dir-card-skel"
+                      aria-hidden
+                    />
+                  ))}
+              </div>
+            </>
           )}
 
           {servers.length > 0 &&

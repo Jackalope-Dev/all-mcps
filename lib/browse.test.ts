@@ -145,12 +145,33 @@ const browse = (qs: string) =>
 const ids = (r: { items: { id: string }[] }) => r.items.map((s) => s.id);
 
 describe('browseCatalog against real SQLite', () => {
-  it('lists only servable listings, featured first on trending', async () => {
+  it('lists only servable listings', async () => {
     const r = await browse('');
     expect(r.total).toBe(4);
-    expect(ids(r)[0]).toBe('paid-files');
     expect(ids(r)).not.toContain('flagged-pg');
     expect(ids(r)).not.toContain('pending-pg');
+  });
+
+  it('never lets payment reorder organic results; paid goes in the labelled slot', async () => {
+    // paid-files has no engagement and is the oldest listing, so it ranks
+    // last organically on every sort, Premium or not.
+    for (const sort of ['', 'sort=popular', 'sort=trending']) {
+      const r = await browse(sort);
+      expect(ids(r).at(-1)).toBe('paid-files');
+      expect(r.featured.map((s) => s.id)).toEqual(['paid-files']);
+    }
+    // A search's Featured slot only holds paid listings the search matched.
+    const search = await browse('q=python');
+    expect(ids(search)[0]).toBe('py-files');
+    expect(search.featured).toEqual([]);
+  });
+
+  it('fills the Featured slot only from listings matching the filters, on page one', async () => {
+    expect((await browse('category=Databases')).featured).toEqual([]);
+    expect((await browse('category=Files')).featured.map((s) => s.id)).toEqual([
+      'paid-files',
+    ]);
+    expect((await browse('offset=30')).featured).toEqual([]);
   });
 
   it('filters on real columns', async () => {
