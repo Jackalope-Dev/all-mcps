@@ -62,6 +62,26 @@ export function ConfigGeneratorTool() {
   const [rows, setRows] = useState<ServerRow[]>([]);
   const [format, setFormat] = useState<ClientFormat>('claude');
   const [hydrated, setHydrated] = useState(false);
+  // The site-wide count (lib/catalogCount.ts via /api/catalog-count), never a
+  // hardcoded figure; the placeholder just drops the number until it loads.
+  const [catalogCount, setCatalogCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/catalog-count')
+      .then((res) =>
+        res.ok ? (res.json() as Promise<{ count?: number }>) : null,
+      )
+      .then((data) => {
+        if (!cancelled && data?.count && data.count > 0) {
+          setCatalogCount(data.count);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -148,7 +168,11 @@ export function ConfigGeneratorTool() {
         <ServerPicker
           onSelect={addFromDirectory}
           addedIds={addedIds}
-          placeholder="Search 30,000+ servers — e.g. github, postgres"
+          placeholder={
+            catalogCount
+              ? `Search ${catalogCount.toLocaleString('en-US')} servers — e.g. github, postgres`
+              : 'Search the directory — e.g. github, postgres'
+          }
         />
 
         {rows.length === 0 ? (

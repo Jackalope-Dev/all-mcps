@@ -28,6 +28,7 @@ import type { ReactNode } from 'react';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { TrendChart } from '../../components/TrustCharts';
 import { CALLER_COLORS } from '../../lib/accessLog';
+import { formatCatalogAsOf } from '../../lib/catalogCount';
 import type {
   CallerBreakdown,
   CountryBreakdown,
@@ -692,12 +693,16 @@ export default async function TrustPage() {
 
             <SectionLabel
               title="The catalog"
-              note="All-time totals across every listed MCP server."
+              note={
+                stats.totalServersAsOf
+                  ? `All-time totals across every listed MCP server. Listing count as of ${formatCatalogAsOf({ count: stats.totalServers, asOf: stats.totalServersAsOf })}.`
+                  : 'All-time totals across every listed MCP server.'
+              }
             />
             <StatGrid>
               <StatTile
                 icon={Cpu}
-                value={formatNumber(stats.totalServers)}
+                value={stats.totalServers.toLocaleString('en-US')}
                 label="MCP servers listed"
               />
               <StatTile

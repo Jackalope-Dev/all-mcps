@@ -236,9 +236,9 @@ export default async function PricingPage({
         <ul className="acct-proof" aria-label="Directory at a glance">
           <li>
             <strong className="tabular">
-              {siteStats.totalServers.toLocaleString()}
+              {siteStats.totalServers.toLocaleString('en-US')}
             </strong>
-            <span>servers indexed</span>
+            <span>servers listed</span>
           </li>
           <li>
             <strong className="tabular">

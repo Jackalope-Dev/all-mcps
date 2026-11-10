@@ -114,7 +114,7 @@ export const STATIC_PAGE_LASTMOD: Record<string, string> = {
   '/mcp-troubleshooting': '2026-08-07',
   '/mcp-protocol-versioning': '2026-08-22',
   '/mcp-transports': '2026-09-17',
-  '/state-of-mcp': '2026-10-05',
+  '/state-of-mcp': '2026-11-10',
   '/pricing': '2026-11-10',
   '/tools': '2026-10-14',
   '/tools/openapi-to-mcp': '2026-08-05',

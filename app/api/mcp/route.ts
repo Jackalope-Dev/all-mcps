@@ -18,6 +18,7 @@ import {
 } from '@/lib/agentAuth';
 import { confirmAgentRegistration } from '@/lib/agentConfirm';
 import { registerAgent } from '@/lib/agentRegister';
+import { formatCatalogAsOf, getCatalogCount } from '@/lib/catalogCount';
 import { resolveCategoryParam } from '@/lib/categories';
 import { claimListing } from '@/lib/claimListing';
 import { listingClientConfigs } from '@/lib/listingClientConfigs';
@@ -532,9 +533,15 @@ export async function POST(request: Request) {
     }
 
     if (toolName === 'list_mcp_categories') {
-      const counts = await getCategoryCounts();
+      const [counts, catalog] = await Promise.all([
+        getCategoryCounts(),
+        getCatalogCount(),
+      ]);
 
       let md = `# AllMCPs Categories\n\n`;
+      if (catalog) {
+        md += `${catalog.count} servers listed (as of ${formatCatalogAsOf(catalog)}).\n\n`;
+      }
       for (const [cat, count] of Object.entries(counts)) {
         md += `- **${cat}**: ${count} servers\n`;
       }

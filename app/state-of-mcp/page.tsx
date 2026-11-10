@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { ArticleLayout } from '@/components/content/ArticleLayout';
 import { CopyBlock } from '@/components/ui/CopyBlock';
 import { FaqSection } from '@/components/ui/FaqSection';
+import { getCatalogCount } from '@/lib/catalogCount';
 import { categoryHueClass } from '@/lib/categories';
 import { getEcosystemStats } from '@/lib/ecosystemStats';
 import { serializeJsonLd } from '@/lib/jsonLd';
@@ -113,7 +114,10 @@ function Section({
 }
 
 export default async function StateOfMcpPage() {
-  const stats = await getEcosystemStats();
+  const [stats, catalog] = await Promise.all([
+    getEcosystemStats(),
+    getCatalogCount(),
+  ]);
 
   if (!stats || stats.total === 0) {
     return (
@@ -132,6 +136,11 @@ export default async function StateOfMcpPage() {
   }
 
   const updated = stats.generatedAt.slice(0, 10);
+  // The headline count is the site-wide one (lib/catalogCount.ts), so this
+  // page, its share card, the homepage and /trust all print the same number.
+  // Shares below stay on stats.total, the set the breakdowns were counted on.
+  const listed = catalog?.count ?? stats.total;
+  const listedAsOf = (catalog?.asOf ?? stats.generatedAt).slice(0, 10);
   const stdio =
     stats.transport.find((t) => t.label === 'Local (stdio)')?.count ?? 0;
   const remote =
@@ -168,7 +177,7 @@ export default async function StateOfMcpPage() {
   const faqs = [
     {
       q: 'How many MCP servers are there?',
-      a: `AllMCPs indexes ${fmt(stats.total)} active MCP servers as of ${updated}, with ${fmt(stats.added30d)} added in the last 30 days. The count covers public servers from the official MCP Registry, community server lists and direct submissions, after merging duplicates and removing archived projects.`,
+      a: `AllMCPs lists ${fmt(listed)} MCP servers as of ${listedAsOf}, with ${fmt(stats.added30d)} added in the last 30 days. The count covers public servers from the official MCP Registry, community server lists and direct submissions, after merging duplicates. Projects already archived when we find them are not imported. A listed repository that is archived later stays listed, because archived repos often still ship a working package, but it ranks lower. Listings our checks flag as dead, broken, not an MCP server or unsafe are left out of the count until the flag clears.`,
     },
     {
       q: 'Are most MCP servers local or remote?',
@@ -284,8 +293,8 @@ export default async function StateOfMcpPage() {
       >
         <div className="som-stats">
           <StatTile
-            value={fmt(stats.total)}
-            label="active Model Context Protocol servers indexed"
+            value={fmt(listed)}
+            label={`Model Context Protocol servers listed, as of ${listedAsOf}`}
             href="#size"
             icon={Server}
             hue={SECTION_HUE.size}
@@ -313,7 +322,7 @@ export default async function StateOfMcpPage() {
           />
         </div>
         <ShareBar
-          text={`State of MCP: ${fmt(stats.total)} active MCP servers, ${localShare} run locally, ${npxShare} of local servers launch with npx. Live data:`}
+          text={`State of MCP: ${fmt(listed)} MCP servers listed, ${localShare} run locally, ${npxShare} of local servers launch with npx. Live data:`}
         />
 
         <Section
@@ -321,13 +330,14 @@ export default async function StateOfMcpPage() {
           title="How big is the MCP ecosystem?"
           takeaway={
             <>
-              <strong>{fmt(stats.total)}</strong> active servers,{' '}
+              <strong>{fmt(listed)}</strong> servers listed,{' '}
               <strong>{fmt(stats.added30d)}</strong> added in the last 30 days.{' '}
-              {fmt(stats.official)} carry the Official badge, meaning their
-              maintainers proved ownership of the listing.
+              {fmt(stats.official)} carry the Official badge, meaning the
+              company behind the product publishes them (or they are reference
+              servers from the MCP project).
             </>
           }
-          shareText={`${fmt(stats.total)} active MCP servers, ${fmt(stats.added30d)} added in the last 30 days — State of MCP`}
+          shareText={`${fmt(listed)} MCP servers listed, ${fmt(stats.added30d)} added in the last 30 days — State of MCP`}
         >
           <ColumnChart
             rows={stats.monthly}
@@ -536,11 +546,14 @@ export default async function StateOfMcpPage() {
             Methodology and citing this data
           </h2>
           <p>
-            Figures cover listings with active status in AllMCPs, which ingests
-            public MCP servers from the official MCP Registry, community server
-            lists and direct submissions, merges duplicates, and removes
-            archived or deleted repositories. Transport, runner, auth, pricing
-            and license are extracted from each server&apos;s documentation and
+            Figures cover the listings AllMCPs serves in browse and search:
+            active, and not flagged by our checks as dead, broken, not an MCP
+            server or unsafe. AllMCPs ingests public MCP servers from the
+            official MCP Registry, community server lists and direct
+            submissions, merges duplicates, and skips repositories that are
+            already archived or deleted. A listed repository archived later
+            stays listed but ranks lower. Transport, runner, auth, pricing and
+            license are extracted from each server&apos;s documentation and
             verified where possible; values that could not be determined are
             excluded from the shares that depend on them. Numbers refresh every
             few hours; last computed{' '}
