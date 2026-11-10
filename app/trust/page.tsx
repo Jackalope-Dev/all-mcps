@@ -718,7 +718,7 @@ export default async function TrustPage() {
               <StatTile
                 icon={ShieldCheck}
                 value={formatNumber(stats.verifiedCount)}
-                label="Verified listings"
+                label="Verified owner or Official"
               />
             </StatGrid>
 

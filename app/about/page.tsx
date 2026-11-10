@@ -217,12 +217,14 @@ export default function AboutPage() {
         <p>
           Ranking scores on category, best-of, and search pages are computed
           from real engagement signals (install copies, views, upvotes, GitHub
-          stars, npm downloads) plus official/verified status — payment never
-          changes a listing&rsquo;s score. A <strong>Featured</strong> or{' '}
-          <strong>Sponsored</strong> badge means a listing paid for placement
-          (see <a href="/pricing">/pricing</a>): paid listings are pinned above
-          the ranked results on browse and category pages and always carry that
-          label, so you can tell them apart from organic results.
+          stars, npm downloads) plus verified-owner and official status. Payment
+          never changes a listing&rsquo;s score or its organic order, and never
+          makes it Verified. A <strong>Featured</strong> badge means a listing
+          paid for placement (see <a href="/pricing">/pricing</a>): paid
+          listings appear in labelled slots (the homepage Featured shelf, a
+          Featured row above <a href="/browse">/browse</a> results, and a
+          category sponsor&rsquo;s pinned top spot) and always carry that label.
+          Ads are marked <strong>Sponsored</strong>.
         </p>
         <p>
           We list any public MCP server that implements the protocol, including

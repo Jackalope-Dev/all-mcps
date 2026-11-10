@@ -60,9 +60,9 @@ If you're driving this from an agent rather than doing it by hand, the "copy age
 
 ## Claiming and verifying your own server
 
-If you maintain a server that's listed on AllMCPs — or you're submitting a new one — you can claim it once it's live. Claiming works like most domain-ownership checks: prove you control the linked GitHub repository or website, either by adding a DNS TXT record or by hosting a small verification badge file, and the listing flips to Verified.
+If you maintain a server that's listed on AllMCPs — or you're submitting a new one — you can claim it once it's live. Claiming works like most domain-ownership checks: prove you control the linked GitHub repository or website, either by adding a DNS TXT record or by hosting a small verification badge file, and the listing flips to Verified owner.
 
-Once claimed, you can edit your own listing's details directly, and verified listings get a reciprocal dofollow link back to the project's own site — a real trust signal for people browsing the directory, and a modest SEO benefit for the project itself.
+Once claimed, you can edit your own listing's details directly, and its repository link becomes dofollow. Your website link becomes dofollow when the free AllMCPs badge is live on that site, claimed or not. Paying for Premium doesn't buy either.
 
 If you haven't listed your server yet, start with [Submit](/submit); if it's already in the directory, open its page and look for the claim flow.
 

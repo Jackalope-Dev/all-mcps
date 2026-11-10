@@ -2107,7 +2107,7 @@ export default async function MCPDetail({
                   <p>
                     This listing is pre-filled from public sources. Claim it via
                     your GitHub README, a site badge, or DNS TXT to edit it and
-                    earn the Verified badge
+                    earn the Verified owner badge
                     {server.websiteUrl ? '' : ' (and attach your website)'}.
                   </p>
                   <p className="lst-claim-perk">

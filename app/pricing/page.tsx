@@ -62,7 +62,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'What is included in the Premium subscription ($19/mo)?',
-    a: 'Premium gives your MCP continuous featured rotation on the homepage and directory grid, real-time LLM access analytics, and a Verified badge with a glowing featured card. It does not buy a dofollow link: a Premium website link is marked rel="sponsored" unless your site carries the free AllMCPs badge.',
+    a: 'Premium gives your MCP continuous featured rotation on the homepage and directory grid, real-time LLM access analytics, and a Premium label with a glowing featured card. It does not make a listing Verified (that takes an ownership claim), change its quality score or organic search order, or buy a dofollow link: a Premium website link is marked rel="sponsored" unless your site carries the free AllMCPs badge.',
   },
   {
     q: 'How do I get a dofollow link to my project?',

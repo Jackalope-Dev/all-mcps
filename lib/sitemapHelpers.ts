@@ -93,12 +93,12 @@ export function safeDateISO(val: unknown): string {
  * on every request (that teaches crawlers to ignore lastmod).
  */
 export const STATIC_PAGE_LASTMOD: Record<string, string> = {
-  '/': '2026-10-14',
+  '/': '2026-11-10',
   '/browse': '2026-10-14',
   '/categories': '2026-10-14',
   '/best': '2026-10-14',
   '/clients': '2026-09-23',
-  '/about': '2026-10-14',
+  '/about': '2026-11-10',
   '/docs/api': '2026-10-14',
   '/blog': '2026-08-07',
   '/contact': '2026-10-14',
