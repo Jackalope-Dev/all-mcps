@@ -58,6 +58,30 @@ export function isReferenceServer(server: TrustFields): boolean {
   return !!server.isOfficial && server.officialSource === 'reference';
 }
 
+/** Listing-name endings that name the server, not the product ("Slack MCP Server"). */
+const SERVER_SUFFIX =
+  /(?:[\s\-_:]+(?:official|remote|hosted|mcp|server|model\s+context\s+protocol|integration|connector|tools?))+$/i;
+const SERVER_PREFIX = /^(?:official\s+)?mcp\s+(?:server\s+)?(?:for\s+)?/i;
+
+/**
+ * The product or brand a listing name refers to ("Slack MCP" → "Slack"), for
+ * the Official tooltip, which must name the vendor's product rather than
+ * repeat the listing name. There is no vendor column, so this only strips
+ * server wording; null when nothing brand-like is left, and callers fall back
+ * to a sentence that names no one.
+ */
+export function productBrand(name: string | null | undefined): string | null {
+  const brand = (name ?? '')
+    .trim()
+    .replace(SERVER_PREFIX, '')
+    .replace(SERVER_SUFFIX, '')
+    .trim();
+  if (brand.length < 2 || /\bmcp\b/i.test(brand)) return null;
+  if (/^(?:server|tools?|integration|connector|official)$/i.test(brand))
+    return null;
+  return brand;
+}
+
 export type TrustLabel = {
   kind: 'official' | 'reference' | 'owner';
   label: 'Official' | 'Reference' | 'Verified owner';
@@ -82,13 +106,13 @@ export function trustLabel(
     };
   }
   if (server.isOfficial) {
-    const name = productName?.trim();
+    const brand = productBrand(productName);
     return {
       kind: 'official',
       label: 'Official',
-      title: name
-        ? `Published by the company behind ${name}`
-        : 'Published by the company behind this product',
+      title: brand
+        ? `Published by the company behind ${brand}`
+        : 'Published by the vendor',
     };
   }
   if (server.ownerVerified) {

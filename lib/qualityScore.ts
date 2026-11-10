@@ -226,7 +226,11 @@ export function computeQualityScore(server: Server): QualityScore {
 
     components.push({
       key: 'trust',
-      label: 'Verified ownership',
+      // Not "Verified ownership": since Official and Verified owner were split
+      // (Nov 2026), ownership means an approved claim, and an unclaimed
+      // Official listing earns this line too. Badges and an active repo earn
+      // part of it.
+      label: 'Trust & verification',
       earned: Math.round(earned),
       max,
       hint,

@@ -3,6 +3,7 @@ import {
   isOperatorListing,
   isReferenceServer,
   isVerifiedListing,
+  productBrand,
   trustLabel,
 } from './featuredStatus';
 import { computeQualityScore } from './qualityScore';
@@ -65,6 +66,26 @@ describe('trust labels', () => {
     expect(trustLabel({ isOfficial: true, ownerVerified: true })?.label).toBe(
       'Official',
     );
+  });
+
+  it('names the product, not the listing, in the Official tooltip', () => {
+    const official = { isOfficial: true, officialSource: 'vendor-endpoint' };
+    expect(trustLabel(official, 'Slack MCP')?.title).toBe(
+      'Published by the company behind Slack',
+    );
+    expect(trustLabel(official, 'GitHub MCP Server')?.title).toBe(
+      'Published by the company behind GitHub',
+    );
+    expect(trustLabel(official, 'MCP Server for Notion')?.title).toBe(
+      'Published by the company behind Notion',
+    );
+    // Nothing brand-like left: name no one rather than repeat the listing.
+    expect(trustLabel(official, 'MCP Server')?.title).toBe(
+      'Published by the vendor',
+    );
+    expect(trustLabel(official)?.title).toBe('Published by the vendor');
+    expect(productBrand('Pinecone Assistant MCP')).toBe('Pinecone Assistant');
+    expect(productBrand('stripe-mcp')).toBe('stripe');
   });
 
   it('labels modelcontextprotocol reference servers Reference', () => {
