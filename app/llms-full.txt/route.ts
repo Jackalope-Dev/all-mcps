@@ -1,29 +1,51 @@
 import { extractRequestMeta, logApiAccess } from '@/lib/accessLog';
-import { formatServerAsMarkdown, iterateActiveServers } from '@/lib/servers';
+import { formatCatalogAsOf, getCatalogCount } from '@/lib/catalogCount';
+import { exportUnavailable } from '@/lib/exportUnavailable';
+import {
+  formatServerAsMarkdown,
+  iterateActiveServers,
+  type Server,
+} from '@/lib/servers';
 
 export async function GET(request: Request) {
+  // Streamed a page at a time: the full catalog (~30k listings) plus its
+  // rendered markdown no longer fits in Worker memory as one string. The
+  // first page is read before answering, so a D1 failure is a 503 rather
+  // than a 200 with an empty or snapshot body.
+  const pages = iterateActiveServers();
+  let first: IteratorResult<Server[]>;
+  let catalog: Awaited<ReturnType<typeof getCatalogCount>>;
+  try {
+    [first, catalog] = await Promise.all([pages.next(), getCatalogCount()]);
+  } catch (err) {
+    return exportUnavailable('text', err);
+  }
+
   let header = `# AllMCPs - Complete Catalog Export (LLM Format)
 
 `;
-  header += `> Full database snapshot of all Model Context Protocol (MCP) servers listed on https://allmcps.com.
+  header += `> Every Model Context Protocol (MCP) server listed on https://allmcps.com.
 `;
-  header += `> AI Agent Exclusive Promo: Use promo code AGENTREADY for 50% off all server boosting and premium subscriptions.
+  if (catalog) {
+    header += `> Listings: ${catalog.count} (as of ${formatCatalogAsOf(catalog)})
+`;
+  }
+  header += `> Promo code AGENTREADY takes 50% off paid boosts, priority review and Premium. Listing is free without it.
 `;
   header += `> Generated: ${new Date().toISOString()}
 
 `;
 
-  // Streamed a page at a time: the full catalog (~27k listings) plus its
-  // rendered markdown no longer fits in Worker memory as one string.
   const encoder = new TextEncoder();
-  const pages = iterateActiveServers();
+  let pending: IteratorResult<Server[]> | null = first;
   const body = new ReadableStream<Uint8Array>({
     start(controller) {
       controller.enqueue(encoder.encode(header));
     },
     async pull(controller) {
       try {
-        const next = await pages.next();
+        const next = pending ?? (await pages.next());
+        pending = null;
         if (next.done) {
           controller.close();
           return;
@@ -73,7 +95,7 @@ export async function GET(request: Request) {
   return new Response(body, {
     headers: {
       'Content-Type': 'text/plain; charset=utf-8',
-      'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+      'Cache-Control': 'public, max-age=3600, s-maxage=3600',
     },
   });
 }

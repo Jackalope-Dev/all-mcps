@@ -1096,44 +1096,63 @@ export async function getRandomActiveServers(
 }
 
 /**
- * Every active listing, `pageSize` full rows (tools trimmed) at a time in id
+ * Every servable listing, `pageSize` full rows (tools trimmed) at a time in id
  * order, for whole-catalog exports such as /llms-full.txt. Holding the whole
- * ~27k-row catalog plus the rendered output at once exceeds the Worker memory
+ * ~30k-row catalog plus the rendered output at once exceeds the Worker memory
  * limit, so callers stream each page out before asking for the next.
+ *
+ * A D1 failure throws (the route answers 503). It used to fall back to the
+ * 114-row bundled snapshot, which then sat in caches for a day as if it were
+ * the catalog. The snapshot is only used where there is no D1 at all
+ * (local dev without bindings).
  */
 export async function* iterateActiveServers(
   pageSize = 500,
 ): AsyncGenerator<Server[]> {
   const searchDb = await getSearchDb();
-  let after = '';
-  let yielded = false;
-  if (searchDb) {
-    try {
-      for (;;) {
-        const rows = await searchDb.db
-          .select(SCORING_SERVER_COLUMNS)
-          .from(serversTable)
-          .where(and(servableFilter(), gt(serversTable.id, after)))
-          .orderBy(serversTable.id)
-          .limit(pageSize);
-        if (rows.length === 0) break;
-        yielded = true;
-        yield rows.map((r) => normalizeServer(r as unknown as Server));
-        after = rows[rows.length - 1].id;
-        if (rows.length < pageSize) break;
-      }
-    } catch (e) {
-      // Fall back to static JSON only if nothing was streamed yet; a partial
-      // export followed by a different snapshot would duplicate listings.
-      if (yielded) throw e;
-    }
-  }
-  if (!yielded) {
+  if (!searchDb) {
     const snapshot = snapshotCatalogServers().map(normalizeServer);
     for (let i = 0; i < snapshot.length; i += pageSize) {
       yield snapshot.slice(i, i + pageSize);
     }
+    return;
   }
+  let after = '';
+  for (;;) {
+    const rows = await searchDb.db
+      .select(SCORING_SERVER_COLUMNS)
+      .from(serversTable)
+      .where(and(servableFilter(), gt(serversTable.id, after)))
+      .orderBy(serversTable.id)
+      .limit(pageSize);
+    if (rows.length === 0) break;
+    yield rows.map((r) => normalizeServer(r as unknown as Server));
+    after = rows[rows.length - 1].id;
+    if (rows.length < pageSize) break;
+  }
+}
+
+/** Rows per page for the whole-catalog exports (llms.txt, data.json). */
+const EXPORT_PAGE_SIZE = 2000;
+
+/**
+ * Keyset-pages a whole-catalog export in id order, `pageSize` rows per D1
+ * query. One unpaged select of every servable row was too big a D1 result
+ * and failed often enough that the exports kept serving the snapshot.
+ */
+async function collectExportPages<T extends { id: string }>(
+  fetchPage: (afterId: string, limit: number) => Promise<T[]>,
+  pageSize: number,
+): Promise<T[]> {
+  const out: T[] = [];
+  let after = '';
+  for (;;) {
+    const rows = await fetchPage(after, pageSize);
+    for (const r of rows) out.push(r);
+    if (rows.length < pageSize) break;
+    after = rows[rows.length - 1].id;
+  }
+  return out;
 }
 
 /** Row shape for whole-catalog indexes (/data.json, the Cmd+K search index). */
@@ -1148,38 +1167,43 @@ export type CatalogIndexRow = {
 };
 
 /**
- * Every active listing with only the columns a catalog index needs. Like
- * getServersForLlmsTxt, it skips `tools` and the long AI columns that made
- * getActiveServersForScoring() too heavy for whole-catalog routes.
+ * Every servable listing with only the columns a catalog index needs, paged
+ * through D1 (collectExportPages). Like getServersForLlmsTxt, it skips
+ * `tools` and the long AI columns that made getActiveServersForScoring() too
+ * heavy for whole-catalog routes. Throws when D1 fails, so /data.json answers
+ * 503 instead of publishing the bundled snapshot as the catalog.
  */
-export async function getCatalogIndexRows(): Promise<CatalogIndexRow[]> {
-  try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const ctx = await getCloudflareContext();
-    if (ctx?.env && (ctx.env as any).DB) {
-      const db = drizzle((ctx.env as any).DB);
-      const rows = await db
-        .select({
-          id: serversTable.id,
-          name: serversTable.name,
-          description: serversTable.description,
-          category: serversTable.category,
-          url: serversTable.url,
-          logoUrl: serversTable.logoUrl,
-          aiSummary: serversTable.aiSummary,
-        })
-        .from(serversTable)
-        .where(servableFilter());
-      if (rows.length > 0) {
-        return rows.map((r) => ({
-          ...r,
-          description: cleanListingDescription(r.description),
-        }));
-      }
-    }
-  } catch (_e) {
-    // Fall back to static JSON
+export async function getCatalogIndexRows({
+  pageSize = EXPORT_PAGE_SIZE,
+}: {
+  pageSize?: number;
+} = {}): Promise<CatalogIndexRow[]> {
+  const searchDb = await getSearchDb();
+  if (searchDb) {
+    const rows = await collectExportPages(
+      (after, limit) =>
+        searchDb.db
+          .select({
+            id: serversTable.id,
+            name: serversTable.name,
+            description: serversTable.description,
+            category: serversTable.category,
+            url: serversTable.url,
+            logoUrl: serversTable.logoUrl,
+            aiSummary: serversTable.aiSummary,
+          })
+          .from(serversTable)
+          .where(and(servableFilter(), gt(serversTable.id, after)))
+          .orderBy(serversTable.id)
+          .limit(limit),
+      pageSize,
+    );
+    return rows.map((r) => ({
+      ...r,
+      description: cleanListingDescription(r.description),
+    }));
   }
+  // No D1 binding at all (local dev): the bundled snapshot.
   return snapshotCatalogServers().map((s) => ({
     id: s.id,
     name: s.name,
@@ -1931,43 +1955,52 @@ export type LlmsTxtServer = {
 };
 
 /**
- * Ultra-slim catalog fetch for the /llms.txt route.
- * Fetches ONLY id, name, description, category — the four fields the route
- * actually uses. Loading the full catalog via getActiveServersForScoring()
- * pulled every AI-text blob, tools JSON, and scoring column into the Worker
- * heap for all ~3200 rows, which reliably OOMs the Cloudflare Worker on this
- * route. This query is ~10-20× lighter.
+ * Ultra-slim catalog fetch for the /llms.txt route: only the fields the route
+ * uses, never the AI-text blobs or tools JSON (those OOM'd the Worker here).
+ * Paged through D1 in id order (collectExportPages), then ordered by
+ * popularity in memory so "top 10 per category" really is the most-used ten.
+ * Throws when D1 fails, so the route answers 503 instead of listing the
+ * 114-row bundled snapshot as the catalog.
  */
-export async function getServersForLlmsTxt(): Promise<LlmsTxtServer[]> {
-  try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const ctx = await getCloudflareContext();
-    if (ctx?.env && (ctx.env as any).DB) {
-      const db = drizzle((ctx.env as any).DB);
-      const rows = await db
-        .select({
-          id: serversTable.id,
-          name: serversTable.name,
-          description: serversTable.description,
-          category: serversTable.category,
-          installKind: serversTable.installKind,
-          installCommand: serversTable.installCommand,
-          installPackage: serversTable.installPackage,
-        })
-        .from(serversTable)
-        .where(servableFilter())
-        // Same order as idx_servers_status_popularity, so "top 10 per
-        // category" really is the most-used ten, not insertion order.
-        .orderBy(
-          desc(serversTable.views),
-          desc(serversTable.copies),
-          desc(serversTable.upvotes),
-        );
-      if (rows.length > 0) return rows;
-    }
-  } catch {
-    // Fall back to static JSON
+export async function getServersForLlmsTxt({
+  pageSize = EXPORT_PAGE_SIZE,
+}: {
+  pageSize?: number;
+} = {}): Promise<LlmsTxtServer[]> {
+  const searchDb = await getSearchDb();
+  if (searchDb) {
+    const rows = await collectExportPages(
+      (after, limit) =>
+        searchDb.db
+          .select({
+            id: serversTable.id,
+            name: serversTable.name,
+            description: serversTable.description,
+            category: serversTable.category,
+            installKind: serversTable.installKind,
+            installCommand: serversTable.installCommand,
+            installPackage: serversTable.installPackage,
+            views: serversTable.views,
+            copies: serversTable.copies,
+            upvotes: serversTable.upvotes,
+          })
+          .from(serversTable)
+          .where(and(servableFilter(), gt(serversTable.id, after)))
+          .orderBy(serversTable.id)
+          .limit(limit),
+      pageSize,
+    );
+    // Same order as idx_servers_status_popularity; id breaks ties stably.
+    rows.sort(
+      (a, b) =>
+        (b.views ?? 0) - (a.views ?? 0) ||
+        (b.copies ?? 0) - (a.copies ?? 0) ||
+        (b.upvotes ?? 0) - (a.upvotes ?? 0) ||
+        (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+    );
+    return rows.map(({ views: _v, copies: _c, upvotes: _u, ...r }) => r);
   }
+  // No D1 binding at all (local dev): the bundled snapshot.
   return snapshotCatalogServers().map((s) => ({
     id: s.id,
     name: s.name,

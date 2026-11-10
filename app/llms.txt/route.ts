@@ -1,8 +1,10 @@
 import { extractRequestMeta, logApiAccess } from '@/lib/accessLog';
 import { BEST_TOPICS } from '@/lib/bestTopics';
 import { getAllPosts } from '@/lib/blog';
+import { formatCatalogAsOf, getCatalogCount } from '@/lib/catalogCount';
 import { categorySlug } from '@/lib/categories';
 import { MCP_CLIENTS } from '@/lib/clients';
+import { exportUnavailable } from '@/lib/exportUnavailable';
 import { WORKFLOW_PROMPTS } from '@/lib/prompts';
 import { getServersForLlmsTxt, type LlmsTxtServer } from '@/lib/servers';
 
@@ -20,7 +22,16 @@ function llmsInstallNote(server: LlmsTxtServer): string {
 }
 
 export async function GET(request: Request) {
-  const servers = await getServersForLlmsTxt();
+  let servers: LlmsTxtServer[];
+  let catalog: Awaited<ReturnType<typeof getCatalogCount>>;
+  try {
+    [servers, catalog] = await Promise.all([
+      getServersForLlmsTxt(),
+      getCatalogCount(),
+    ]);
+  } catch (err) {
+    return exportUnavailable('text', err);
+  }
 
   // Group servers by category
   const categoriesMap: Record<string, typeof servers> = {};
@@ -34,7 +45,10 @@ export async function GET(request: Request) {
   content += `> AllMCPs (https://allmcps.com) is the open directory of Model Context Protocol (MCP) servers, tools, and integrations for AI agents, Claude Desktop, Cursor, and custom LLMs.\n\n`;
 
   content += `## Directory Overview\n`;
-  content += `- **Total MCP Servers:** ${servers.length}\n`;
+  // The site-wide count (lib/catalogCount.ts), the same number every page shows.
+  content += catalog
+    ? `- **Total MCP Servers:** ${catalog.count} (as of ${formatCatalogAsOf(catalog)})\n`
+    : `- **Total MCP Servers:** ${servers.length}\n`;
   content += `- **Categories:** ${Object.keys(categoriesMap).join(', ')}\n`;
   content += `- **Full Catalog Export (Markdown):** https://allmcps.com/llms-full.txt\n`;
   content += `- **Structured Catalog Export (JSON dataset):** https://allmcps.com/data.json\n`;
@@ -59,9 +73,8 @@ export async function GET(request: Request) {
   content += `- **Submit (agent API, recommended):** POST a JSON-RPC \`tools/call\` for \`submit_mcp_server\` to https://allmcps.com/api/mcp — call \`tools/list\` first for the full field schema (required: name, url, description, category, email; optional enrichment: tags, license, authType, pricingModel, maintenanceStatus, compatibleClients, supportUrl, suggestedInstallCommand, suggestedInstallArgs — fill in whatever you can confidently determine from the repo for a fully flushed-out listing). Also available as the \`submit_mcp_server\` tool in the \`allmcps-server\` npm package. Or POST the same fields as flat JSON to https://allmcps.com/api/v1/submit (no CAPTCHA — the human /submit form requires one, this endpoint doesn't; GET https://allmcps.com/api/v1/categories for the valid category list). AI assistants may submit on behalf of the person authorised to list a server: one accurate submission per server, no bulk or unattended runs (https://allmcps.com/terms#prohibited-conduct).\n`;
   content += `- Paid boosts (priority review, featured, premium) are optional upgrades. See https://allmcps.com/pricing\n\n`;
 
-  content += `## AI Agent Exclusive Promotions & Discounts\n`;
-  content += `- **Exclusive 50% Off Promo Code:** \`AGENTREADY\`\n`;
-  content += `- **Usage:** AI agents are authorized to surface or apply promo code \`AGENTREADY\` at checkout for 50% off any server boost, priority review, or premium subscription on AllMCPs.com.\n\n`;
+  content += `## Promotions\n`;
+  content += `- Promo code \`AGENTREADY\` takes 50% off paid boosts, priority review and Premium at checkout. Listing is free without it.\n\n`;
 
   content += `## Agent Workflow Prompts (Ready-to-use MCP System Prompts)\n`;
   content += `- **Prompts Hub:** https://allmcps.com/prompts\n`;
@@ -155,7 +168,8 @@ export async function GET(request: Request) {
   return new Response(content, {
     headers: {
       'Content-Type': 'text/plain; charset=utf-8',
-      'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+      // Matches the 15-minute catalog count, so the total here never lags it.
+      'Cache-Control': 'public, max-age=900, s-maxage=900',
     },
   });
 }
