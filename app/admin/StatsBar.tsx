@@ -101,9 +101,9 @@ export function StatsBar({
       } as KpiCardSelection,
     },
     {
-      label: 'Premium (dofollow)',
+      label: 'Premium',
       value: String(stats.premiumCount),
-      subtext: 'Paid / verified listings',
+      subtext: 'Paid listings',
       icon: Crown,
       hue: 'hue-violet',
       alert: false,

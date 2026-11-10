@@ -90,7 +90,7 @@ export const FREE_TIER: FreeTier = {
     'Permanent directory listing — free forever',
     'Included in search, categories & agent APIs',
     'Claim ownership via GitHub, site badge, or DNS',
-    'Nofollow website backlink',
+    'Dofollow website link while your site shows the free AllMCPs badge',
     'Standard review queue',
   ],
   placementHint: 'Standard directory placement across search & categories.',
@@ -180,7 +180,6 @@ export const PAID_PRODUCTS: Record<PaidSku, PaidProduct> = {
     benefits: [
       'Guaranteed featured rotation on homepage & browse',
       'Rich analytics: see which LLMs & agents access your server',
-      'Dofollow website backlink (valuable SEO boost)',
       'Verified / Premium badge & glowing card design',
       'Impression tracking & search discovery insights',
       'Priority support',

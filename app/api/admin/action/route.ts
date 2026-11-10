@@ -125,8 +125,8 @@ const NON_LISTING_ACTIONS = new Set<string>([
 const MESSAGES: Record<string, string> = {
   approve: 'Listing approved.',
   reject: 'Listing rejected.',
-  set_premium: 'Marked premium (dofollow).',
-  unset_premium: 'Premium removed (nofollow).',
+  set_premium: 'Marked premium.',
+  unset_premium: 'Premium removed.',
   edit: 'Listing updated.',
   unpublish: 'Listing unpublished.',
   republish: 'Listing republished.',

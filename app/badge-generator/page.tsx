@@ -86,10 +86,11 @@ export default function BadgeGeneratorPage() {
       <div className="tl-alert tl-alert--ok bdg-dofollow">
         <ShieldCheck size={18} aria-hidden="true" />
         <p>
-          <strong>Free dofollow path:</strong> claim your listing, verify the
-          product website, then embed a badge <em>without</em>{' '}
-          <code>nofollow</code>. We recheck periodically. Premium listings get
-          dofollow without a badge — see <a href="/pricing#premium">Premium</a>.
+          <strong>Free dofollow path:</strong> make sure your listing links to
+          your product website (claim the listing to change it), then embed a
+          badge there <em>without</em> <code>nofollow</code>. We recheck
+          periodically. Payment never buys a dofollow link; the badge is the
+          only way.
         </p>
       </div>
       <BadgeEmbedBuilder />

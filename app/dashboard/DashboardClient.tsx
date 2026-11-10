@@ -513,9 +513,7 @@ export default function DashboardClient({
     setActiveTabMap((prev) => ({ ...prev, [serverId]: tab }));
   };
 
-  const needsBacklinkHelp = servers.some(
-    (s) => !s.isPremium && !s.websiteBacklinkOk,
-  );
+  const needsBacklinkHelp = servers.some((s) => !s.websiteBacklinkOk);
 
   if (servers.length === 0) {
     return (
@@ -683,7 +681,8 @@ export default function DashboardClient({
             <strong>Free dofollow available</strong>
             <p>
               On each listing, finish setup: website → verify ownership → place
-              the AllMCPs badge. Premium includes dofollow without a badge.
+              the AllMCPs badge. The badge is the only way to a dofollow website
+              link; Premium doesn&apos;t include one.
             </p>
           </div>
         </div>
@@ -803,7 +802,7 @@ export default function DashboardClient({
                   >
                     <ExternalLink size={14} aria-hidden="true" /> View listing
                   </Link>
-                  {!server.websiteBacklinkOk && !server.isPremium && (
+                  {!server.websiteBacklinkOk && (
                     <Link
                       href={`/mcp/${server.id}/claim`}
                       className="btn btn-secondary btn-sm"
@@ -909,7 +908,7 @@ export default function DashboardClient({
                 >
                   <Globe size={15} aria-hidden="true" />
                   SEO
-                  {!server.isPremium && !server.websiteBacklinkOk && (
+                  {!server.websiteBacklinkOk && (
                     <span
                       className="dashboard-tab-dot"
                       role="img"
@@ -1039,7 +1038,7 @@ export default function DashboardClient({
                               >
                                 — Full analytics unlocked through your boost
                                 window! Upgrade to Premium for 24/7 perpetual
-                                analytics &amp; dofollow backlinks.
+                                analytics.
                               </span>
                             </div>
                             <Link
@@ -2221,29 +2220,21 @@ function ListingSetupSteps({
     },
     {
       id: 'badge',
-      done: Boolean(server.websiteBacklinkOk || server.isPremium),
-      title: server.isPremium
-        ? 'Dofollow included (Premium)'
-        : server.websiteBacklinkOk
-          ? 'AllMCPs badge live'
-          : server.readmeBadgeOk
-            ? 'Add the badge to your website'
-            : 'Place the AllMCPs badge',
-      description: server.isPremium
-        ? 'Premium listings get a dofollow website link without a reciprocal badge.'
-        : server.websiteBacklinkOk
-          ? 'We detected your badge — your website link is dofollow.'
-          : server.readmeBadgeOk
-            ? 'Your README badge is detected and counts toward verification. The dofollow website link needs the badge on your website itself.'
+      done: Boolean(server.websiteBacklinkOk),
+      title: server.websiteBacklinkOk
+        ? 'AllMCPs badge live'
+        : server.readmeBadgeOk
+          ? 'Add the badge to your website'
+          : 'Place the AllMCPs badge',
+      description: server.websiteBacklinkOk
+        ? 'We detected your badge — your website link is dofollow.'
+        : server.readmeBadgeOk
+          ? 'Your README badge is detected and counts toward verification. The dofollow website link needs the badge on your website itself.'
+          : server.isPremium
+            ? 'Premium website links are marked rel="sponsored". Embed the free badge on your site for a dofollow link.'
             : 'Embed the free dofollow badge on your site to unlock SEO value.',
-      actionLabel:
-        server.websiteBacklinkOk || server.isPremium
-          ? undefined
-          : 'Get badge code',
-      href:
-        server.websiteBacklinkOk || server.isPremium
-          ? undefined
-          : '/badge-generator',
+      actionLabel: server.websiteBacklinkOk ? undefined : 'Get badge code',
+      href: server.websiteBacklinkOk ? undefined : '/badge-generator',
     },
     {
       id: 'status',
@@ -2387,7 +2378,7 @@ function ListingSetupSteps({
 /** Per-listing SEO backlink checklist — drives free dofollow completion. */
 function BacklinkStatus({ server }: { server: Server }) {
   const hasWebsite = Boolean(server.websiteUrl?.trim());
-  const dofollow = Boolean(server.isPremium || server.websiteBacklinkOk);
+  const dofollow = Boolean(server.websiteBacklinkOk);
 
   if (dofollow) {
     return (
@@ -2415,9 +2406,7 @@ function BacklinkStatus({ server }: { server: Server }) {
             lineHeight: 1.5,
           }}
         >
-          {server.isPremium
-            ? 'Your website link passes full SEO authority as part of your Premium Plan.'
-            : 'Your reciprocal AllMCPs badge is live and passes full SEO authority.'}
+          Your reciprocal AllMCPs badge is live and passes full SEO authority.
         </p>
       </div>
     );
@@ -2721,7 +2710,7 @@ function PremiumTeaser() {
         <strong style={{ color: 'var(--text-primary)' }}>where</strong> you
         appear in the directory, and{' '}
         <strong style={{ color: 'var(--text-primary)' }}>what searches</strong>{' '}
-        find you — plus a dofollow website backlink.
+        find you.
       </p>
       <ul
         style={{
@@ -2739,7 +2728,6 @@ function PremiumTeaser() {
         <li>✓ Caller breakdown (Claude, Cursor, ChatGPT, bots…)</li>
         <li>✓ Impression surfaces (browse, marquee, related, API)</li>
         <li>✓ Search queries that surface your MCP</li>
-        <li>✓ Dofollow website link without a reciprocal badge</li>
       </ul>
       <div
         style={{
