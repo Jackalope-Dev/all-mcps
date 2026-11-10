@@ -19,6 +19,8 @@
 --   admin, not claimed; they are left as they are (official_source NULL) for
 --   the evidence backfill to review.
 --
+-- (instr, not LIKE: D1 rejects LIKE patterns over 50 bytes.)
+--
 -- To reverse:
 --   UPDATE servers SET is_official = 1, owner_verified = 0 WHERE id IN
 --     (SELECT target_id FROM admin_audit WHERE request_id = '0072_official_owner_split' AND action = 'split_official_owner');
@@ -37,8 +39,8 @@ SELECT 'm0072-owner-' || `id`, 'migration', 'migration:0072_official_owner_split
 FROM `servers`
 WHERE `is_official` = 1
   AND `owner_user_id` IS NOT NULL
-  AND `url` NOT LIKE 'https://github.com/modelcontextprotocol/servers/%'
-  AND `url` NOT LIKE 'https://github.com/modelcontextprotocol/servers-archived/%';--> statement-breakpoint
+  AND instr(`url`, 'https://github.com/modelcontextprotocol/servers/') != 1
+  AND instr(`url`, 'https://github.com/modelcontextprotocol/servers-archived/') != 1;--> statement-breakpoint
 UPDATE `servers` SET `owner_verified` = 1, `is_official` = 0
 WHERE `id` IN (SELECT `target_id` FROM `admin_audit` WHERE `request_id` = '0072_official_owner_split' AND `action` = 'split_official_owner');--> statement-breakpoint
 INSERT INTO `admin_audit` (`id`, `connector_id`, `actor_id`, `request_id`, `action`, `target_type`, `target_id`, `before`, `after`, `created_at`)
@@ -48,7 +50,7 @@ SELECT 'm0072-ref-' || `id`, 'migration', 'migration:0072_official_owner_split',
   CAST(strftime('%s', 'now') AS integer)
 FROM `servers`
 WHERE `is_official` = 1
-  AND (`url` LIKE 'https://github.com/modelcontextprotocol/servers/%'
-    OR `url` LIKE 'https://github.com/modelcontextprotocol/servers-archived/%');--> statement-breakpoint
+  AND (instr(`url`, 'https://github.com/modelcontextprotocol/servers/') = 1
+    OR instr(`url`, 'https://github.com/modelcontextprotocol/servers-archived/') = 1);--> statement-breakpoint
 UPDATE `servers` SET `official_source` = 'reference', `official_evidence_url` = `url`
 WHERE `id` IN (SELECT `target_id` FROM `admin_audit` WHERE `request_id` = '0072_official_owner_split' AND `action` = 'tag_reference_official');
