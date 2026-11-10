@@ -21,6 +21,9 @@ import { isCronAuthorized } from '../../../../lib/cronAuth';
  * own, so one failing (D1 down mid-build) leaves the others fresh and its own
  * last good copy in place.
  */
+const BUILD_ATTEMPTS = 3;
+const RETRY_PAUSE_MS = 15_000;
+
 export async function POST(req: Request) {
   if (!(await isCronAuthorized(req))) {
     return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
@@ -45,21 +48,41 @@ export async function POST(req: Request) {
     const catalog = await getCatalogCount();
     for (const name of Object.keys(EXPORT_BUILDERS) as CatalogExportName[]) {
       const startedAt = Date.now();
-      try {
-        const now = new Date();
-        const build = await EXPORT_BUILDERS[name](catalog, now);
-        const { bytes } = await writeExport(bucket, name, build.chunks, {
-          generatedAt: now.toISOString(),
-          rows: String(build.rows),
-        });
-        results[name] = { rows: build.rows, bytes, ms: Date.now() - startedAt };
-      } catch (err) {
-        failed++;
-        console.error(`[exports] building ${name} failed:`, err);
-        results[name] = {
-          error: err instanceof Error ? err.message : String(err),
-          ms: Date.now() - startedAt,
-        };
+      // The build pages the whole catalog, so it runs into D1's 10 s
+      // overload window when the tick's other crons are busy (seen on the
+      // first run). Each page already retries once; a failed export is
+      // retried whole after a pause instead of waiting two hours.
+      for (let attempt = 1; ; attempt++) {
+        try {
+          const now = new Date();
+          const build = await EXPORT_BUILDERS[name](catalog, now);
+          const { bytes } = await writeExport(bucket, name, build.chunks, {
+            generatedAt: now.toISOString(),
+            rows: String(build.rows),
+          });
+          results[name] = {
+            rows: build.rows,
+            bytes,
+            ms: Date.now() - startedAt,
+            attempts: attempt,
+          };
+          break;
+        } catch (err) {
+          console.error(
+            `[exports] building ${name} failed (attempt ${attempt}):`,
+            err instanceof Error ? err.message.slice(0, 300) : err,
+          );
+          if (attempt < BUILD_ATTEMPTS) {
+            await new Promise((r) => setTimeout(r, RETRY_PAUSE_MS));
+            continue;
+          }
+          failed++;
+          results[name] = {
+            error: err instanceof Error ? err.message : String(err),
+            ms: Date.now() - startedAt,
+          };
+          break;
+        }
       }
     }
   } finally {

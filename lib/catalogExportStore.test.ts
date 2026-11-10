@@ -141,20 +141,22 @@ describe('writeExport', () => {
   });
 
   it('streams a large export up in >= 5 MiB parts', async () => {
-    const line = `${'x'.repeat(1023)}\n`;
+    // Uneven chunks (3,000 bytes) that never line up with a part boundary.
+    const line = `${'x'.repeat(2999)}\n`;
     async function* chunks() {
-      for (let i = 0; i < 20 * 1024; i++) yield line; // 20 MiB
+      for (let i = 0; i < 7000; i++) yield line; // ~20 MiB
     }
     const res = await writeExport(r2, 'llms-full.txt', chunks(), {});
-    expect(res.bytes).toBe(20 * 1024 * 1024);
+    expect(res.bytes).toBe(7000 * 3000);
     expect(
       bucket.objects.get(exportKey('llms-full.txt'))?.bytes.byteLength,
-    ).toBe(20 * 1024 * 1024);
+    ).toBe(7000 * 3000);
+    // R2 rejects a multipart upload whose non-trailing parts differ in length.
     const sizes = bucket.parts.map((p) => p.size);
     expect(sizes.length).toBeGreaterThan(1);
-    for (const size of sizes.slice(0, -1)) {
-      expect(size).toBeGreaterThanOrEqual(5 * 1024 * 1024);
-    }
+    expect(new Set(sizes.slice(0, -1)).size).toBe(1);
+    expect(sizes[0]).toBeGreaterThanOrEqual(5 * 1024 * 1024);
+    expect(sizes.at(-1)).toBeLessThanOrEqual(sizes[0]);
   });
 
   it('keeps the last good copy when a build fails mid-way', async () => {
@@ -196,7 +198,7 @@ describe('serveStoredExport', () => {
     );
     expect(res?.status).toBe(206);
     expect(res?.headers.get('Content-Range')).toBe(
-      `bytes 0-1000/${20 * 1024 * 1024}`,
+      `bytes 0-1000/${7000 * 3000}`,
     );
     expect(res?.headers.get('Content-Length')).toBe('1001');
     expect((await res?.arrayBuffer())?.byteLength).toBe(1001);

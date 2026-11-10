@@ -144,7 +144,11 @@ export function resolvedRange(
   return { start, end: Math.min(size, start + length) - 1 };
 }
 
-/** Bytes per multipart part. R2 needs every part but the last to be >= 5 MiB. */
+/**
+ * Bytes per multipart part. R2 needs every part but the last to be >= 5 MiB
+ * and all of them the same length ("All non-trailing parts must have the
+ * same length"), so parts are cut at exactly this size.
+ */
 const PART_BYTES = 8 * 1024 * 1024;
 
 /**
@@ -165,42 +169,38 @@ export async function writeExport(
     customMetadata: metadata,
   };
   const encoder = new TextEncoder();
-  let buffered: Uint8Array[] = [];
-  let bufferedBytes = 0;
+  // The part being filled; `filled` bytes of it are in use.
+  let part = new Uint8Array(PART_BYTES);
+  let filled = 0;
   let total = 0;
   let upload: R2MultipartUpload | null = null;
   const parts: R2UploadedPart[] = [];
 
-  const takeBuffer = (): Uint8Array => {
-    const out = new Uint8Array(bufferedBytes);
-    let offset = 0;
-    for (const b of buffered) {
-      out.set(b, offset);
-      offset += b.byteLength;
-    }
-    buffered = [];
-    bufferedBytes = 0;
-    return out;
-  };
-
   try {
     for await (const chunk of chunks) {
       if (!chunk) continue;
-      const bytes = encoder.encode(chunk);
-      buffered.push(bytes);
-      bufferedBytes += bytes.byteLength;
+      let bytes = encoder.encode(chunk);
       total += bytes.byteLength;
-      if (bufferedBytes >= PART_BYTES) {
-        upload ??= await bucket.createMultipartUpload(key, options);
-        parts.push(await upload.uploadPart(parts.length + 1, takeBuffer()));
+      while (bytes.byteLength > 0) {
+        const n = Math.min(PART_BYTES - filled, bytes.byteLength);
+        part.set(bytes.subarray(0, n), filled);
+        filled += n;
+        bytes = bytes.subarray(n);
+        if (filled === PART_BYTES) {
+          upload ??= await bucket.createMultipartUpload(key, options);
+          parts.push(await upload.uploadPart(parts.length + 1, part));
+          part = new Uint8Array(PART_BYTES);
+          filled = 0;
+        }
       }
     }
+    const rest = part.slice(0, filled);
     if (!upload) {
-      const obj = await bucket.put(key, takeBuffer(), options);
+      const obj = await bucket.put(key, rest, options);
       return { bytes: total, etag: obj?.httpEtag ?? '' };
     }
-    if (bufferedBytes > 0) {
-      parts.push(await upload.uploadPart(parts.length + 1, takeBuffer()));
+    if (filled > 0) {
+      parts.push(await upload.uploadPart(parts.length + 1, rest));
     }
     const obj = await upload.complete(parts);
     return { bytes: total, etag: obj.httpEtag };
