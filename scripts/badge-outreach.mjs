@@ -39,6 +39,7 @@ const sql = `SELECT id, name, url, github_stars AS stars, ai_summary AS summary
     AND readme_badge_ok = 0
     AND reciprocal_badge_ok = 0
     AND is_official = 0
+    AND owner_verified = 0
     AND url LIKE 'https://github.com/%'
     AND coalesce(github_stars, 0) BETWEEN ${MIN_STARS} AND ${MAX_STARS}
   ORDER BY github_stars DESC

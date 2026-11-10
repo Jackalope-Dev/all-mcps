@@ -41,7 +41,7 @@ export default function ClaimClient({
   serverName: _serverName,
   repoUrl,
   websiteUrl: initialWebsite,
-  isOfficial,
+  ownerVerified,
   reciprocalBadgeOk,
   hasPendingClaim,
   userId,
@@ -50,7 +50,8 @@ export default function ClaimClient({
   serverName: string;
   repoUrl: string;
   websiteUrl?: string | null;
-  isOfficial?: boolean;
+  /** Approved ownership claim (servers.owner_verified). */
+  ownerVerified?: boolean;
   reciprocalBadgeOk?: boolean;
   hasPendingClaim?: boolean;
   userId: string | null;
@@ -71,7 +72,7 @@ export default function ClaimClient({
   const [outcome, setOutcome] = useState<
     'official' | 'already-official' | 'pending' | null
   >(null);
-  const claimed = !!isOfficial || outcome === 'official';
+  const claimed = !!ownerVerified || outcome === 'official';
   const pendingReview =
     (!!hasPendingClaim || outcome === 'pending') && !claimed;
   // "Verified" (the reciprocal badge) is a separate, automatic signal — it's
@@ -142,7 +143,7 @@ export default function ClaimClient({
     }
   };
 
-  const alreadyOfficial = claimed;
+  const alreadyClaimed = claimed;
 
   const copyText = async (text: string, label: string) => {
     try {
@@ -363,8 +364,8 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           }}
         >
           {outcome === 'official'
-            ? 'Your ownership proof was verified successfully. The listing is now officially claimed under your account with full editing access.'
-            : "You're already the confirmed Official owner of this listing — nothing to review."}
+            ? 'Your ownership proof was verified successfully. The listing now shows "Verified owner" and is claimed under your account with full editing access.'
+            : "You're already the verified owner of this listing — nothing to review."}
         </p>
 
         <div
@@ -391,9 +392,9 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           >
             ✨ Free Reciprocal Dofollow Backlinks:
           </strong>
-          To activate a dofollow backlink to your website, simply add the
-          official AllMCPs badge to your website or README. Our automated
-          background health checker detects it automatically!
+          To activate a dofollow backlink to your website, add the AllMCPs badge
+          to that website (a README badge doesn&rsquo;t count). Our automated
+          health checker detects it automatically!
         </div>
 
         <div
@@ -492,8 +493,8 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           }}
         >
           Your ownership proof was verified and is now waiting on a quick review
-          from our team before the <strong>Official</strong> badge and edit
-          access go live. We'll email you as soon as it's approved.
+          from our team before the <strong>Verified owner</strong> badge and
+          edit access go live. We'll email you as soon as it's approved.
         </p>
         <div
           style={{
@@ -519,9 +520,9 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           >
             ✨ Earn Reciprocal Dofollow Backlinks:
           </strong>
-          Keep an AllMCPs badge live on your GitHub README or product website.
-          When our automated health checker sees your live link, your website
-          link on AllMCPs becomes a high-value dofollow backlink!
+          Keep an AllMCPs badge live on your product website. When our automated
+          health checker sees your live link there, your website link on AllMCPs
+          becomes a dofollow backlink!
         </div>
         <div
           style={{
@@ -593,7 +594,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
         }}
       >
-        {/* Official Status Card — admin-approved ownership */}
+        {/* Ownership Card — approved ownership claim (Verified owner) */}
         <div
           style={{
             padding: '1rem 1.15rem',
@@ -642,7 +643,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                 letterSpacing: '0.05em',
               }}
             >
-              Official Status
+              Ownership
             </div>
             <div
               style={{
@@ -657,7 +658,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               }}
             >
               {claimed
-                ? '✓ Official'
+                ? '✓ Verified owner'
                 : pendingReview
                   ? 'Pending admin review'
                   : 'Not claimed'}
@@ -679,7 +680,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           </div>
         </div>
 
-        {/* Verified Card — automatic reciprocal-badge detection */}
+        {/* Badge Card — automatic reciprocal-badge detection */}
         <div
           style={{
             padding: '1rem 1.15rem',
@@ -728,7 +729,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                 letterSpacing: '0.05em',
               }}
             >
-              Verified (reciprocal badge)
+              AllMCPs badge
             </div>
             <div
               style={{
@@ -875,7 +876,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                         borderRadius: '999px',
                       }}
                     >
-                      ✓ Official
+                      ✓ Verified owner
                     </span>
                   )}
                 </div>
@@ -887,8 +888,8 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                     lineHeight: 1.45,
                   }}
                 >
-                  Proves repo ownership — grants the Official badge &amp; edit
-                  access after a quick admin review.
+                  Proves repo ownership — grants the Verified owner badge &amp;
+                  edit access.
                 </p>
               </button>
             )}
@@ -943,7 +944,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                       borderRadius: '999px',
                     }}
                   >
-                    ✓ Official
+                    ✓ Verified owner
                   </span>
                 )}
               </div>
@@ -956,7 +957,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                 }}
               >
                 Add a personalized meta tag to your site to prove ownership —
-                grants the Official badge after admin review.
+                grants the Verified owner badge.
               </p>
             </button>
 
@@ -1010,7 +1011,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                       borderRadius: '999px',
                     }}
                   >
-                    ✓ Official
+                    ✓ Verified owner
                   </span>
                 )}
               </div>
@@ -1072,8 +1073,8 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
             </h2>
           </div>
 
-          {/* Already Official Banner */}
-          {alreadyOfficial && (
+          {/* Already-claimed Banner */}
+          {alreadyClaimed && (
             <div
               style={{
                 padding: '1rem 1.15rem',
@@ -1089,7 +1090,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               <CheckCircle2 size={22} color="#10b981" />
               <div>
                 <strong style={{ color: '#10b981', fontSize: '0.9rem' }}>
-                  Official ownership already confirmed
+                  Ownership already verified
                 </strong>
                 <p
                   style={{
@@ -2208,7 +2209,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               ) : (
                 <>
                   <ShieldCheck size={20} />
-                  {alreadyOfficial
+                  {alreadyClaimed
                     ? 'Re-verify Ownership'
                     : 'Submit Ownership Proof'}
                 </>

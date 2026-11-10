@@ -92,17 +92,40 @@ type QualitySignals = {
   toolsSource?: string | null;
   installNeedsConfig?: unknown;
   remoteEndpointHealthy?: boolean | number | null;
+  /** Published by the product's own company (admin-set with evidence). */
+  isOfficial?: boolean | number | null;
+  /** Claimed through the ownership flow. */
+  ownerVerified?: boolean | number | null;
 };
+
+/**
+ * Trust multipliers. Official (the vendor publishes it) beats owner-verified
+ * (someone proved they control the repo); the two don't stack. Kept small on
+ * purpose: they settle near-ties between similar matches (two listings whose
+ * names both start with "notion"), but can't lift a weaker text match over a
+ * clearly better one (an exact name scores over twice a prefix match). Paid
+ * status is not an input, here or anywhere in organic order.
+ */
+export const OFFICIAL_BOOST = 1.1;
+export const OWNER_VERIFIED_BOOST = 1.05;
+
+function trustMultiplier(s: QualitySignals): number {
+  if (s.isOfficial) return OFFICIAL_BOOST;
+  if (s.ownerVerified) return OWNER_VERIFIED_BOOST;
+  return 1;
+}
 
 /**
  * Relevance multiplier from what we know about a listing: one we saw run
  * (live tools, a sandbox start that asked for keys, a healthy endpoint) ranks
- * a little higher; an archived or unreachable one ranks lower. Applied to the
- * match score, so a strong match on a dead listing still beats a weak match
- * on a working one, but two similar matches resolve toward the one that works.
+ * a little higher; an archived or unreachable one ranks lower; an Official or
+ * owner-verified one gets the small trust lift above. Applied to the match
+ * score, so a strong match on a dead listing still beats a weak match on a
+ * working one, but two similar matches resolve toward the one that works and
+ * the one its vendor publishes.
  */
 export function qualityMultiplier(s: QualitySignals): number {
-  let m = 1;
+  let m = trustMultiplier(s);
   if (s.healthStatus === 'archived') m *= 0.6;
   else if (s.healthStatus === 'offline') m *= 0.5;
   if (

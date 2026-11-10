@@ -18,6 +18,7 @@ import { parseServerName } from '../../../../../lib/displayName';
 import {
   isFeaturedListing,
   isVerifiedListing,
+  trustLabel,
 } from '../../../../../lib/featuredStatus';
 import { publicViewCount } from '../../../../../lib/format';
 import {
@@ -493,11 +494,11 @@ export default async function ComparePage({
       ],
     },
     {
-      label: 'Verified owner',
+      label: 'Official / verified',
       cells: sides.map((x) =>
-        isVerifiedListing(x.s) && x.s.isOfficial ? (
+        isVerifiedListing(x.s) ? (
           <span key={x.s.id} className="cmp-yes">
-            <BadgeCheck size={14} aria-hidden="true" /> Verified
+            <BadgeCheck size={14} aria-hidden="true" /> {trustLabel(x.s)?.label}
           </span>
         ) : (
           <span key={x.s.id} className="cmp-muted">
@@ -505,10 +506,7 @@ export default async function ComparePage({
           </span>
         ),
       ) as [ReactNode, ReactNode],
-      keys: [
-        String(isVerifiedListing(left) && !!left.isOfficial),
-        String(isVerifiedListing(right) && !!right.isOfficial),
-      ],
+      keys: [trustLabel(left)?.label ?? '', trustLabel(right)?.label ?? ''],
     },
     {
       label: 'GitHub stars',

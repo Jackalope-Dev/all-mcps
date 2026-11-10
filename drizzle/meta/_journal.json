@@ -372,6 +372,13 @@
       "when": 1794113206464,
       "tag": "0071_setup_steps",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "6",
+      "when": 1794348699251,
+      "tag": "0072_official_owner_split",
+      "breakpoints": true
     }
   ]
 }

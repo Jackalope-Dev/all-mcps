@@ -36,13 +36,16 @@ function fakeRepo(): Repo {
       emailVerified: null,
     },
   ];
-  const servers = [
+  const servers: Record<string, unknown>[] = [
     {
       id: 's1',
       name: 'Alpha',
       category: 'dev',
       premiumStatus: 'free',
       isOfficial: false,
+      ownerVerified: true,
+      officialSource: null,
+      officialEvidenceUrl: null,
       createdAt: null,
     },
   ];
@@ -71,7 +74,16 @@ function fakeRepo(): Repo {
         return { rows: servers.slice(0, limit), total: servers.length };
       },
       async get(id) {
-        return servers.find((s) => s.id === id) ?? null;
+        const s = servers.find((x) => x.id === id);
+        return s ? { ...s } : null;
+      },
+      async setOfficial(id, grant) {
+        const s = servers.find((x) => x.id === id);
+        if (!s) throw new Error('not found');
+        s.isOfficial = grant.official;
+        s.officialSource = grant.official ? grant.source : null;
+        s.officialEvidenceUrl = grant.official ? grant.evidenceUrl : null;
+        return { ...s };
       },
     },
     reports: {
@@ -159,6 +171,44 @@ describe('AllMcps back-office adapter', () => {
     );
     expect(audit.rows[0].action).toBe('resolve_report');
     expect(audit.rows[0].after.status).toBe('dismissed');
+  });
+
+  it('set_official needs evidence, keeps the owner claim, and writes audit', async () => {
+    const adapter = build();
+    const post = (params: Record<string, unknown>) =>
+      adapter.handle(
+        new Request(`${base}/actions/set_official`, {
+          method: 'POST',
+          headers: { authorization: `Bearer ${TOKEN}` },
+          body: JSON.stringify({ params }),
+        }),
+      );
+    // No evidence: refused, nothing changes.
+    expect((await post({ serverId: 's1', official: true })).status).toBe(500);
+    const ok = await j(
+      await post({
+        serverId: 's1',
+        official: true,
+        source: 'github-org',
+        evidenceUrl: 'https://github.com/alpha',
+      }),
+    );
+    expect(ok.ok).toBe(true);
+    const audit = await j(
+      await adapter.handle(
+        new Request(`${base}/audit`, {
+          headers: { authorization: `Bearer ${TOKEN}` },
+        }),
+      ),
+    );
+    expect(audit.rows[0].action).toBe('set_official');
+    expect(audit.rows[0].before.isOfficial).toBe(false);
+    expect(audit.rows[0].after).toMatchObject({
+      isOfficial: true,
+      officialSource: 'github-org',
+      officialEvidenceUrl: 'https://github.com/alpha',
+      ownerVerified: true,
+    });
   });
 
   it('passes the ADR 0006 conformance suite', async () => {

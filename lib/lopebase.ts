@@ -144,6 +144,11 @@ export function createLopebaseAdapter(opts: {
             inList: true,
           },
           { name: 'is_official', label: 'Official', type: 'boolean' },
+          {
+            name: 'owner_verified',
+            label: 'Verified owner',
+            type: 'boolean',
+          },
           { name: 'health_status', label: 'Health', type: 'string' },
           { name: 'github_stars', label: 'GitHub stars', type: 'number' },
           {
@@ -305,6 +310,7 @@ const listingColumns = {
   status: servers.status,
   premium_status: servers.premiumStatus,
   is_official: servers.isOfficial,
+  owner_verified: servers.ownerVerified,
   health_status: servers.healthStatus,
   github_stars: servers.githubStars,
   created_at: servers.createdAt,

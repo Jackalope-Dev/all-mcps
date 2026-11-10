@@ -105,7 +105,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'What does verified mean?',
-    a: 'The owner claimed the listing, or it is a paid listing. Many also have live health checks. It is a signal, not a guarantee. Read the listing before you install.',
+    a: 'The owner proved control of the listing (Verified owner), or the company behind the product publishes it (Official). Paying never makes a listing Verified. Many also have live health checks. It is a signal, not a guarantee. Read the listing before you install.',
   },
   {
     q: 'How do I list my server?',

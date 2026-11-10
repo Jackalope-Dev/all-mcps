@@ -94,13 +94,16 @@ export function computeQualityScore(server: Server): QualityScore {
     const hasRemoteEndpointSignal =
       !!server.remoteEndpointUrl && server.remoteEndpointHealthy != null;
 
-    if ((server.isOfficial || server.id === 'allmcps-server') && !isDeadRepo) {
+    // Only our own hosted server gets a pass here: being Official says who
+    // publishes a server, not whether it is up, so vendor listings are
+    // measured like every other listing below.
+    if (server.id === 'allmcps-server' && !isDeadRepo) {
       components.push({
         key: 'health',
         label: 'Server availability',
         earned: max,
         max,
-        hint: 'Official flagship server — maintained directly by AllMCPs.com and verified active.',
+        hint: 'AllMCPs’ own hosted server, run by the team behind AllMCPs.',
       });
     } else if (server.combinedAvailabilityPct != null) {
       // Rolling remote-endpoint check history combined with a recent E2B
@@ -168,7 +171,9 @@ export function computeQualityScore(server: Server): QualityScore {
     }
   }
 
-  // 2. Trust & verification (20) — proven ownership, badges, and verified domain
+  // 2. Trust & verification (20) — proven ownership, badges, and verified domain.
+  // Payment never earns points here: Premium and Featured are not inputs to
+  // the quality score at all.
   {
     const max = 20;
     let earned = 0;
@@ -176,10 +181,13 @@ export function computeQualityScore(server: Server): QualityScore {
       'Ownership proven via GitHub, DNS, or site badge. Claim your listing to earn full credit.';
     if (server.isOfficial) {
       earned = max;
-      hint = 'Official maintainer claimed listing.';
-    } else if (server.isPremium) {
-      earned = max * 0.7;
-      hint = 'Premium listing.';
+      hint =
+        server.officialSource === 'reference'
+          ? 'Reference server from the Model Context Protocol project.'
+          : 'Official server, published by the company behind the product.';
+    } else if (server.ownerVerified) {
+      earned = max;
+      hint = 'Verified owner: the maintainer proved control of this listing.';
     } else if (server.reciprocalBadgeOk) {
       earned = max * 0.6;
       hint =

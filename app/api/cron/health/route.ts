@@ -25,7 +25,6 @@ import {
 import {
   fetchListingReadme,
   isCatalogReadme,
-  isListingTrulyDead,
   parseGithubUrl,
 } from '../../../../lib/listingEnrich';
 import {
@@ -209,7 +208,6 @@ async function mapWithConcurrency<T, R>(
 type CheckResult = {
   statements: unknown[];
   installHintUpdated: boolean;
-  unpublished: boolean;
   contentChanged: boolean;
   pageChanged: boolean;
 };
@@ -457,12 +455,9 @@ async function checkListing(
 
   // The website backlink is a separate public-content check from the repo
   // README badge above, so it writes its own signal and never overwrites the
-  // README result. Premium is skipped since it's already dofollow.
-  if (
-    !server.isPremium &&
-    server.websiteUrl &&
-    isSafeSubmissionUrl(server.websiteUrl)
-  ) {
+  // README result. Premium listings are checked too: payment doesn't earn
+  // dofollow, only the live badge does (lib/linkRel.ts).
+  if (server.websiteUrl && isSafeSubmissionUrl(server.websiteUrl)) {
     try {
       const siteRes = await fetch(server.websiteUrl, {
         method: 'GET',
@@ -596,23 +591,10 @@ async function checkListing(
     }
   }
 
-  // Dead/archived GitHub projects: unpublish so the public catalog stays fresh —
-  // but only once the npm/pypi package and remote endpoint are also confirmed
-  // dead (see isListingTrulyDead). Soft-remove only (status = removed).
-  const shouldUnpublish =
-    healthStatus === 'archived'
-      ? await isListingTrulyDead({
-          githubDead: true,
-          remoteEndpointHealthy,
-          // A just-cleared install is not evidence the listing is reachable.
-          installCommand: clearInstallFields
-            ? null
-            : (installFields?.installCommand ?? server.installCommand),
-          installPackage: clearInstallFields
-            ? null
-            : (installFields?.installPackage ?? server.installPackage),
-        })
-      : false;
+  // An archived repo is no longer unpublished here: its code (and usually
+  // its package) is still there to run, read-only, so it is not stale
+  // (lib/staleness.ts). It ranks lower instead. A repo that is actually gone
+  // goes through the stale sweep's confirmed 'repo-gone' rule.
 
   if (inconclusive) {
     isVerifiedActive = Boolean(server.isVerifiedActive);
@@ -653,7 +635,6 @@ async function checkListing(
         ...(remoteEndpointHealthy === true
           ? { remoteEndpointHealthyAt: now }
           : {}),
-        ...(shouldUnpublish ? { status: 'removed' } : {}),
         ...(installFields
           ? {
               installKind: installFields.installKind,
@@ -727,12 +708,8 @@ async function checkListing(
   return {
     statements,
     installHintUpdated,
-    unpublished: shouldUnpublish,
     contentChanged,
-    pageChanged: listingRenderChanged(server, {
-      websiteBacklinkOk,
-      status: shouldUnpublish ? 'removed' : undefined,
-    }),
+    pageChanged: listingRenderChanged(server, { websiteBacklinkOk }),
   };
 }
 
@@ -813,17 +790,15 @@ export async function POST(req: Request) {
     const installHintsUpdated = results.filter(
       (r) => r.installHintUpdated,
     ).length;
-    const unpublished = results.filter((r) => r.unpublished).length;
     const contentChanged = results.filter((r) => r.contentChanged).length;
     return NextResponse.json({
       success: true,
       processed: batch.length,
       installHintsUpdated,
-      unpublished,
       contentChanged,
       pagesRefreshed: pages.refreshed.length,
       pageRefreshFailed: pages.failed,
-      message: `Verified ${batch.length} servers (${installHintsUpdated} install hints, ${unpublished} unpublished, ${contentChanged} content changes, ${pages.refreshed.length}/${pagesToRefresh.length} pages refreshed).`,
+      message: `Verified ${batch.length} servers (${installHintsUpdated} install hints, ${contentChanged} content changes, ${pages.refreshed.length}/${pagesToRefresh.length} pages refreshed).`,
     });
   } catch (error) {
     console.error('Cron error:', error);

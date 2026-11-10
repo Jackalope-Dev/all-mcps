@@ -2,7 +2,12 @@ import { BadgeCheck, CircleCheck, Download, Heart, Star } from 'lucide-react';
 import Link from 'next/link';
 import { categoryHueClass, getCategoryMeta } from '../../lib/categories';
 import { parseServerName } from '../../lib/displayName';
-import { isFeaturedListing, isVerifiedListing } from '../../lib/featuredStatus';
+import {
+  isFeaturedListing,
+  isOperatorListing,
+  OPERATOR_DISCLOSURE,
+  trustLabel,
+} from '../../lib/featuredStatus';
 import { formatCompactNumber } from '../../lib/format';
 import { InlineMarkdown } from '../ui/InlineMarkdown';
 import { ServerAvatar } from '../ui/ServerAvatar';
@@ -15,10 +20,14 @@ import { ServerAvatar } from '../ui/ServerAvatar';
 export type DirectoryServer = {
   id: string;
   name: string;
+  /** Repo URL; identifies AllMCPs' own listings (isOperatorListing). */
+  url?: string | null;
   description?: string | null;
   category: string;
   logoUrl?: string | null;
   isOfficial?: boolean | null;
+  ownerVerified?: boolean | null;
+  officialSource?: string | null;
   isPremium?: boolean | null;
   featuredUntil?: string | Date | number | null;
   upvotes?: number | null;
@@ -30,20 +39,13 @@ export type DirectoryServer = {
 
 function Badges({ server }: { server: DirectoryServer }) {
   const featured = isFeaturedListing(server);
-  const verified = isVerifiedListing(server);
+  const trust = trustLabel(server, parseServerName(server.name).displayName);
   return (
     <>
-      {verified && (
-        <span
-          className="dir-flag dir-flag--verified"
-          title={
-            server.isOfficial
-              ? 'Official server from the vendor'
-              : 'Ownership verified on AllMCPs'
-          }
-        >
+      {trust && (
+        <span className="dir-flag dir-flag--verified" title={trust.title}>
           <BadgeCheck size={13} aria-hidden="true" />
-          {server.isOfficial ? 'Official' : 'Verified'}
+          {trust.label}
         </span>
       )}
       {server.testedWorking && (
@@ -56,7 +58,17 @@ function Badges({ server }: { server: DirectoryServer }) {
         </span>
       )}
       {featured && (
-        <span className="dir-flag dir-flag--featured">Featured</span>
+        <span className="dir-flag dir-flag--featured" title="Paid placement">
+          Featured
+        </span>
+      )}
+      {isOperatorListing(server) && (
+        <span
+          className="dir-flag dir-flag--operator"
+          title={OPERATOR_DISCLOSURE}
+        >
+          Made by us
+        </span>
       )}
     </>
   );

@@ -60,6 +60,7 @@ export async function POST(req: Request) {
         name: servers.name,
         url: servers.url,
         isOfficial: servers.isOfficial,
+        ownerVerified: servers.ownerVerified,
       })
       .from(servers)
       .where(and(eq(servers.status, 'active'), gt(servers.id, after)))
@@ -67,7 +68,7 @@ export async function POST(req: Request) {
       .limit(SCAN_PAGE_SIZE);
 
     const candidates = page.filter(
-      (r) => !r.isOfficial && isGenericServerName(r.name),
+      (r) => !r.isOfficial && !r.ownerVerified && isGenericServerName(r.name),
     );
     const toFix = candidates.slice(0, FIX_LIMIT);
 

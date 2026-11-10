@@ -31,9 +31,14 @@ import {
 } from './aiContent';
 import type { BestTopic } from './bestTopics';
 import { categoryFromSlug } from './categories';
+import { withD1Retry } from './d1Retry';
 import { cleanListingDescription } from './description';
 import { readEdgeCache, swrEdgeCache, writeEdgeCache } from './edgeCache';
-import { isFeaturedListing } from './featuredStatus';
+import {
+  isFeaturedListing,
+  isVerifiedListing,
+  trustLabel,
+} from './featuredStatus';
 import { publicViewCount } from './format';
 import {
   installConfidenceNote,
@@ -79,6 +84,22 @@ function servableFilter(): SQL {
   return and(
     eq(serversTable.status, 'active'),
     isNull(serversTable.staleFlaggedAt),
+  ) as SQL;
+}
+
+/**
+ * servableFilter for keyset paging in id order (the whole-catalog exports).
+ * The unary `+` keeps `status` out of index selection so SQLite walks the
+ * primary key from `afterId`: ~2.7k rows read per 2,000-row page on prod D1.
+ * With a plain `status = ?` it picked a status index and sorted every active
+ * row for each page (~65k rows read per page, ~1M per export), which
+ * overloaded D1 within minutes of deploying the paged exports.
+ */
+function servableAfterIdFilter(afterId: string): SQL {
+  return and(
+    sql`+${serversTable.status} = ${'active'}`,
+    isNull(serversTable.staleFlaggedAt),
+    gt(serversTable.id, afterId),
   ) as SQL;
 }
 
@@ -191,6 +212,8 @@ export const PUBLIC_SERVER_COLUMNS = {
   isPremium: serversTable.isPremium,
   websiteVerified: serversTable.websiteVerified,
   isOfficial: serversTable.isOfficial,
+  ownerVerified: serversTable.ownerVerified,
+  officialSource: serversTable.officialSource,
   featuredUntil: serversTable.featuredUntil,
   categorySponsorUntil: serversTable.categorySponsorUntil,
   status: serversTable.status,
@@ -263,6 +286,10 @@ export type Server = {
   description: string;
   category: string;
   isOfficial: boolean;
+  /** Approved ownership claim ("Verified owner"). */
+  ownerVerified?: boolean;
+  /** Why isOfficial is set (OFFICIAL_SOURCES in lib/featuredStatus.ts). */
+  officialSource?: string | null;
   redirectTo?: string | null;
   /** Optional setup note shown above install config. JSON-only until persisted. */
   installNote?: string | null;
@@ -417,6 +444,8 @@ const DISCOVERY_COLUMNS = {
   createdAt: serversTable.createdAt,
   logoUrl: serversTable.logoUrl,
   isOfficial: serversTable.isOfficial,
+  ownerVerified: serversTable.ownerVerified,
+  officialSource: serversTable.officialSource,
   isPremium: serversTable.isPremium,
   featuredUntil: serversTable.featuredUntil,
   views: serversTable.views,
@@ -455,6 +484,8 @@ function snapshotLightServers(limit?: number): Server[] {
     createdAt: s.createdAt,
     logoUrl: s.logoUrl ?? null,
     isOfficial: !!s.isOfficial,
+    ownerVerified: !!s.ownerVerified,
+    officialSource: s.officialSource ?? null,
     isPremium: !!s.isPremium,
     featuredUntil: s.featuredUntil ?? null,
     views: s.views ?? 0,
@@ -863,6 +894,8 @@ const RANKING_COLUMNS = {
   npmDownloads: serversTable.npmDownloads,
   installConfidence: serversTable.installConfidence,
   isOfficial: serversTable.isOfficial,
+  ownerVerified: serversTable.ownerVerified,
+  officialSource: serversTable.officialSource,
   isPremium: serversTable.isPremium,
   isVerifiedActive: serversTable.isVerifiedActive,
   healthStatus: serversTable.healthStatus,
@@ -1080,44 +1113,70 @@ export async function getRandomActiveServers(
 }
 
 /**
- * Every active listing, `pageSize` full rows (tools trimmed) at a time in id
+ * Every servable listing, `pageSize` full rows (tools trimmed) at a time in id
  * order, for whole-catalog exports such as /llms-full.txt. Holding the whole
- * ~27k-row catalog plus the rendered output at once exceeds the Worker memory
+ * ~30k-row catalog plus the rendered output at once exceeds the Worker memory
  * limit, so callers stream each page out before asking for the next.
+ *
+ * A D1 failure throws (the route answers 503). It used to fall back to the
+ * 114-row bundled snapshot, which then sat in caches for a day as if it were
+ * the catalog. The snapshot is only used where there is no D1 at all
+ * (local dev without bindings).
  */
 export async function* iterateActiveServers(
   pageSize = 500,
 ): AsyncGenerator<Server[]> {
   const searchDb = await getSearchDb();
-  let after = '';
-  let yielded = false;
-  if (searchDb) {
-    try {
-      for (;;) {
-        const rows = await searchDb.db
-          .select(SCORING_SERVER_COLUMNS)
-          .from(serversTable)
-          .where(and(servableFilter(), gt(serversTable.id, after)))
-          .orderBy(serversTable.id)
-          .limit(pageSize);
-        if (rows.length === 0) break;
-        yielded = true;
-        yield rows.map((r) => normalizeServer(r as unknown as Server));
-        after = rows[rows.length - 1].id;
-        if (rows.length < pageSize) break;
-      }
-    } catch (e) {
-      // Fall back to static JSON only if nothing was streamed yet; a partial
-      // export followed by a different snapshot would duplicate listings.
-      if (yielded) throw e;
-    }
-  }
-  if (!yielded) {
+  if (!searchDb) {
     const snapshot = snapshotCatalogServers().map(normalizeServer);
     for (let i = 0; i < snapshot.length; i += pageSize) {
       yield snapshot.slice(i, i + pageSize);
     }
+    return;
   }
+  let after = '';
+  for (;;) {
+    const from = after;
+    const rows = await withD1Retry('export page', () =>
+      searchDb.db
+        .select(SCORING_SERVER_COLUMNS)
+        .from(serversTable)
+        .where(servableAfterIdFilter(from))
+        .orderBy(serversTable.id)
+        .limit(pageSize),
+    );
+    if (rows.length === 0) break;
+    yield rows.map((r) => normalizeServer(r as unknown as Server));
+    after = rows[rows.length - 1].id;
+    if (rows.length < pageSize) break;
+  }
+}
+
+/** Rows per page for the whole-catalog exports (llms.txt, data.json). */
+const EXPORT_PAGE_SIZE = 2000;
+
+/**
+ * Keyset-pages a whole-catalog export in id order, `pageSize` rows per D1
+ * query. One unpaged select of every servable row was too big a D1 result
+ * and failed often enough that the exports kept serving the snapshot.
+ */
+async function collectExportPages<T extends { id: string }>(
+  fetchPage: (afterId: string, limit: number) => Promise<T[]>,
+  pageSize: number,
+): Promise<T[]> {
+  const out: T[] = [];
+  let after = '';
+  for (;;) {
+    // One page out of ~16 failing used to fail the whole export.
+    const from = after;
+    const rows = await withD1Retry('export page', () =>
+      fetchPage(from, pageSize),
+    );
+    for (const r of rows) out.push(r);
+    if (rows.length < pageSize) break;
+    after = rows[rows.length - 1].id;
+  }
+  return out;
 }
 
 /** Row shape for whole-catalog indexes (/data.json, the Cmd+K search index). */
@@ -1132,38 +1191,43 @@ export type CatalogIndexRow = {
 };
 
 /**
- * Every active listing with only the columns a catalog index needs. Like
- * getServersForLlmsTxt, it skips `tools` and the long AI columns that made
- * getActiveServersForScoring() too heavy for whole-catalog routes.
+ * Every servable listing with only the columns a catalog index needs, paged
+ * through D1 (collectExportPages). Like getServersForLlmsTxt, it skips
+ * `tools` and the long AI columns that made getActiveServersForScoring() too
+ * heavy for whole-catalog routes. Throws when D1 fails, so /data.json answers
+ * 503 instead of publishing the bundled snapshot as the catalog.
  */
-export async function getCatalogIndexRows(): Promise<CatalogIndexRow[]> {
-  try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const ctx = await getCloudflareContext();
-    if (ctx?.env && (ctx.env as any).DB) {
-      const db = drizzle((ctx.env as any).DB);
-      const rows = await db
-        .select({
-          id: serversTable.id,
-          name: serversTable.name,
-          description: serversTable.description,
-          category: serversTable.category,
-          url: serversTable.url,
-          logoUrl: serversTable.logoUrl,
-          aiSummary: serversTable.aiSummary,
-        })
-        .from(serversTable)
-        .where(servableFilter());
-      if (rows.length > 0) {
-        return rows.map((r) => ({
-          ...r,
-          description: cleanListingDescription(r.description),
-        }));
-      }
-    }
-  } catch (_e) {
-    // Fall back to static JSON
+export async function getCatalogIndexRows({
+  pageSize = EXPORT_PAGE_SIZE,
+}: {
+  pageSize?: number;
+} = {}): Promise<CatalogIndexRow[]> {
+  const searchDb = await getSearchDb();
+  if (searchDb) {
+    const rows = await collectExportPages(
+      (after, limit) =>
+        searchDb.db
+          .select({
+            id: serversTable.id,
+            name: serversTable.name,
+            description: serversTable.description,
+            category: serversTable.category,
+            url: serversTable.url,
+            logoUrl: serversTable.logoUrl,
+            aiSummary: serversTable.aiSummary,
+          })
+          .from(serversTable)
+          .where(servableAfterIdFilter(after))
+          .orderBy(serversTable.id)
+          .limit(limit),
+      pageSize,
+    );
+    return rows.map((r) => ({
+      ...r,
+      description: cleanListingDescription(r.description),
+    }));
   }
+  // No D1 binding at all (local dev): the bundled snapshot.
   return snapshotCatalogServers().map((s) => ({
     id: s.id,
     name: s.name,
@@ -1175,28 +1239,47 @@ export async function getCatalogIndexRows(): Promise<CatalogIndexRow[]> {
   }));
 }
 
-/** Category counts computed via lightweight SQL GROUP BY for category sidebar links. */
+/**
+ * Category counts for the category sidebar, hubs and agent views. A GROUP BY
+ * over every servable row (~35k rows read, ~0.3 s of D1 time) that ran
+ * uncached ~1k times a day, so it is cached like the catalog count: fresh
+ * for 30 minutes, the last good copy served while one reloads.
+ */
+const CATEGORY_COUNTS_CACHE = {
+  freshMs: 30 * 60 * 1000,
+  maxAgeSeconds: 2 * 24 * 60 * 60,
+};
+
 export async function getCategoryCounts(): Promise<Record<string, number>> {
-  try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const ctx = await getCloudflareContext();
-    if (ctx?.env && (ctx.env as any).DB) {
-      const db = drizzle((ctx.env as any).DB);
-      const rows = await db
-        .select({
-          category: serversTable.category,
-          count: sql<number>`count(*)`,
-        })
-        .from(serversTable)
-        .where(servableFilter())
-        .groupBy(serversTable.category);
-      const counts: Record<string, number> = {};
-      for (const r of rows) {
-        if (r.category) counts[r.category] = Number(r.count);
+  const cached = await swrEdgeCache<Record<string, number>>(
+    'category-counts/v1',
+    CATEGORY_COUNTS_CACHE,
+    async () => {
+      try {
+        const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+        const ctx = await getCloudflareContext();
+        if (!ctx?.env || !(ctx.env as any).DB) return null;
+        const db = drizzle((ctx.env as any).DB);
+        const rows = await db
+          .select({
+            category: serversTable.category,
+            count: sql<number>`count(*)`,
+          })
+          .from(serversTable)
+          .where(servableFilter())
+          .groupBy(serversTable.category);
+        const counts: Record<string, number> = {};
+        for (const r of rows) {
+          if (r.category) counts[r.category] = Number(r.count);
+        }
+        return Object.keys(counts).length > 0 ? counts : null;
+      } catch (e) {
+        console.error('[servers] category counts read failed:', e);
+        return null;
       }
-      if (Object.keys(counts).length > 0) return counts;
-    }
-  } catch (_e) {}
+    },
+  );
+  if (cached) return cached;
 
   const counts: Record<string, number> = {};
   for (const s of snapshotCatalogServers()) {
@@ -1327,6 +1410,7 @@ const SEARCH_CANDIDATE_SELECT_SQL = `s.id AS id, s.name AS name, s.description A
   s.github_stars AS githubStars, s.npm_downloads AS npmDownloads,
   s.health_status AS healthStatus, s.tools_source AS toolsSource,
   s.install_needs_config AS installNeedsConfig, s.remote_endpoint_healthy AS remoteEndpointHealthy,
+  s.is_official AS isOfficial, s.owner_verified AS ownerVerified,
   CASE WHEN json_valid(s.tools) THEN (
     SELECT group_concat(json_extract(je.value, '$.name'), ' ') FROM json_each(s.tools) AS je
   ) END AS toolText`;
@@ -1354,6 +1438,8 @@ type SearchCandidateRow = {
   toolsSource: string | null;
   installNeedsConfig: number | null;
   remoteEndpointHealthy: number | null;
+  isOfficial: number | null;
+  ownerVerified: number | null;
   toolText: string | null;
 };
 
@@ -1389,6 +1475,8 @@ function toSearchCandidate(row: SearchCandidateRow): SearchCandidate {
     toolsSource: row.toolsSource,
     installNeedsConfig: row.installNeedsConfig,
     remoteEndpointHealthy: row.remoteEndpointHealthy,
+    isOfficial: row.isOfficial,
+    ownerVerified: row.ownerVerified,
   };
 }
 
@@ -1779,9 +1867,11 @@ async function rankSearch(opts: SearchOpts): Promise<RankedSearch> {
   // (not the rows) skips the embedding call and the prefilter query,
   // while hydrateSearchResults still reads current listing data by id.
   const normalizedQuery = query.trim().toLowerCase().replace(/\s+/g, ' ');
+  // v2: Official and owner-verified listings get a small trust lift, so v1
+  // orders are stale.
   const cacheKey =
     normalizedQuery.length <= SEARCH_CACHE_MAX_QUERY
-      ? `search/v1/${category ?? ''}/${limit}/${vectorTopK}/${normalizedQuery}`
+      ? `search/v2/${category ?? ''}/${limit}/${vectorTopK}/${normalizedQuery}`
       : null;
   if (cacheKey) {
     const cachedIds = await readEdgeCache<string[]>(cacheKey);
@@ -1915,43 +2005,52 @@ export type LlmsTxtServer = {
 };
 
 /**
- * Ultra-slim catalog fetch for the /llms.txt route.
- * Fetches ONLY id, name, description, category — the four fields the route
- * actually uses. Loading the full catalog via getActiveServersForScoring()
- * pulled every AI-text blob, tools JSON, and scoring column into the Worker
- * heap for all ~3200 rows, which reliably OOMs the Cloudflare Worker on this
- * route. This query is ~10-20× lighter.
+ * Ultra-slim catalog fetch for the /llms.txt route: only the fields the route
+ * uses, never the AI-text blobs or tools JSON (those OOM'd the Worker here).
+ * Paged through D1 in id order (collectExportPages), then ordered by
+ * popularity in memory so "top 10 per category" really is the most-used ten.
+ * Throws when D1 fails, so the route answers 503 instead of listing the
+ * 114-row bundled snapshot as the catalog.
  */
-export async function getServersForLlmsTxt(): Promise<LlmsTxtServer[]> {
-  try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const ctx = await getCloudflareContext();
-    if (ctx?.env && (ctx.env as any).DB) {
-      const db = drizzle((ctx.env as any).DB);
-      const rows = await db
-        .select({
-          id: serversTable.id,
-          name: serversTable.name,
-          description: serversTable.description,
-          category: serversTable.category,
-          installKind: serversTable.installKind,
-          installCommand: serversTable.installCommand,
-          installPackage: serversTable.installPackage,
-        })
-        .from(serversTable)
-        .where(servableFilter())
-        // Same order as idx_servers_status_popularity, so "top 10 per
-        // category" really is the most-used ten, not insertion order.
-        .orderBy(
-          desc(serversTable.views),
-          desc(serversTable.copies),
-          desc(serversTable.upvotes),
-        );
-      if (rows.length > 0) return rows;
-    }
-  } catch {
-    // Fall back to static JSON
+export async function getServersForLlmsTxt({
+  pageSize = EXPORT_PAGE_SIZE,
+}: {
+  pageSize?: number;
+} = {}): Promise<LlmsTxtServer[]> {
+  const searchDb = await getSearchDb();
+  if (searchDb) {
+    const rows = await collectExportPages(
+      (after, limit) =>
+        searchDb.db
+          .select({
+            id: serversTable.id,
+            name: serversTable.name,
+            description: serversTable.description,
+            category: serversTable.category,
+            installKind: serversTable.installKind,
+            installCommand: serversTable.installCommand,
+            installPackage: serversTable.installPackage,
+            views: serversTable.views,
+            copies: serversTable.copies,
+            upvotes: serversTable.upvotes,
+          })
+          .from(serversTable)
+          .where(servableAfterIdFilter(after))
+          .orderBy(serversTable.id)
+          .limit(limit),
+      pageSize,
+    );
+    // Same order as idx_servers_status_popularity; id breaks ties stably.
+    rows.sort(
+      (a, b) =>
+        (b.views ?? 0) - (a.views ?? 0) ||
+        (b.copies ?? 0) - (a.copies ?? 0) ||
+        (b.upvotes ?? 0) - (a.upvotes ?? 0) ||
+        (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+    );
+    return rows.map(({ views: _v, copies: _c, upvotes: _u, ...r }) => r);
   }
+  // No D1 binding at all (local dev): the bundled snapshot.
   return snapshotCatalogServers().map((s) => ({
     id: s.id,
     name: s.name,
@@ -1981,6 +2080,10 @@ export type DirectoryFeedItem = {
   category: string;
   logoUrl: string | null;
   isOfficial: boolean;
+  /** Approved ownership claim ("Verified owner"). */
+  ownerVerified?: boolean;
+  /** Why isOfficial is set (OFFICIAL_SOURCES in lib/featuredStatus.ts). */
+  officialSource?: string | null;
   isPremium: boolean;
   featuredUntil: string | Date | null;
   githubStars: number | null;
@@ -2069,6 +2172,8 @@ function selectFeedRows(db: D1Drizzle, where: SQL) {
       category: serversTable.category,
       logoUrl: serversTable.logoUrl,
       isOfficial: serversTable.isOfficial,
+      ownerVerified: serversTable.ownerVerified,
+      officialSource: serversTable.officialSource,
       isPremium: serversTable.isPremium,
       featuredUntil: serversTable.featuredUntil,
       githubStars: serversTable.githubStars,
@@ -2120,6 +2225,8 @@ function toFeedItem(r: FeedRow): DirectoryFeedItem {
     category: r.category,
     logoUrl: r.logoUrl ?? null,
     isOfficial: !!r.isOfficial,
+    ownerVerified: !!r.ownerVerified,
+    officialSource: r.officialSource ?? null,
     isPremium: !!r.isPremium,
     featuredUntil: r.featuredUntil ?? null,
     githubStars: r.githubStars ?? null,
@@ -2213,6 +2320,8 @@ export function snapshotFeedPage(
         category: s.category,
         logoUrl: s.logoUrl ?? null,
         isOfficial: !!s.isOfficial,
+        ownerVerified: !!s.ownerVerified,
+        officialSource: s.officialSource ?? null,
         isPremium: !!s.isPremium,
         featuredUntil: s.featuredUntil ?? null,
         githubStars: s.githubStars ?? null,
@@ -2323,11 +2432,14 @@ export async function getServerById(id: string): Promise<Server | undefined> {
     const ctx = await getCloudflareContext();
     if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
-      const dbServers = await db
-        .select(PUBLIC_SERVER_COLUMNS)
-        .from(serversTable)
-        .where(eq(serversTable.id, id))
-        .limit(1);
+      // One transient D1 error here used to 500 a fresh render outright.
+      const dbServers = await withD1Retry(`getServerById(${id})`, () =>
+        db
+          .select(PUBLIC_SERVER_COLUMNS)
+          .from(serversTable)
+          .where(eq(serversTable.id, id))
+          .limit(1),
+      );
       if (dbServers.length > 0) {
         // Withdrawn at the owner's request, or a rejected submission waiting
         // on its submitter: no public surface may serve it.
@@ -2858,7 +2970,8 @@ export function relatedRankingScore(
   else if (conf === 'medium') score += 4;
   else if (conf === 'low') score += 1;
 
-  if (candidate.isOfficial || candidate.isPremium) score += 5;
+  // Verified owner or vendor-official. Premium never boosts organic ranking.
+  if (isVerifiedListing(candidate)) score += 5;
   if (candidate.isVerifiedActive || candidate.healthStatus === 'healthy')
     score += 3;
   if (candidate.reciprocalBadgeOk) score += 2;
@@ -3028,8 +3141,10 @@ export function formatServerAsMarkdown(
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '') || 'mcp-server';
-  const verifiedBadge =
-    server.isOfficial || server.isPremium ? ' [Verified]' : '';
+  // Trust label only (Official / Reference / Verified owner); paid tiers are
+  // never presented as verification.
+  const trust = trustLabel(server);
+  const verifiedBadge = trust ? ` [${trust.label}]` : '';
   const activeBadge = server.isVerifiedActive ? ' [Health: Active]' : '';
 
   let md = `# ${server.name}${verifiedBadge}${activeBadge}\n\n`;
@@ -3240,6 +3355,8 @@ const RELATED_RANKING_COLUMNS = {
   tools: RELATED_TOOLS_SQL,
   installConfidence: serversTable.installConfidence,
   isOfficial: serversTable.isOfficial,
+  ownerVerified: serversTable.ownerVerified,
+  officialSource: serversTable.officialSource,
   isPremium: serversTable.isPremium,
   isVerifiedActive: serversTable.isVerifiedActive,
   healthStatus: serversTable.healthStatus,

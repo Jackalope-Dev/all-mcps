@@ -30,7 +30,7 @@
  *
  * Usage:
  *   wrangler d1 execute all-mcps --remote --json --command \
- *     "SELECT id, name, url, is_official FROM servers WHERE status='active'" > rows.json
+ *     "SELECT id, name, url, is_official, owner_verified FROM servers WHERE status='active'" > rows.json
  *   npx tsx scripts/fix-generic-server-names.mts rows.json out-dir
  *   # review out-dir/proposed-renames.json, then:
  *   wrangler d1 execute all-mcps --remote --yes --file out-dir/updates.sql
@@ -47,7 +47,13 @@ import {
   parseGithubUrl,
 } from '../lib/listingEnrich';
 
-type Row = { id: string; name: string; url: string; is_official: number };
+type Row = {
+  id: string;
+  name: string;
+  url: string;
+  is_official: number;
+  owner_verified?: number;
+};
 
 const DELAY_MS = 150;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -82,7 +88,7 @@ async function main() {
   console.log(`Loaded ${rows.length} active listings from ${rowsPath}.`);
 
   const candidates = rows.filter(
-    (r) => !r.is_official && isGenericServerName(r.name),
+    (r) => !r.is_official && !r.owner_verified && isGenericServerName(r.name),
   );
   console.log(
     `${candidates.length} have a generic name and are not owner-claimed.\n`,

@@ -1265,11 +1265,11 @@ async function main() {
       : null;
     if (r.dupWarning) sql += `-- ⚠ ${r.dupWarning}\n`;
     sql +=
-      `INSERT INTO servers (id, name, url, website_url, description, category, is_official, status, review_flagged, ` +
+      `INSERT INTO servers (id, name, url, website_url, description, category, is_official, official_source, official_evidence_url, status, review_flagged, ` +
       `github_stars, npm_downloads, install_kind, install_command, install_args, install_package, ` +
       `install_confidence, remote_endpoint_url, created_at) ` +
       `VALUES ('${esc(r.id)}', '${esc(r.name)}', '${esc(r.url)}', ${strOrNull(r.websiteUrl)}, '${esc(r.description)}', ` +
-      `'${esc(r.category)}', ${r.isOfficial ? 1 : 0}, '${esc(r.status)}', ${r.reviewFlagged ? 1 : 0}, ` +
+      `'${esc(r.category)}', ${r.isOfficial ? 1 : 0}, ${r.isOfficial ? "'reference'" : 'NULL'}, ${r.isOfficial ? `'${esc(r.url)}'` : 'NULL'}, '${esc(r.status)}', ${r.reviewFlagged ? 1 : 0}, ` +
       `${numOrNull(r.githubStars)}, ${numOrNull(r.npmDownloads)}, ${strOrNull(r.installKind)}, ` +
       `${strOrNull(r.installCommand)}, ${strOrNull(installArgsJson)}, ${strOrNull(r.installPackage)}, ` +
       `${strOrNull(r.installConfidence)}, ${strOrNull(r.remoteEndpointUrl)}, strftime('%s', 'now')) ` +

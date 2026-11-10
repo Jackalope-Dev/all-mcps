@@ -28,6 +28,7 @@ import type { ReactNode } from 'react';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { TrendChart } from '../../components/TrustCharts';
 import { CALLER_COLORS } from '../../lib/accessLog';
+import { formatCatalogAsOf } from '../../lib/catalogCount';
 import type {
   CallerBreakdown,
   CountryBreakdown,
@@ -692,12 +693,16 @@ export default async function TrustPage() {
 
             <SectionLabel
               title="The catalog"
-              note="All-time totals across every listed MCP server."
+              note={
+                stats.totalServersAsOf
+                  ? `All-time totals across every listed MCP server. Listing count as of ${formatCatalogAsOf({ count: stats.totalServers, asOf: stats.totalServersAsOf })}.`
+                  : 'All-time totals across every listed MCP server.'
+              }
             />
             <StatGrid>
               <StatTile
                 icon={Cpu}
-                value={formatNumber(stats.totalServers)}
+                value={stats.totalServers.toLocaleString('en-US')}
                 label="MCP servers listed"
               />
               <StatTile
@@ -713,7 +718,7 @@ export default async function TrustPage() {
               <StatTile
                 icon={ShieldCheck}
                 value={formatNumber(stats.verifiedCount)}
-                label="Verified listings"
+                label="Verified owner or Official"
               />
             </StatGrid>
 
@@ -1181,8 +1186,8 @@ export default async function TrustPage() {
               <OpennessCard
                 icon={Bot}
                 color="var(--brand-cyan)"
-                title="Crawlers are allowlisted"
-                detail="Our robots.txt allows GPTBot, ClaudeBot, PerplexityBot, Google-Extended, Amazonbot, and Bytespider to read the catalog, search API, and llms-full.txt."
+                title="Crawler rules, as published"
+                detail="Our robots.txt lets ClaudeBot, PerplexityBot, and Amazonbot read the catalog, llms.txt, llms-full.txt, data.json, /api/v1/, and /api/mcp. It blocks GPTBot, Google-Extended, and Bytespider from the whole site, since they crawl for training first. Other crawlers may read pages, llms.txt, llms-full.txt, and data.json, but not /api/."
               />
               <OpennessCard
                 icon={MessageSquare}

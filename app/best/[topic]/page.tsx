@@ -14,10 +14,7 @@ import {
   selectServersForTopic,
 } from '../../../lib/bestTopics';
 import { parseServerName } from '../../../lib/displayName';
-import {
-  isFeaturedListing,
-  isVerifiedListing,
-} from '../../../lib/featuredStatus';
+import { isFeaturedListing, trustLabel } from '../../../lib/featuredStatus';
 import { engagementScore } from '../../../lib/search';
 import { getServersForTopic, type Server } from '../../../lib/servers';
 
@@ -92,8 +89,11 @@ export async function generateMetadata({
 /** A short, factual reason each server earns its rank — no invented claims. */
 function reasonFor(server: Server, index: number): string {
   if (index === 0) return 'Most popular in this category on AllMCPs';
-  if (isFeaturedListing(server)) return 'Featured listing';
-  if (server.isOfficial) return 'Official server';
+  // Rank comes from engagement only; a paid listing gets no "why" of its own.
+  const trust = trustLabel(server);
+  if (trust?.kind === 'official') return 'Official server from the vendor';
+  if (trust?.kind === 'reference')
+    return 'Reference server from the MCP project';
   const bits: string[] = [];
   if (server.copies) bits.push(`${server.copies.toLocaleString()} installs`);
   if (server.upvotes) bits.push(`${server.upvotes.toLocaleString()} upvotes`);
@@ -222,7 +222,7 @@ export default async function BestTopicPage({
             <ol className="dir-ranked">
               {ranked.map((server, i) => {
                 const { displayName, org } = parseServerName(server.name);
-                const verified = isVerifiedListing(server);
+                const trust = trustLabel(server, displayName);
                 return (
                   <li key={server.id}>
                     <article
@@ -254,10 +254,21 @@ export default async function BestTopicPage({
                               {org && (
                                 <span className="dir-row-org">{org}</span>
                               )}
-                              {verified && (
-                                <span className="dir-flag dir-flag--verified">
+                              {trust && (
+                                <span
+                                  className="dir-flag dir-flag--verified"
+                                  title={trust.title}
+                                >
                                   <BadgeCheck size={13} aria-hidden="true" />
-                                  {server.isOfficial ? 'Official' : 'Verified'}
+                                  {trust.label}
+                                </span>
+                              )}
+                              {isFeaturedListing(server) && (
+                                <span
+                                  className="dir-flag dir-flag--featured"
+                                  title="Paid placement; it doesn't change this ranking"
+                                >
+                                  Featured
                                 </span>
                               )}
                             </div>

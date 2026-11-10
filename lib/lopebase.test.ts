@@ -21,6 +21,7 @@ const LISTINGS = [
     status: 'active',
     premium_status: 'free',
     is_official: false,
+    owner_verified: false,
     health_status: 'healthy',
     github_stars: 12,
     created_at: new Date('2026-09-01T00:00:00Z'),

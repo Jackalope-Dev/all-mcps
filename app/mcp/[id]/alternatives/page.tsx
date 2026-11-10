@@ -24,10 +24,7 @@ import {
   parseCategoryLabel,
 } from '../../../../lib/categories';
 import { parseServerName } from '../../../../lib/displayName';
-import {
-  isFeaturedListing,
-  isVerifiedListing,
-} from '../../../../lib/featuredStatus';
+import { isFeaturedListing, trustLabel } from '../../../../lib/featuredStatus';
 import { publicViewCount } from '../../../../lib/format';
 import {
   isUnverifiedInstall,
@@ -883,12 +880,13 @@ export default async function AlternativesPage({
                         >
                           ★ Featured
                         </Badge>
-                      ) : isVerifiedListing(alt) ? (
+                      ) : trustLabel(alt) ? (
                         <Badge
                           variant="official"
                           style={{ fontSize: '0.65rem', flexShrink: 0 }}
+                          title={trustLabel(alt)?.title}
                         >
-                          Verified
+                          {trustLabel(alt)?.label}
                         </Badge>
                       ) : null}
                     </div>

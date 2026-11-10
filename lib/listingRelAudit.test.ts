@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   auditListingPageRel,
   comparableUrl,
+  relQualifiers,
   websiteLinkRelsInHtml,
 } from './listingRelAudit';
 
@@ -27,6 +28,16 @@ describe('comparableUrl', () => {
     );
     expect(comparableUrl('https://a.com/')).toBe('https://a.com');
     expect(comparableUrl('not a url')).toBeNull();
+  });
+});
+
+describe('relQualifiers', () => {
+  it('keeps only nofollow / sponsored / ugc, in a fixed order', () => {
+    expect(relQualifiers('noopener noreferrer')).toBe('');
+    expect(relQualifiers('Sponsored noopener NOFOLLOW')).toBe(
+      'nofollow sponsored',
+    );
+    expect(relQualifiers('ugc nofollow')).toBe('nofollow ugc');
   });
 });
 
@@ -68,8 +79,28 @@ describe('auditListingPageRel', () => {
       auditListingPageRel(page('noopener noreferrer'), {
         ...verified,
         isPremium: true,
-        websiteBacklinkOk: false,
       }),
+    ).toEqual({ ok: true });
+  });
+
+  it('expects sponsored, not dofollow, for a Premium listing without the badge', () => {
+    const premiumOnly = {
+      ...verified,
+      isPremium: true,
+      websiteBacklinkOk: false,
+    };
+    expect(
+      auditListingPageRel(page('noopener noreferrer'), premiumOnly),
+    ).toEqual({
+      ok: false,
+      reason: 'rel-mismatch',
+      rels: ['noopener noreferrer'],
+    });
+    expect(
+      auditListingPageRel(page('noopener noreferrer nofollow'), premiumOnly).ok,
+    ).toBe(false);
+    expect(
+      auditListingPageRel(page('noopener noreferrer sponsored'), premiumOnly),
     ).toEqual({ ok: true });
   });
 

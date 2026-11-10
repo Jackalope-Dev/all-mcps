@@ -145,12 +145,33 @@ const browse = (qs: string) =>
 const ids = (r: { items: { id: string }[] }) => r.items.map((s) => s.id);
 
 describe('browseCatalog against real SQLite', () => {
-  it('lists only servable listings, featured first on trending', async () => {
+  it('lists only servable listings', async () => {
     const r = await browse('');
     expect(r.total).toBe(4);
-    expect(ids(r)[0]).toBe('paid-files');
     expect(ids(r)).not.toContain('flagged-pg');
     expect(ids(r)).not.toContain('pending-pg');
+  });
+
+  it('never lets payment reorder organic results; paid goes in the labelled slot', async () => {
+    // paid-files has no engagement and is the oldest listing, so it ranks
+    // last organically on every sort, Premium or not.
+    for (const sort of ['', 'sort=popular', 'sort=trending']) {
+      const r = await browse(sort);
+      expect(ids(r).at(-1)).toBe('paid-files');
+      expect(r.featured.map((s) => s.id)).toEqual(['paid-files']);
+    }
+    // A search's Featured slot only holds paid listings the search matched.
+    const search = await browse('q=python');
+    expect(ids(search)[0]).toBe('py-files');
+    expect(search.featured).toEqual([]);
+  });
+
+  it('fills the Featured slot only from listings matching the filters, on page one', async () => {
+    expect((await browse('category=Databases')).featured).toEqual([]);
+    expect((await browse('category=Files')).featured.map((s) => s.id)).toEqual([
+      'paid-files',
+    ]);
+    expect((await browse('offset=30')).featured).toEqual([]);
   });
 
   it('filters on real columns', async () => {
@@ -185,6 +206,47 @@ describe('browseCatalog against real SQLite', () => {
     expect(ids(await browse('q=postgresql&transport=stdio'))).toEqual([
       'pg-node',
     ]);
+  });
+
+  it('lifts Official, then owner-verified, on near-ties; payment never', async () => {
+    // Four listings identical in text and engagement except for trust and
+    // payment. Same views, same age, same description.
+    const trust: Record<string, Record<string, number>> = {
+      'zz-plain': {},
+      'zz-paid': { is_premium: 1 },
+      'zz-owner': { owner_verified: 1 },
+      'zz-official': { is_official: 1 },
+    };
+    const insert = sqlite.prepare(
+      `INSERT INTO servers (id, name, url, status, category, description, views, copies, upvotes, is_premium, is_official, owner_verified, created_at)
+       VALUES (?, 'Zebra Tracker', ?, 'active', '🎮 Gaming', 'Zebra migration tracker.', 20, 0, 0, ?, ?, ?, ?)`,
+    );
+    for (const [id, t] of Object.entries(trust)) {
+      insert.run(
+        id,
+        `https://github.com/acme/${id}`,
+        t.is_premium ?? 0,
+        t.is_official ?? 0,
+        t.owner_verified ?? 0,
+        nowSec - 10 * DAY,
+      );
+    }
+    const gaming = `category=${encodeURIComponent('🎮 Gaming')}`;
+    try {
+      for (const qs of [
+        gaming,
+        `${gaming}&sort=popular`,
+        `${gaming}&sort=trending`,
+        'q=zebra',
+      ]) {
+        const order = ids(await browse(qs));
+        expect(order.slice(0, 2)).toEqual(['zz-official', 'zz-owner']);
+        // Premium ranks like any unverified listing: no organic lift.
+        expect(order.slice(2).sort()).toEqual(['zz-paid', 'zz-plain']);
+      }
+    } finally {
+      sqlite.prepare("DELETE FROM servers WHERE id LIKE 'zz-%'").run();
+    }
   });
 
   it('records a text search that found nothing', async () => {

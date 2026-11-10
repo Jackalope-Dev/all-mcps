@@ -111,7 +111,7 @@ export async function claimListing(
 
     // Attach/update website without re-proving ownership (claimed listings only)
     if (method === 'attach_website') {
-      if (!server.isOfficial) {
+      if (!server.ownerVerified) {
         return {
           ok: false,
           status: 400,
@@ -284,8 +284,11 @@ export async function claimListing(
     }
     const earnedReciprocal = readmeBadgeOk || websiteBacklinkOk;
 
+    // A claim proves who controls the listing, not who publishes the code:
+    // it sets ownerVerified ("Verified owner"). Official (vendor-published)
+    // is only ever set by an admin with evidence.
     const claimUpdates: Record<string, unknown> = {
-      isOfficial: true,
+      ownerVerified: true,
       ownerUserId: userId,
       claimedAt: server.claimedAt || new Date(),
       pendingClaimUserId: null,
@@ -299,7 +302,7 @@ export async function claimListing(
     }
 
     await db.update(servers).set(claimUpdates).where(eq(servers.id, id));
-    // Official status (repo link rel) and possibly the website backlink changed.
+    // Owner-verified status (repo link rel) and possibly the website backlink changed.
     refreshListingPageInBackground(id);
 
     const methodLabel =
@@ -321,7 +324,7 @@ export async function claimListing(
       await sendNotificationEmail({
         to: userEmail,
         heading: `Listing Verified: ${server.name}`,
-        message: `Congratulations! Your ownership of "${server.name}" has been verified via ${methodLabel} and is now official. You have full edit access in your dashboard.\n\n${dofollowNote}`,
+        message: `Congratulations! Your ownership of "${server.name}" has been verified via ${methodLabel}, and the listing now shows "Verified owner". You have full edit access in your dashboard.\n\n${dofollowNote}`,
         actionText: 'Manage in Dashboard',
         actionUrl: `${getAppUrl()}/dashboard`,
       });
@@ -343,10 +346,10 @@ export async function claimListing(
       body: {
         success: true,
         pending: false,
-        isOfficial: true,
+        ownerVerified: true,
         reciprocalBadgeOk: earnedReciprocal,
         message:
-          'Ownership verified! Your listing is now official and you have full management access.',
+          'Ownership verified! Your listing now shows "Verified owner" and you have full management access.',
       },
     };
   } catch (error) {

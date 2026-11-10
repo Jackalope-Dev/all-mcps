@@ -115,7 +115,8 @@ export default async function AdvertiseLandingPage() {
   // "1+ monthly requests" tile undersells the page it is meant to sell.
   const audience = [
     {
-      value: compact(stats.totalServers),
+      // Exact, like every other page that prints the catalog count.
+      value: stats.totalServers.toLocaleString('en-US'),
       label: 'MCP servers listed',
       note: `Across ${stats.categoryCount} categories`,
       show: stats.totalServers > 0,

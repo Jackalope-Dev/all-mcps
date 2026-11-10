@@ -19,7 +19,7 @@ import {
 } from '@/lib/categories';
 import type { ComparePickServer } from '@/lib/comparePick';
 import { parseServerName } from '@/lib/displayName';
-import { isVerifiedListing } from '@/lib/featuredStatus';
+import { trustLabel } from '@/lib/featuredStatus';
 import {
   formatCommitAge,
   formatCompactNumber,
@@ -166,18 +166,18 @@ export function MultiServerCompareView({
             })),
           },
           {
-            label: 'Verified owner',
+            label: 'Official / verified',
             cells: enriched.map((e) => {
-              const v = isVerifiedListing(e.server) && !!e.server.isOfficial;
+              const trust = trustLabel(e.server);
               return {
-                node: v ? (
+                node: trust ? (
                   <span className="cmp-yes">
-                    <BadgeCheck size={14} aria-hidden="true" /> Verified
+                    <BadgeCheck size={14} aria-hidden="true" /> {trust.label}
                   </span>
                 ) : (
                   <span className="cmp-muted">Not claimed</span>
                 ),
-                key: String(v),
+                key: trust?.label ?? '',
               };
             }),
           },

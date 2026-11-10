@@ -59,6 +59,7 @@ type OwnedServer = {
   featuredUntil: Date | null;
   categorySponsorUntil: Date | null;
   isOfficial: boolean;
+  ownerVerified: boolean;
   reciprocalBadgeOk: boolean;
   readmeBadgeOk: boolean;
   websiteBacklinkOk: boolean;
@@ -114,6 +115,7 @@ async function getOwnedServers(userId: string): Promise<{
           featuredUntil: servers.featuredUntil,
           categorySponsorUntil: servers.categorySponsorUntil,
           isOfficial: servers.isOfficial,
+          ownerVerified: servers.ownerVerified,
           reciprocalBadgeOk: servers.reciprocalBadgeOk,
           readmeBadgeOk: servers.readmeBadgeOk,
           websiteBacklinkOk: servers.websiteBacklinkOk,

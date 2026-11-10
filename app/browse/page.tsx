@@ -193,6 +193,7 @@ export default async function BrowsePage({
           params: browseParams,
           total: result.total ?? 0,
           capped: result.capped,
+          featured: result.featured,
         }}
       />
     </main>

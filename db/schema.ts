@@ -21,26 +21,53 @@ export const servers = sqliteTable(
     websiteUrl: text('website_url'),
     /** Email the submitter gave at submit time. Used for status notices and the submission upsell sequence. */
     submitterEmail: text('submitter_email'),
-    /** Paid/premium listings get dofollow website backlinks; free listings use nofollow. */
+    /**
+     * Paid Premium subscription (Stripe). A clearly labelled paid tier: it buys
+     * Featured placement in labelled slots and dashboard extras, never the
+     * Verified/Official badges, quality-score points, organic ranking, or a
+     * dofollow link (Premium-only website links are rel="sponsored"; see
+     * lib/linkRel.ts and lib/featuredStatus.ts).
+     */
     isPremium: integer('is_premium', { mode: 'boolean' })
       .notNull()
       .default(false),
     /**
      * Legacy — no longer written by the claim flow (kept for backward-compat reads
-     * of old rows only). "Verified" now means `reciprocalBadgeOk`; "Official"
-     * ownership is `isOfficial`. Do not use this column for new logic.
+     * of old rows only). Ownership is `ownerVerified`; vendor-published is
+     * `isOfficial`. Do not use this column for new logic.
      */
     websiteVerified: integer('website_verified', { mode: 'boolean' })
       .notNull()
       .default(false),
-    /** "Official" — admin-approved ownership claim (proof via GitHub README, site badge, or DNS, but the grant itself always goes through admin review; see approve_claim/reject_claim). Grants edit rights and the Official badge. */
+    /**
+     * "Official": published by the company behind the product (or, with
+     * `officialSource = 'reference'`, a modelcontextprotocol reference server).
+     * Set only by an admin with evidence (`officialSource`,
+     * `officialEvidenceUrl`, `officialReviewedAt`; see `set_official` in
+     * app/api/admin/action/route.ts), never by an ownership claim and never by
+     * payment. A claim sets `ownerVerified` instead (migration 0072).
+     */
     isOfficial: integer('is_official', { mode: 'boolean' })
       .notNull()
       .default(false),
+    /**
+     * "Verified owner": an approved ownership claim (GitHub README, site badge
+     * or DNS proof, approved automatically or in the admin claim queue). Grants
+     * edit rights. Says who controls the listing, not who publishes the code.
+     */
+    ownerVerified: integer('owner_verified', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    /** Why `isOfficial` is set: OFFICIAL_SOURCES in lib/featuredStatus.ts ('github-org' | 'vendor-endpoint' | 'registry-namespace' | 'vendor-docs' | 'reference'). */
+    officialSource: text('official_source'),
+    /** The page an admin checked to grant `isOfficial` (vendor GitHub org, docs page, registry namespace...). */
+    officialEvidenceUrl: text('official_evidence_url'),
+    /** When an admin last reviewed the `isOfficial` evidence. */
+    officialReviewedAt: integer('official_reviewed_at', { mode: 'timestamp' }),
     claimedAt: integer('claimed_at', { mode: 'timestamp' }),
     /** Auth.js user id after claim (optional until owners sign in). */
     ownerUserId: text('owner_user_id'),
-    /** Set whenever a claim proof (GitHub README, site badge, or DNS) succeeds — every method awaits admin approval before ownerUserId/isOfficial/websiteUrl take effect (see approve_claim/reject_claim). */
+    /** Set when a claim proof (GitHub README, site badge, or DNS) succeeds but can't be auto-approved; the claim waits in the admin queue before ownerUserId/ownerVerified/websiteUrl take effect (see approve_claim/reject_claim). */
     pendingClaimUserId: text('pending_claim_user_id'),
     /** The site the pending claimant proved control of. Null for a GitHub-proven claim (no website was part of that proof). */
     pendingClaimWebsiteUrl: text('pending_claim_website_url'),
@@ -79,11 +106,12 @@ export const servers = sqliteTable(
       .default(false),
     healthStatus: text('health_status').notNull().default('unknown'),
     /**
-     * "Verified" badge shown across the site. Derived aggregate: true when either
-     * the repo README badge (`readmeBadgeOk`) OR the custom-website backlink
-     * (`websiteBacklinkOk`) is currently live. Kept as the single field most
-     * consumers read (quality score, ranking, site stats, admin/dashboard badges).
-     * Fully automatic, independent of claim/Official status. NOTE: this aggregate
+     * "Badge live": the free AllMCPs badge program. Derived aggregate: true when
+     * either the repo README badge (`readmeBadgeOk`) OR the custom-website
+     * backlink (`websiteBacklinkOk`) is currently live. Fully automatic and
+     * independent of claim/Official status; it is not the public "Verified"
+     * badge (that is `ownerVerified || isOfficial`, lib/featuredStatus.ts).
+     * NOTE: this aggregate
      * does NOT by itself grant website dofollow — that is gated specifically on
      * `websiteBacklinkOk`, since a repo README badge can't earn ranking credit for
      * an unrelated marketing site (see lib/linkRel.ts).

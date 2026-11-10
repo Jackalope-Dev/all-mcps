@@ -75,16 +75,17 @@ export const ListingStatusEmail = ({
             backlink from AllMCPs at no cost:
           </Text>
           <Text style={textStyle}>
-            1. Claim ownership of your listing
+            1. Check that your listing links to your product website (claim the
+            listing to change it)
             <br />
-            2. Verify control of your product website (badge or DNS TXT)
-            <br />
-            3. Place the AllMCPs badge on that site <em>without</em> a{' '}
+            2. Place the AllMCPs badge on that site <em>without</em> a{' '}
             <code style={codeStyle}>nofollow</code> attribute
+            <br />
+            3. Our health checks detect it and make the link dofollow
           </Text>
           <Text style={textStyle}>
-            We recheck the badge periodically so it stays honest. Premium
-            listings get dofollow instantly (no badge required).
+            We recheck the badge periodically so it stays honest. The badge is
+            the only way to a dofollow link; it can&apos;t be bought.
           </Text>
           <Button
             href={claimUrl}

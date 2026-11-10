@@ -27,7 +27,7 @@ import { PricingClient } from './PricingClient';
 export const metadata: Metadata = {
   title: 'Pricing & Sponsorships - Featured MCP Listings',
   description:
-    'Promote your Model Context Protocol server on AllMCPs with featured placements, dofollow backlinks, real-time agent analytics, and priority review.',
+    'Promote your Model Context Protocol server on AllMCPs with labelled featured placements, real-time agent analytics, and priority review.',
   alternates: { canonical: 'https://allmcps.com/pricing' },
   openGraph: {
     images: [
@@ -40,14 +40,14 @@ export const metadata: Metadata = {
     ],
     title: 'Pricing & Sponsorships - Featured MCP Listings | AllMCPs',
     description:
-      'Promote your Model Context Protocol server on AllMCPs with featured placements, dofollow backlinks, real-time agent analytics, and priority review.',
+      'Promote your Model Context Protocol server on AllMCPs with labelled featured placements, real-time agent analytics, and priority review.',
     url: 'https://allmcps.com/pricing',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Pricing & Sponsorships - Featured MCP Listings | AllMCPs',
     description:
-      'Promote your Model Context Protocol server on AllMCPs with featured placements, dofollow backlinks, real-time agent analytics, and priority review.',
+      'Promote your Model Context Protocol server on AllMCPs with labelled featured placements, real-time agent analytics, and priority review.',
   },
 };
 
@@ -62,11 +62,11 @@ const FAQ_ITEMS = [
   },
   {
     q: 'What is included in the Premium subscription ($19/mo)?',
-    a: 'Premium gives your MCP continuous featured rotation on the homepage and directory grid, a high-value dofollow SEO backlink, real-time LLM access analytics, and a Verified badge with a glowing featured card.',
+    a: 'Premium gives your MCP continuous featured rotation on the homepage and directory grid, real-time LLM access analytics, and a Premium label with a glowing featured card. It does not make a listing Verified (that takes an ownership claim), change its quality score or organic search order, or buy a dofollow link: a Premium website link is marked rel="sponsored" unless your site carries the free AllMCPs badge.',
   },
   {
-    q: 'What is a Dofollow backlink and why does it matter for my project?',
-    a: 'Unlike standard nofollow links, a dofollow backlink passes domain authority directly to your project site or GitHub repo, accelerating Google ranking and domain authority for your brand.',
+    q: 'How do I get a dofollow link to my project?',
+    a: 'Put the free AllMCPs badge on the website your listing links to. Our health checks detect it and make the website link dofollow on any plan, for as long as the badge stays live. A claimed listing (Verified owner) also gets a dofollow repository link. Payment never buys a dofollow link: as Google asks for paid links, a Premium website link without the badge is marked rel="sponsored".',
   },
   {
     q: 'How do volume discounts work on Featured & Category Sponsorships?',
@@ -99,8 +99,8 @@ const MATRIX: { feature: string; cells: [Cell, Cell, Cell, Cell, Cell] }[] = [
     cells: [false, false, false, false, true],
   },
   {
-    feature: 'Dofollow website backlink',
-    cells: [false, false, false, true, 'Direct link'],
+    feature: 'Dofollow website link (free with the AllMCPs badge)',
+    cells: ['With badge', 'With badge', 'With badge', 'With badge', false],
   },
   {
     feature: 'Live impressions & CTR analytics',
@@ -228,17 +228,17 @@ export default async function PricingPage({
           </h1>
           <p className="text-lead">
             Every MCP server is listed <strong>free, forever</strong>. Upgrade
-            when you want to skip the review queue, get featured, or earn a
-            dofollow backlink.
+            when you want to skip the review queue or get featured. Dofollow
+            links are never for sale: they come free with the AllMCPs badge.
           </p>
         </header>
 
         <ul className="acct-proof" aria-label="Directory at a glance">
           <li>
             <strong className="tabular">
-              {siteStats.totalServers.toLocaleString()}
+              {siteStats.totalServers.toLocaleString('en-US')}
             </strong>
-            <span>servers indexed</span>
+            <span>servers listed</span>
           </li>
           <li>
             <strong className="tabular">

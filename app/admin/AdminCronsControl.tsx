@@ -275,7 +275,7 @@ export function AdminToolsControl() {
               </span>
               {inspectedServer.isPremium && (
                 <span className="adm-tag hue-violet">
-                  <Crown size={11} aria-hidden="true" /> Premium dofollow
+                  <Crown size={11} aria-hidden="true" /> Premium
                 </span>
               )}
             </div>

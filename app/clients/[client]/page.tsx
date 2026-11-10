@@ -12,7 +12,7 @@ import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
 import { ServerAvatar } from '../../../components/ui/ServerAvatar';
 import { MCP_CLIENTS, mcpClientBySlug } from '../../../lib/clients';
 import { parseServerName } from '../../../lib/displayName';
-import { isVerifiedListing } from '../../../lib/featuredStatus';
+import { isVerifiedListing, trustLabel } from '../../../lib/featuredStatus';
 import { formatCompactNumber, publicViewCount } from '../../../lib/format';
 import { getPopularServers } from '../../../lib/servers';
 
@@ -256,7 +256,8 @@ export default async function ClientPage({
                               Verified Listing
                             </span>
                             <span className="mcp-icon-tooltip-body">
-                              Ownership or active status confirmed on AllMCPs.
+                              {trustLabel(server)?.title ??
+                                'Ownership confirmed on AllMCPs.'}
                             </span>
                           </IconTooltip>
                         )}

@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import {
+  adminAudit,
   reports,
   reviews,
   servers,
@@ -21,6 +22,7 @@ import {
 import { DEFAULT_SUBMIT_CATEGORY } from '../../../../lib/categories';
 import { cleanListingDescription } from '../../../../lib/description';
 import { computeFeaturedUntil } from '../../../../lib/featuredGrant';
+import { OFFICIAL_SOURCES } from '../../../../lib/featuredStatus';
 import { getGithubToken } from '../../../../lib/githubAuth';
 import { notifyListingIndexed } from '../../../../lib/indexnow';
 import {
@@ -73,7 +75,7 @@ const actionSchema = z.object({
     'approve_screenshot',
     'reject_screenshot',
     'resend_approval',
-    'toggle_official',
+    'set_official',
     'toggle_reciprocal_badge',
     'check_health',
     'approve_review_comment',
@@ -95,8 +97,13 @@ const actionSchema = z.object({
       setupSteps: z.string().max(12_000).optional(),
       setupNote: z.string().trim().max(400).optional(),
       setupSourceUrl: z.string().trim().max(2000).optional(),
+      /** set_official: why the vendor publishes it, and the page checked. */
+      officialSource: z.enum(OFFICIAL_SOURCES).optional(),
+      officialEvidenceUrl: z.string().trim().url().max(2000).optional(),
     })
     .optional(),
+  /** set_official: grant (true, needs officialSource + officialEvidenceUrl) or revoke. */
+  official: z.boolean().optional(),
   days: z.number().int().min(1).max(365).optional(),
   reason: z.string().trim().max(2000).optional(),
   /** Reject/unpublish reason codes, recorded for gate tuning (lib/moderationLog.ts). */
@@ -118,8 +125,8 @@ const NON_LISTING_ACTIONS = new Set<string>([
 const MESSAGES: Record<string, string> = {
   approve: 'Listing approved.',
   reject: 'Listing rejected.',
-  set_premium: 'Marked premium (dofollow).',
-  unset_premium: 'Premium removed (nofollow).',
+  set_premium: 'Marked premium.',
+  unset_premium: 'Premium removed.',
   edit: 'Listing updated.',
   unpublish: 'Listing unpublished.',
   republish: 'Listing republished.',
@@ -138,7 +145,7 @@ const MESSAGES: Record<string, string> = {
   approve_screenshot: 'Screenshot approved.',
   reject_screenshot: 'Screenshot rejected.',
   resend_approval: 'Approval email resent.',
-  toggle_official: 'Official status updated.',
+  set_official: 'Official status updated.',
   toggle_reciprocal_badge: 'Verified (reciprocal badge) status updated.',
   check_health: 'Health check completed.',
   approve_review_comment: 'Review comment approved.',
@@ -167,8 +174,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: message }, { status: 400 });
     }
 
-    const { id, action, fields, days, reason, reasons, reasonNote, source } =
-      result.data;
+    const {
+      id,
+      action,
+      fields,
+      days,
+      reason,
+      reasons,
+      reasonNote,
+      source,
+      official,
+    } = result.data;
 
     let env: CloudflareEnv | undefined;
     try {
@@ -733,10 +749,11 @@ export async function POST(req: Request) {
         // pendingClaimWebsiteUrl is null for a GitHub-proven claim (no website
         // was part of that proof) — only overwrite websiteUrl when the claim
         // actually proposed one, so approving a GitHub claim can't null out an
-        // existing website. "Verified" (reciprocalBadgeOk) is a separate,
-        // cron-managed signal and is intentionally left untouched here.
+        // existing website. The reciprocal badge is a separate, cron-managed
+        // signal and is intentionally left untouched here. A claim makes the
+        // listing "Verified owner", never Official (set_official, below).
         const claimUpdates: Record<string, unknown> = {
-          isOfficial: true,
+          ownerVerified: true,
           claimedAt: server.claimedAt || new Date(),
           ownerUserId: server.pendingClaimUserId,
           pendingClaimUserId: null,
@@ -939,9 +956,32 @@ export async function POST(req: Request) {
           });
         }
       }
-    } else if (action === 'toggle_official') {
+    } else if (action === 'set_official') {
+      // Official = published by the company behind the product. Granting it
+      // needs the evidence an admin checked; every change is audited.
+      if (official === undefined) {
+        return NextResponse.json(
+          { error: 'official: true or false is required.' },
+          { status: 400 },
+        );
+      }
+      const officialSource = fields?.officialSource;
+      const officialEvidenceUrl = fields?.officialEvidenceUrl;
+      if (official && (!officialSource || !officialEvidenceUrl)) {
+        return NextResponse.json(
+          {
+            error:
+              'Granting Official needs fields.officialSource and fields.officialEvidenceUrl.',
+          },
+          { status: 400 },
+        );
+      }
       const rows = await db
-        .select({ isOfficial: servers.isOfficial })
+        .select({
+          isOfficial: servers.isOfficial,
+          officialSource: servers.officialSource,
+          officialEvidenceUrl: servers.officialEvidenceUrl,
+        })
         .from(servers)
         .where(eq(servers.id, id))
         .limit(1);
@@ -950,19 +990,40 @@ export async function POST(req: Request) {
           { error: 'Server not found.' },
           { status: 404 },
         );
-      const nextOfficial = !rows[0].isOfficial;
-      await db
-        .update(servers)
-        .set({
-          isOfficial: nextOfficial,
-          claimedAt: nextOfficial ? new Date() : null,
-        })
-        .where(eq(servers.id, id));
+      const after = official
+        ? {
+            isOfficial: true,
+            officialSource: officialSource ?? null,
+            officialEvidenceUrl: officialEvidenceUrl ?? null,
+            officialReviewedAt: new Date(),
+          }
+        : {
+            isOfficial: false,
+            officialSource: null,
+            officialEvidenceUrl: null,
+            officialReviewedAt: new Date(),
+          };
+      await db.update(servers).set(after).where(eq(servers.id, id));
+      await db.insert(adminAudit).values({
+        id: crypto.randomUUID(),
+        connectorId: 'admin-ui',
+        actorId: adminEmail,
+        requestId: crypto.randomUUID(),
+        action: 'set_official',
+        targetType: 'server',
+        targetId: id,
+        before: JSON.stringify(rows[0]),
+        after: JSON.stringify({
+          ...after,
+          officialReviewedAt: after.officialReviewedAt.toISOString(),
+        }),
+      });
       refreshListingPageInBackground(id);
       return NextResponse.json({
         success: true,
-        message: `Official badge ${nextOfficial ? 'granted' : 'removed'}.`,
-        isOfficial: nextOfficial,
+        message: `Official badge ${official ? `granted (${officialSource})` : 'removed'}.`,
+        isOfficial: official,
+        officialSource: after.officialSource,
       });
     } else if (action === 'toggle_reciprocal_badge') {
       const rows = await db

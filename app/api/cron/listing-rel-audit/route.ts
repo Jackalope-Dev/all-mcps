@@ -17,8 +17,9 @@ import {
 
 /**
  * Backstop for lib/listingPageRefresh.ts. Loads the /mcp/[id] page visitors
- * and crawlers are actually served for every active listing that should have
- * a dofollow website link (premium, or a verified website badge), and
+ * and crawlers are actually served for every active listing whose website
+ * link isn't plain nofollow (a verified website badge: dofollow; premium
+ * without one: sponsored), and
  * regenerates any whose cached render disagrees with the database. Catches
  * whatever the write-time refresh missed, and logs it so the miss is visible.
  */
@@ -117,7 +118,7 @@ export async function POST(req: Request) {
       repaired,
       stillWrong,
       unreadable,
-      message: `Checked ${rows.length} dofollow listings: ${drifted.length} stale, ${repaired.length} repaired, ${stillWrong.length} still wrong, ${unreadable.length} unreadable.`,
+      message: `Checked ${rows.length} dofollow/sponsored listings: ${drifted.length} stale, ${repaired.length} repaired, ${stillWrong.length} still wrong, ${unreadable.length} unreadable.`,
     });
   } catch (error) {
     console.error('Listing rel audit error:', error);

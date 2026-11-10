@@ -15,7 +15,8 @@ const PremiumUpgrade = dynamic(
 
 type Props = {
   serverId: string;
-  isOfficial: boolean;
+  /** Approved ownership claim (servers.owner_verified). */
+  ownerVerified: boolean;
   websiteUrl?: string | null;
   isPremium?: boolean;
   websiteBacklinkOk?: boolean;
@@ -33,7 +34,7 @@ type Props = {
  */
 export function OwnerZone({
   serverId,
-  isOfficial,
+  ownerVerified,
   websiteUrl,
   isPremium,
   websiteBacklinkOk,
@@ -61,11 +62,11 @@ export function OwnerZone({
     };
   }, [serverId]);
 
-  const dofollow = !!isPremium || !!websiteBacklinkOk;
+  const dofollow = !!websiteBacklinkOk;
 
   return (
     <>
-      {isOfficial && isOwner && (
+      {ownerVerified && isOwner && (
         <div className="surface" style={{ padding: '1.5rem' }}>
           <h3
             style={{
@@ -116,8 +117,10 @@ export function OwnerZone({
                 }}
               >
                 {dofollow
-                  ? `Website link is dofollow${isPremium ? ' — Premium' : ' — reciprocal badge verified'}`
-                  : 'Website link is nofollow'}
+                  ? 'Website link is dofollow — reciprocal badge verified'
+                  : isPremium
+                    ? 'Website link is rel="sponsored" (Premium)'
+                    : 'Website link is nofollow'}
               </p>
               {!dofollow && (
                 <>
@@ -131,8 +134,8 @@ export function OwnerZone({
                   >
                     Add the AllMCPs badge to your site and verify it to earn a
                     free dofollow backlink — rechecked periodically to stay
-                    live. Premium listings get dofollow instantly, no badge
-                    required.
+                    live. Premium doesn&rsquo;t change this: the badge is the
+                    only way to a dofollow website link.
                   </p>
                   <Link
                     href={`/mcp/${serverId}/claim`}

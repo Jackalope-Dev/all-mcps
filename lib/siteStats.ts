@@ -5,6 +5,7 @@ import {
   eq,
   gte,
   isNotNull,
+  isNull,
   sql,
   sum,
 } from 'drizzle-orm';
@@ -17,6 +18,7 @@ import {
   ENDPOINT_LABELS,
   type Endpoint,
 } from './accessLog';
+import { getCatalogCount } from './catalogCount';
 import { swrEdgeCache } from './edgeCache';
 import { computeQualityScore } from './qualityScore';
 
@@ -58,7 +60,14 @@ export type EndpointBreakdown = {
 export type CountryBreakdown = { country: string; hits: number };
 
 export type SiteStats = {
+  /**
+   * Servable listings, always from getCatalogCount (lib/catalogCount.ts), the
+   * one count every page shows. Overlaid on each read, so it is never as old
+   * as the 24h aggregates below.
+   */
   totalServers: number;
+  /** When totalServers was counted (ISO), or null when it is the snapshot's. */
+  totalServersAsOf: string | null;
   categoryCount: number;
   aiReads30d: number;
   aiSystemCount: number;
@@ -104,6 +113,11 @@ export type SiteStats = {
   reciprocalBadgeCount: number;
   recentCommitCount30d: number;
 };
+
+/** Same rule as lib/servability.ts: the listings browse, search and the exports serve. */
+function servable() {
+  return and(eq(servers.status, 'active'), isNull(servers.staleFlaggedAt));
+}
 
 /** Helper to compute quality tier breakdown from an array of server objects */
 function calcQualityTiers(serverList: any[]): {
@@ -155,10 +169,10 @@ function getSnapshotFallback(): SiteStats {
     (acc, s) => acc + (Number(s.upvotes) || 0),
     0,
   );
-  // Same rule as the Verified badge (isVerifiedListing) so the /trust count
-  // matches what visitors see on listings.
+  // Same rule as the Verified badge (isVerifiedListing): a verified owner or
+  // vendor-official. Premium is paid and never counts as verified.
   const snapshotVerified = snapshotServers.filter(
-    (s) => s.isOfficial || s.isPremium,
+    (s) => s.ownerVerified || s.isOfficial,
   ).length;
   const snapshotTools = snapshotServers.reduce((acc, s) => {
     if (Array.isArray(s.tools)) return acc + s.tools.length;
@@ -195,6 +209,7 @@ function getSnapshotFallback(): SiteStats {
 
   memoizedSnapshotFallback = {
     totalServers: snapshotTotal,
+    totalServersAsOf: null,
     categoryCount: snapshotCategories,
     aiReads30d: 0,
     aiSystemCount: 0,
@@ -256,6 +271,16 @@ type CachedSiteStats = { data: SiteStats; timestamp: number };
  * expired copy is returned at once and recomputed in waitUntil.
  */
 export async function getSiteStats(): Promise<SiteStats> {
+  const [stats, catalog] = await Promise.all([
+    getAggregateSiteStats(),
+    getCatalogCount(),
+  ]);
+  return catalog
+    ? { ...stats, totalServers: catalog.count, totalServersAsOf: catalog.asOf }
+    : stats;
+}
+
+async function getAggregateSiteStats(): Promise<SiteStats> {
   if (
     cachedSiteStats &&
     Date.now() - cachedSiteStats.timestamp < CACHE_TTL_MS
@@ -359,6 +384,7 @@ function queryQualityTierPage(
       remoteEndpointUrl: servers.remoteEndpointUrl,
       remoteEndpointHealthy: servers.remoteEndpointHealthy,
       isOfficial: servers.isOfficial,
+      ownerVerified: servers.ownerVerified,
       isVerifiedActive: servers.isVerifiedActive,
       toolsSource: servers.toolsSource,
       websiteVerified: servers.websiteVerified,
@@ -385,8 +411,8 @@ function queryQualityTierPage(
     .from(servers)
     .where(
       afterRowid === null
-        ? eq(servers.status, 'active')
-        : and(eq(servers.status, 'active'), sql`rowid > ${afterRowid}`),
+        ? servable()
+        : and(servable(), sql`rowid > ${afterRowid}`),
     )
     .orderBy(sql`rowid`)
     .limit(QUALITY_TIER_PAGE_SIZE);
@@ -455,7 +481,7 @@ async function querySiteStats(
           totalTools: sql<number>`sum(case when ${servers.tools} is not null then json_array_length(${servers.tools}) else 0 end)`,
         })
         .from(servers)
-        .where(eq(servers.status, 'active'))
+        .where(servable())
         .catch(() => []),
 
       // Daily hits by caller class (aggregated into total vs AI in JS below) — powers the trend chart.
@@ -514,11 +540,12 @@ async function querySiteStats(
           // this whole multi-column query, silently falling back to stale snapshot values
           // for introspected/readme/reciprocalBadges/verified too, not just this field.
           recentCommits: sql<number>`sum(case when ${gte(servers.lastCommitAt, cutoff)} then 1 else 0 end)`,
-          // Matches the Verified badge (isVerifiedListing): official/claimed or premium.
-          verified: sql<number>`sum(case when ${servers.isOfficial} = 1 or ${servers.isPremium} = 1 then 1 else 0 end)`,
+          // Matches the Verified badge (isVerifiedListing): a verified owner or
+          // vendor-official. Premium is paid and never counts as verified.
+          verified: sql<number>`sum(case when ${servers.ownerVerified} = 1 or ${servers.isOfficial} = 1 then 1 else 0 end)`,
         })
         .from(servers)
-        .where(eq(servers.status, 'active'))
+        .where(servable())
         .catch(() => []),
 
       db
@@ -671,7 +698,10 @@ async function querySiteStats(
     );
 
     const result: SiteStats = {
+      // Replaced by getCatalogCount on read (getSiteStats); kept so a copy
+      // read with no catalog count still has a live-ish total.
       totalServers: dbTotal > 0 ? dbTotal : fallback.totalServers,
+      totalServersAsOf: dbTotal > 0 ? new Date(now).toISOString() : null,
       categoryCount: dbCategories > 0 ? dbCategories : fallback.categoryCount,
       aiReads30d: hits,
       aiSystemCount: callersCount,

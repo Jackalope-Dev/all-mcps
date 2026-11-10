@@ -4,7 +4,9 @@ import { websiteLinkRel } from './linkRel';
  * Checks that the /mcp/[id] page actually being served gives the listing's
  * website link the rel that `websiteLinkRel` says it should. Exists because a
  * cached ISR render can lag the database: a verified listing kept serving
- * rel="nofollow" for days after earning dofollow (2026-10).
+ * rel="nofollow" for days after earning dofollow (2026-10). Compares the
+ * qualifying tokens (nofollow / sponsored / ugc), so a Premium-only listing
+ * still served dofollow from before the sponsored rule is caught too.
  */
 
 export type RelAuditListing = {
@@ -74,18 +76,24 @@ export function websiteLinkRelsInHtml(
   return rels;
 }
 
-const hasNofollow = (rel: string) => /(^|\s)nofollow(\s|$)/i.test(rel);
+const QUALIFIERS = ['nofollow', 'sponsored', 'ugc'] as const;
+
+/** The link-qualifying rel tokens (nofollow / sponsored / ugc), sorted; '' = dofollow. */
+export function relQualifiers(rel: string): string {
+  const tokens = new Set(rel.toLowerCase().split(/\s+/));
+  return QUALIFIERS.filter((t) => tokens.has(t)).join(' ');
+}
 
 export function auditListingPageRel(
   html: string,
   listing: RelAuditListing,
 ): RelAuditResult {
-  const expectNofollow = hasNofollow(
+  const expected = relQualifiers(
     websiteLinkRel(!!listing.isPremium, !!listing.websiteBacklinkOk),
   );
   const rels = websiteLinkRelsInHtml(html, listing.websiteUrl);
   if (rels.length === 0) return { ok: false, reason: 'link-missing', rels };
-  if (rels.some((rel) => hasNofollow(rel) !== expectNofollow)) {
+  if (rels.some((rel) => relQualifiers(rel) !== expected)) {
     return { ok: false, reason: 'rel-mismatch', rels };
   }
   return { ok: true };

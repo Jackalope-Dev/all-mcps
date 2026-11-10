@@ -101,6 +101,10 @@ export async function GET(request: Request) {
       category: server.category,
       url: server.url,
       isOfficial: server.isOfficial,
+      officialSource: server.isOfficial
+        ? (server.officialSource ?? null)
+        : null,
+      ownerVerified: !!server.ownerVerified,
       isVerifiedActive: server.isVerifiedActive,
       upvotes: server.upvotes || 0,
       githubStars: server.githubStars ?? null,

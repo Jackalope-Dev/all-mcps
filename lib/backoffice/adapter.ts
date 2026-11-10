@@ -12,6 +12,7 @@
  * blast radius). Every mutation writes an admin_audit row.
  */
 
+import { OFFICIAL_SOURCES } from '../featuredStatus';
 import type { AuditStore } from './kit/adapter';
 import { bearerAuth, createAdminAdapter } from './kit/adapter';
 import type { Capability } from './kit/contract';
@@ -113,6 +114,23 @@ export function createBackofficeAdapter({
             type: 'boolean',
             inList: true,
           },
+          {
+            name: 'ownerVerified',
+            label: 'Verified owner',
+            type: 'boolean',
+            inList: true,
+          },
+          { name: 'officialSource', label: 'Official source', type: 'string' },
+          {
+            name: 'officialEvidenceUrl',
+            label: 'Official evidence',
+            type: 'string',
+          },
+          {
+            name: 'officialReviewedAt',
+            label: 'Official reviewed',
+            type: 'date',
+          },
           { name: 'createdAt', label: 'Added', type: 'date', inList: true },
           { name: 'url', label: 'URL', type: 'string' },
           { name: 'description', label: 'Description', type: 'string' },
@@ -150,6 +168,62 @@ export function createBackofficeAdapter({
     ],
 
     actions: [
+      {
+        // Official = published by the company behind the product. A claim
+        // never sets it (that is ownerVerified); granting needs evidence.
+        name: 'set_official',
+        label: 'Set Official (vendor-published)',
+        capability: 'content.review',
+        params: [
+          {
+            name: 'serverId',
+            label: 'Listing',
+            type: 'resourceRef',
+            resource: 'servers',
+            required: true,
+          },
+          {
+            name: 'official',
+            label: 'Official',
+            type: 'boolean',
+            required: true,
+          },
+          {
+            name: 'source',
+            label: 'Evidence type',
+            type: 'enum',
+            enumValues: [...OFFICIAL_SOURCES],
+          },
+          { name: 'evidenceUrl', label: 'Evidence URL', type: 'string' },
+        ],
+        async run(params) {
+          const id = String(params.serverId);
+          const before = await repo.servers.get(id);
+          if (!before) throw new Error(`listing ${id} not found`);
+          const official = params.official === true;
+          const source = String(params.source ?? '');
+          const evidenceUrl = String(params.evidenceUrl ?? '');
+          if (official) {
+            if (!(OFFICIAL_SOURCES as readonly string[]).includes(source))
+              throw new Error(
+                `source must be one of ${OFFICIAL_SOURCES.join(', ')}`,
+              );
+            if (!/^https?:\/\/\S+$/.test(evidenceUrl))
+              throw new Error('evidenceUrl must be an http(s) URL');
+          }
+          const after = await repo.servers.setOfficial(
+            id,
+            official
+              ? { official: true, source, evidenceUrl }
+              : { official: false },
+          );
+          return {
+            ok: true,
+            summary: `listing ${id} → ${official ? `official (${source})` : 'not official'}`,
+            audit: { targetType: 'server', targetId: id, before, after },
+          };
+        },
+      },
       {
         name: 'resolve_report',
         label: 'Resolve report',

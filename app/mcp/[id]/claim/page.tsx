@@ -32,7 +32,7 @@ async function getServer(id: string) {
     name: string;
     url: string;
     websiteUrl?: string;
-    isOfficial?: boolean;
+    ownerVerified?: boolean;
     reciprocalBadgeOk?: boolean;
     pendingClaimUserId?: string | null;
   }[];
@@ -88,10 +88,11 @@ export default async function ClaimPage({
             className="text-lead"
             style={{ margin: '0 auto', textAlign: 'center' }}
           >
-            Prove you own this MCP to get the Official badge and edit access —
-            proof is checked automatically, then reviewed by our team. Adding
-            the AllMCPs badge to your site is separate and doesn't require
-            claiming: we detect it automatically and mark your listing Verified.
+            Prove you own this MCP to get the Verified owner badge and edit
+            access. Proof is checked automatically, and anything we can't match
+            to the listing is reviewed by our team. Adding the AllMCPs badge to
+            your site is separate and doesn't require claiming: we detect it
+            automatically and make your website link dofollow.
           </p>
         </header>
         <ClaimClient
@@ -99,7 +100,7 @@ export default async function ClaimPage({
           serverName={server.name}
           repoUrl={server.url}
           websiteUrl={(server as any).websiteUrl}
-          isOfficial={(server as any).isOfficial}
+          ownerVerified={(server as any).ownerVerified}
           reciprocalBadgeOk={(server as any).reciprocalBadgeOk}
           hasPendingClaim={
             !!session?.user?.id &&

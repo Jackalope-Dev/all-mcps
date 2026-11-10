@@ -9,6 +9,7 @@ import { ServerAvatar } from '../../../../components/ui/ServerAvatar';
 import serversData from '../../../../data/mcp-servers.json';
 import { servers as serversTable } from '../../../../db/schema';
 import { parseServerName } from '../../../../lib/displayName';
+import { isVerifiedListing } from '../../../../lib/featuredStatus';
 import { redirectIfListingMoved } from '../../../../lib/listingRedirect';
 import { isPubliclyHidden } from '../../../../lib/servability';
 import { PUBLIC_SERVER_COLUMNS } from '../../../../lib/servers';
@@ -21,6 +22,7 @@ type Server = {
   category: string;
   logoUrl?: string | null;
   isOfficial: boolean;
+  ownerVerified?: boolean;
   isPremium?: boolean;
 };
 
@@ -198,7 +200,7 @@ export default async function EmbedPage({
             size={40}
           />
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            {(server.isOfficial || server.isPremium) && (
+            {isVerifiedListing(server) && (
               <span
                 style={{
                   fontSize: '0.65rem',

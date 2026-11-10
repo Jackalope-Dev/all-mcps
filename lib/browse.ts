@@ -2,6 +2,7 @@ import { type SQL, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import type { BrowseParams } from './browseParams';
 import { swrEdgeCache } from './edgeCache';
+import { OFFICIAL_BOOST, OWNER_VERIFIED_BOOST } from './search';
 import { recordSearchMiss } from './searchMisses';
 import { servableSql } from './servability';
 import {
@@ -23,7 +24,14 @@ import {
  */
 
 export type BrowseResult = {
+  /** Organic results. Paid status never changes their order. */
   items: DirectoryFeedItem[];
+  /**
+   * The labelled "Featured" slot: up to FEATURED_SLOTS paid listings (Premium
+   * or an active featured boost) that match the same query and filters, on
+   * page one only. Rendered as its own labelled row above the organic list.
+   */
+  featured: DirectoryFeedItem[];
   /** Matching listings; null on pages after the first, which skip the count. */
   total: number | null;
   /** True when `total` hit the search pool cap, so "500+" is the honest count. */
@@ -32,6 +40,8 @@ export type BrowseResult = {
 
 /** Ranked search results considered for facets and sorting. */
 const SEARCH_POOL = 500;
+/** Paid listings shown in the labelled Featured row on page one. */
+const FEATURED_SLOTS = 3;
 const CACHE_TTL_SECONDS = 300;
 
 /** Install runners per language: the stack filter reads the real install, not the name. */
@@ -51,6 +61,9 @@ function hasFacets(p: BrowseParams): boolean {
 
 const VERIFIED_SQL =
   "(s.tools_source = 'introspected' OR s.remote_endpoint_healthy = 1 OR s.install_needs_config IS NOT NULL)";
+
+/** trustMultiplier in lib/search.ts: Official, else owner-verified. Never paid status. */
+const TRUST_SQL = `(CASE WHEN s.is_official = 1 THEN ${OFFICIAL_BOOST} WHEN s.owner_verified = 1 THEN ${OWNER_VERIFIED_BOOST} ELSE 1.0 END)`;
 
 function facetConditions(p: BrowseParams): SQL[] {
   const out: SQL[] = [sql.raw(servableSql('s'))];
@@ -85,19 +98,25 @@ function facetConditions(p: BrowseParams): SQL[] {
   return out;
 }
 
+/** Premium or an active featured boost (lib/featuredStatus.ts isFeaturedListing). */
+function featuredSql(nowSec: number): SQL {
+  return sql`(s.is_premium = 1 OR coalesce(s.featured_until, 0) > ${nowSec})`;
+}
+
 /**
  * ORDER BY for a sort mode. Popular mirrors engagementScore in lib/search.ts
  * (with step functions standing in for the logs, which SQLite lacks);
  * trending divides raw engagement by listing age in days + 2 so newer
- * listings with activity rise. Both are weighted by the same quality multiplier, and put
- * featured listings first as the pricing page promises. Literal metrics
- * (most viewed/upvoted, newest, A-Z) stay literal.
+ * listings with activity rise. Both are weighted by the same quality
+ * multiplier (trust lift included), and so is relevance with no text query
+ * (views). Literal metrics (most viewed/upvoted, newest, A-Z) stay literal.
+ * Paid status is not an input: Featured listings get the labelled slot
+ * (selectFeatured), never a better organic position.
  */
 function orderBy(p: BrowseParams, nowSec: number, ranked: boolean): SQL {
-  const featured = sql`CASE WHEN s.is_premium = 1 OR coalesce(s.featured_until, 0) > ${nowSec} THEN 0 ELSE 1 END`;
   const quality =
     sql.raw(`(CASE WHEN s.health_status = 'archived' THEN 0.6 WHEN s.health_status = 'offline' THEN 0.5 ELSE 1.0 END)
-    * (CASE WHEN ${VERIFIED_SQL} THEN 1.15 ELSE 1.0 END)`);
+    * (CASE WHEN ${VERIFIED_SQL} THEN 1.15 ELSE 1.0 END) * ${TRUST_SQL}`);
   const starPoints =
     sql.raw(`(CASE WHEN coalesce(s.github_stars, 0) >= 10000 THEN 12
     WHEN coalesce(s.github_stars, 0) >= 1000 THEN 9
@@ -111,13 +130,15 @@ function orderBy(p: BrowseParams, nowSec: number, ranked: boolean): SQL {
     WHEN coalesce(s.npm_downloads, 0) >= 10 THEN 2 ELSE 0 END)`);
   switch (p.sort) {
     case 'relevance':
+      // A text search arrives ranked (the trust lift is already in that
+      // order); with no query, relevance is views with the same lift.
       return ranked
-        ? sql`${featured}, j.key ASC`
-        : sql`${featured}, s.views DESC, s.id`;
+        ? sql`j.key ASC`
+        : sql`s.views * ${sql.raw(TRUST_SQL)} DESC, s.views DESC, s.id`;
     case 'popular':
-      return sql`${featured}, (s.upvotes * 5 + s.copies + s.views * 0.05 + ${starPoints} + ${npmPoints}) * ${quality} DESC, s.created_at DESC, s.id`;
+      return sql`(s.upvotes * 5 + s.copies + s.views * 0.05 + ${starPoints} + ${npmPoints}) * ${quality} DESC, s.created_at DESC, s.id`;
     case 'trending':
-      return sql`${featured}, (s.upvotes * 10 + s.copies * 4 + s.views * 0.1
+      return sql`(s.upvotes * 10 + s.copies * 4 + s.views * 0.1
         + min(coalesce(s.github_stars, 0) * 0.1, 40) + min(coalesce(s.npm_downloads, 0) * 0.05, 25))
         * ${quality}
         / ((${nowSec} - coalesce(s.created_at, ${nowSec})) / 86400.0 + 2) DESC, s.created_at DESC, s.id`;
@@ -138,7 +159,7 @@ async function selectPage(
   p: BrowseParams,
   rankedIds: string[] | null,
   now: Date,
-): Promise<{ ids: string[]; total: number | null }> {
+): Promise<{ ids: string[]; total: number | null; featuredIds: string[] }> {
   const nowSec = Math.floor(now.getTime() / 1000);
   // One bound parameter however many ids: json_each unpacks the array in
   // SQLite, which also gives each id its rank (j.key) for relevance order.
@@ -150,25 +171,36 @@ async function selectPage(
       sql`json_each(${JSON.stringify(rankedIds)}) j CROSS JOIN servers s ON s.id = j.value`
     : sql`servers s`;
   const where = sql.join(facetConditions(p), sql` AND `);
-  const [rows, countRows] = await Promise.all([
+  const firstPage = p.offset === 0;
+  const [rows, countRows, featuredRows] = await Promise.all([
     db.all<{ id: string }>(
       sql`SELECT s.id AS id FROM ${from} WHERE ${where} ORDER BY ${orderBy(p, nowSec, rankedIds != null)} LIMIT ${p.limit} OFFSET ${p.offset}`,
     ),
     // The grid keeps page one's total, so later pages skip the count scan.
-    p.offset === 0
+    firstPage
       ? db.all<{ n: number }>(
           sql`SELECT count(*) AS n FROM ${from} WHERE ${where}`,
         )
       : Promise.resolve(null),
+    // The labelled Featured row: paid listings that match the same search and
+    // filters, in their organic order. Kept out of the organic ORDER BY.
+    firstPage
+      ? db.all<{ id: string }>(
+          sql`SELECT s.id AS id FROM ${from} WHERE ${where} AND ${featuredSql(nowSec)} ORDER BY ${orderBy(p, nowSec, rankedIds != null)} LIMIT ${FEATURED_SLOTS}`,
+        )
+      : Promise.resolve([]),
   ]);
   return {
     ids: rows.map((r) => r.id),
     total: countRows ? Number(countRows[0]?.n ?? 0) : null,
+    featuredIds: featuredRows.map((r) => r.id),
   };
 }
 
 function cacheKey(p: BrowseParams): string {
-  return `browse/v2/${JSON.stringify(p)}`;
+  // v4: Official / owner-verified trust lift in relevance, popular and
+  // trending. v3: organic order no longer puts paid listings first.
+  return `browse/v4/${JSON.stringify(p)}`;
 }
 
 async function getDb(): Promise<ReturnType<typeof drizzle> | null> {
@@ -190,7 +222,7 @@ export async function browseCatalog(
   if (!db) {
     // Local dev without D1: newest-first snapshot, unfiltered.
     const { items, total } = snapshotFeedPage(p.offset, p.limit);
-    return { items, total, capped: false };
+    return { items, featured: [], total, capped: false };
   }
 
   // Stale-while-revalidate, kept per colo and globally in R2: the search and
@@ -202,15 +234,32 @@ export async function browseCatalog(
     { freshMs: CACHE_TTL_SECONDS * 1000, maxAgeSeconds: 24 * 60 * 60 },
     () => searchPage(db, p, now),
   );
-  const { ids, total, capped } = cached ?? { ids: [], total: 0, capped: false };
-  return { items: await getFeedItemsByIds(ids), total, capped };
+  const { ids, total, capped, featuredIds } = cached ?? {
+    ids: [],
+    total: 0,
+    capped: false,
+    featuredIds: [],
+  };
+  // One hydrate for both lists; a featured listing is often on the page too.
+  const all = await getFeedItemsByIds([...new Set([...ids, ...featuredIds])]);
+  const byId = new Map(all.map((s) => [s.id, s]));
+  const pick = (list: string[]) =>
+    list
+      .map((id) => byId.get(id))
+      .filter((s): s is DirectoryFeedItem => Boolean(s));
+  return { items: pick(ids), featured: pick(featuredIds), total, capped };
 }
 
 async function searchPage(
   db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
   p: BrowseParams,
   now: Date,
-): Promise<{ ids: string[]; total: number | null; capped: boolean } | null> {
+): Promise<{
+  ids: string[];
+  total: number | null;
+  capped: boolean;
+  featuredIds: string[];
+} | null> {
   let rankedIds: string[] | null = null;
   let capped = false;
   if (p.q) {
@@ -229,7 +278,7 @@ async function searchPage(
 
   const page =
     rankedIds && rankedIds.length === 0
-      ? { ids: [], total: 0 }
+      ? { ids: [], total: 0, featuredIds: [] }
       : await selectPage(db, p, rankedIds, now);
 
   // A text search that found nothing is demand we can't meet. Facet misses are
@@ -238,5 +287,10 @@ async function searchPage(
     await recordSearchMiss(db, p.q, 'browse', now);
   }
 
-  return { ids: page.ids, total: page.total, capped };
+  return {
+    ids: page.ids,
+    total: page.total,
+    capped,
+    featuredIds: page.featuredIds,
+  };
 }

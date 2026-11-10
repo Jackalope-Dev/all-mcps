@@ -178,6 +178,17 @@ describe('catalog sourcing jobs', () => {
     ]);
   });
 
+  it('rebuilds the stored exports every 2h on the :45 tick only', () => {
+    const exportsAt = (iso: string) =>
+      due(iso).filter((p) => p === '/api/cron/exports');
+    expect(exportsAt('2026-10-14T01:45:00Z')).toEqual(['/api/cron/exports']);
+    expect(exportsAt('2026-10-14T23:45:00Z')).toEqual(['/api/cron/exports']);
+    expect(exportsAt('2026-10-14T02:45:00Z')).toEqual([]);
+    // Never on a tick the */20 batches share.
+    expect(exportsAt('2026-10-14T01:00:00Z')).toEqual([]);
+    expect(isOffloadedCronPath('/api/cron/exports')).toBe(true);
+  });
+
   it('auto-promotes on every slow tick', () => {
     const job = SLOW_JOBS.find((j) => j.path === '/api/cron/auto-promote');
     expect(job).toBeDefined();

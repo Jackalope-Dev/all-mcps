@@ -118,6 +118,7 @@ export async function GET(request: Request) {
       category: server.category || 'Developer Tools',
       url: server.url,
       isOfficial: Boolean(server.isOfficial),
+      ownerVerified: Boolean(server.ownerVerified),
       isVerifiedActive: Boolean(server.isVerifiedActive),
       upvotes: server.upvotes || 0,
       githubStars: server.githubStars ?? null,

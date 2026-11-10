@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og';
+import { getCatalogCount } from '@/lib/catalogCount';
 import { getEcosystemStats } from '@/lib/ecosystemStats';
 
 // Share card with the live headline numbers — the thing that makes a link to
@@ -26,9 +27,15 @@ function share(part: number, total: number): number {
 }
 
 export default async function Image() {
-  const stats = await getEcosystemStats();
+  const [stats, catalog] = await Promise.all([
+    getEcosystemStats(),
+    getCatalogCount(),
+  ]);
 
   const total = stats?.total ?? 0;
+  // The headline is the site-wide count (lib/catalogCount.ts), so the card
+  // matches the page, the homepage and /trust.
+  const listed = catalog?.count ?? total;
   const stdio =
     stats?.transport.find((t) => t.label === 'Local (stdio)')?.count ?? 0;
   const remote =
@@ -125,7 +132,7 @@ export default async function Image() {
               color: 'transparent',
             }}
           >
-            {stats ? fmt(total) : 'State of MCP'}
+            {stats ? fmt(listed) : 'State of MCP'}
           </div>
           <div
             style={{

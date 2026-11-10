@@ -20,14 +20,19 @@ interface HealthHistoryStripProps {
   history: ServerHealthCheck[];
   verification?: { status?: string | null } | null;
   hasRemoteEndpoint?: boolean;
-  isOfficial?: boolean;
+  /**
+   * AllMCPs' own server: the health checker runs inside our Worker and can't
+   * reach its own zone, so its checks read as failures. Nothing else gets a
+   * pass; Official says who publishes a server, not whether it is up.
+   */
+  selfHosted?: boolean;
 }
 
 export function HealthHistoryStrip({
   history,
   verification,
   hasRemoteEndpoint,
-  isOfficial,
+  selfHosted,
 }: HealthHistoryStripProps) {
   // Too little data yet to read as a trend — the single health dot elsewhere
   // on the page already covers "what's the status right now".
@@ -49,10 +54,10 @@ export function HealthHistoryStrip({
         aria-label={`${healthyCount} of ${history.length} recent health checks succeeded, over ${spanLabel(oldest)}.`}
       >
         {history.map((h) => {
-          const isPrimaryPass = h.healthy || isOfficial;
+          const isPrimaryPass = h.healthy || selfHosted;
           const isRemotePass =
-            h.remoteHealthy === true || (isOfficial && hasRemoteEndpoint);
-          const isRemoteFail = h.remoteHealthy === false && !isOfficial;
+            h.remoteHealthy === true || (selfHosted && hasRemoteEndpoint);
+          const isRemoteFail = h.remoteHealthy === false && !selfHosted;
 
           const dateStr = new Date(h.checkedAt).toLocaleString(undefined, {
             dateStyle: 'short',

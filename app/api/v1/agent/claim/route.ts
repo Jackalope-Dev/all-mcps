@@ -197,7 +197,7 @@ export async function POST(req: Request) {
         {
           success: true,
           pending: true,
-          isOfficial: false,
+          ownerVerified: false,
           message: ownedByOther
             ? 'This listing is already claimed by another account; the claim was queued for admin review.'
             : "Proof verified, but the website doesn't match this listing's URL or website; the claim was queued for admin review.",
@@ -242,8 +242,9 @@ export async function POST(req: Request) {
     }
     const earnedReciprocal = readmeBadgeOk || websiteBacklinkOk;
 
+    // A claim sets "Verified owner"; Official (vendor) is admin-only.
     const claimUpdates: Record<string, unknown> = {
-      isOfficial: true,
+      ownerVerified: true,
       ownerUserId: agent.userId,
       claimedAt: server.claimedAt || new Date(),
       pendingClaimUserId: null,
@@ -257,7 +258,7 @@ export async function POST(req: Request) {
     }
 
     await db.update(servers).set(claimUpdates).where(eq(servers.id, id));
-    // Official status (repo link rel) and possibly the website backlink changed.
+    // Owner-verified status (repo link rel) and possibly the website backlink changed.
     refreshListingPageInBackground(id);
 
     const methodLabel =
@@ -278,7 +279,7 @@ export async function POST(req: Request) {
       await sendNotificationEmail({
         to: notificationEmail,
         heading: `Agent Claim Approved: ${server.name}`,
-        message: `Ownership proof for "${server.name}" was verified via ${methodLabel} and is now official. You have full edit access.\n\n${dofollowNote}`,
+        message: `Ownership proof for "${server.name}" was verified via ${methodLabel}, and the listing now shows "Verified owner". You have full edit access.\n\n${dofollowNote}`,
         actionText: 'View Listing',
         actionUrl: `${getAppUrl()}/mcp/${id}`,
       });
@@ -298,10 +299,10 @@ export async function POST(req: Request) {
       {
         success: true,
         pending: false,
-        isOfficial: true,
+        ownerVerified: true,
         reciprocalBadgeOk: earnedReciprocal,
         message:
-          'Ownership proof verified and claim approved! The listing is now official.',
+          'Ownership proof verified and claim approved! The listing now shows "Verified owner".',
       },
       { status: 200, headers: CORS_HEADERS },
     );

@@ -3,14 +3,16 @@ import Link from 'next/link';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { CategoryGrid } from '../../components/CategoryGrid';
 import { PageShell } from '../../components/PageShell';
+import { getCatalogCount } from '../../lib/catalogCount';
 import { categorySlug } from '../../lib/categories';
 import { getActiveServersLight, getCategoryCounts } from '../../lib/servers';
 
 /** Servers per category shown as the card's "top servers" preview. */
 const PREVIEW_PER_CATEGORY = 3;
 
-// Hourly ISR keeps category counts current from D1 without querying on every request.
-export const revalidate = 3600;
+// 15-minute ISR, the same window as the site-wide count (lib/catalogCount.ts),
+// so the headline here matches the homepage and /trust.
+export const revalidate = 900;
 
 export const metadata: Metadata = {
   title: 'Browse MCP Servers by Category',
@@ -76,9 +78,10 @@ export default async function CategoriesPage() {
   // row to count it in the Worker.
   // The preview pool is the light discovery scan (no tools / AI columns),
   // capped and ordered by views, so each card can show its best-known servers.
-  const [counts, pool] = await Promise.all([
+  const [counts, pool, catalog] = await Promise.all([
     getCategoryCounts(),
     getActiveServersLight(1500),
+    getCatalogCount(),
   ]);
   const previews = new Map<
     string,
@@ -107,7 +110,9 @@ export default async function CategoriesPage() {
       };
     });
 
-  const totalServers = Object.values(counts).reduce((a, b) => a + b, 0);
+  // The site-wide count; the category sum only stands in before it ever loads.
+  const totalServers =
+    catalog?.count ?? Object.values(counts).reduce((a, b) => a + b, 0);
 
   // JSON-LD structured data
   const jsonLd = {
@@ -174,9 +179,11 @@ export default async function CategoriesPage() {
         <header className="dir-page-head animate-in">
           <h1 className="text-page-title">Browse by category</h1>
           <p className="text-lead">
-            <span className="tabular">{totalServers.toLocaleString()}</span> MCP
-            servers across {categories.length} categories. Pick a domain to see
-            its top picks, or filter the list below.
+            <span className="tabular">
+              {totalServers.toLocaleString('en-US')}
+            </span>{' '}
+            MCP servers across {categories.length} categories. Pick a domain to
+            see its top picks, or filter the list below.
           </p>
         </header>
 

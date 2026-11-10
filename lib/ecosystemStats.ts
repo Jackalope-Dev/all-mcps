@@ -1,11 +1,13 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { servableSql } from './servability';
 
 /**
  * Aggregate statistics about the MCP ecosystem as indexed by AllMCPs — powers
  * /state-of-mcp, a citable data page (original numbers are what earn links and
  * AI-answer citations; nobody else has this dataset).
  *
- * Every figure is computed live from active listings — nothing hand-entered —
+ * Every figure is computed live from servable listings (lib/servability.ts,
+ * the set browse and search serve) — nothing hand-entered —
  * and the page states the method next to each number. One D1 batch of GROUP BY
  * queries (~20k rows scanned), cached per isolate for CACHE_TTL_MS so crawler
  * traffic doesn't turn into repeated full scans.
@@ -37,7 +39,9 @@ export type EcosystemStats = {
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 let cache: { at: number; stats: EcosystemStats } | null = null;
 
-const ACTIVE = "status = 'active'";
+// The headline listing count on the page comes from getCatalogCount
+// (lib/catalogCount.ts); these breakdowns cover the same servable set.
+const ACTIVE = servableSql();
 
 type Row = Record<string, unknown>;
 

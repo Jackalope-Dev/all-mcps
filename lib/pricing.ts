@@ -90,7 +90,7 @@ export const FREE_TIER: FreeTier = {
     'Permanent directory listing — free forever',
     'Included in search, categories & agent APIs',
     'Claim ownership via GitHub, site badge, or DNS',
-    'Nofollow website backlink',
+    'Dofollow website link while your site shows the free AllMCPs badge',
     'Standard review queue',
   ],
   placementHint: 'Standard directory placement across search & categories.',
@@ -127,8 +127,8 @@ export const PAID_PRODUCTS: Record<PaidSku, PaidProduct> = {
     placementHint: 'Homepage discovery marquee & directory grid cards.',
     targetAudience: 'Active MCPs wanting a sudden surge of developer traffic',
     benefits: [
-      '★ Featured badge in browse grid & search results',
-      'Higher ranking weight across homepage discovery',
+      '★ A labelled Featured slot above matching browse & search results',
+      'A place on the homepage Featured shelf',
       'Glowing card border highlighting your listing',
       'Runs for as many weeks as you buy',
     ],
@@ -173,15 +173,13 @@ export const PAID_PRODUCTS: Record<PaidSku, PaidProduct> = {
     mode: 'subscription',
     priceEnv: 'STRIPE_PRICE_PREMIUM_MONTHLY',
     badgeText: '💎 Best Value',
-    placementHint:
-      'Homepage rotation, category highlights & agent API priority.',
+    placementHint: 'Homepage rotation & the labelled Featured slots.',
     targetAudience:
       'Growth-stage MCPs, SaaS tools & companies seeking continuous reach',
     benefits: [
       'Guaranteed featured rotation on homepage & browse',
       'Rich analytics: see which LLMs & agents access your server',
-      'Dofollow website backlink (valuable SEO boost)',
-      'Verified / Premium badge & glowing card design',
+      'Premium label & glowing card design',
       'Impression tracking & search discovery insights',
       'Priority support',
     ],

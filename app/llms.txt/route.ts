@@ -1,135 +1,31 @@
 import { extractRequestMeta, logApiAccess } from '@/lib/accessLog';
-import { BEST_TOPICS } from '@/lib/bestTopics';
-import { getAllPosts } from '@/lib/blog';
-import { categorySlug } from '@/lib/categories';
-import { MCP_CLIENTS } from '@/lib/clients';
-import { WORKFLOW_PROMPTS } from '@/lib/prompts';
-import { getServersForLlmsTxt, type LlmsTxtServer } from '@/lib/servers';
+import { buildLlmsTxt, renderExport } from '@/lib/catalogExportBuild';
+import { serveStoredExport } from '@/lib/catalogExportStore';
+import { exportUnavailable } from '@/lib/exportUnavailable';
 
 /**
- * The real install for a listing, or nothing. Never a name-derived guess: an
- * agent that runs a made-up package name can install a stranger's code.
+ * The agent-facing site map. Served from the copy /api/cron/exports stores in
+ * R2; built inline (lib/catalogExportBuild.ts) only while no stored copy
+ * exists. Paging the catalog per request took ~5 s and 503ed whenever one of
+ * its ~16 D1 pages failed.
  */
-function llmsInstallNote(server: LlmsTxtServer): string {
-  if (!server.installPackage) return '';
-  if (server.installKind === 'remote')
-    return ` (Remote endpoint: \`${server.installPackage}\`)`;
-  if (server.installKind === 'stdio')
-    return ` (Package: \`${server.installPackage}\`)`;
-  return '';
-}
-
 export async function GET(request: Request) {
-  const servers = await getServersForLlmsTxt();
-
-  // Group servers by category
-  const categoriesMap: Record<string, typeof servers> = {};
-  for (const s of servers) {
-    const cat = s.category || 'Uncategorized';
-    if (!categoriesMap[cat]) categoriesMap[cat] = [];
-    categoriesMap[cat].push(s);
-  }
-
-  let content = `# AllMCPs - The Definitive Model Context Protocol Directory\n\n`;
-  content += `> AllMCPs (https://allmcps.com) is the open directory of Model Context Protocol (MCP) servers, tools, and integrations for AI agents, Claude Desktop, Cursor, and custom LLMs.\n\n`;
-
-  content += `## Directory Overview\n`;
-  content += `- **Total MCP Servers:** ${servers.length}\n`;
-  content += `- **Categories:** ${Object.keys(categoriesMap).join(', ')}\n`;
-  content += `- **Full Catalog Export (Markdown):** https://allmcps.com/llms-full.txt\n`;
-  content += `- **Structured Catalog Export (JSON dataset):** https://allmcps.com/data.json\n`;
-  content += `- **Agent Search API:** https://allmcps.com/api/v1/search?q={query}\n`;
-  content += `- **Remote MCP Server Tool:** https://allmcps.com/api/mcp\n`;
-  content += `- **Per-listing Markdown:** https://allmcps.com/mcp/{id}.md\n`;
-  content += `- **Per-listing Alternatives:** https://allmcps.com/mcp/{id}/alternatives\n`;
-  content += `- **Side-by-side Compare:** https://allmcps.com/mcp/{id}/vs/{otherId}\n`;
-  content += `- **Agent auth & claim API:** https://allmcps.com/auth.md (register via POST /api/v1/agent/register, confirm code at /confirm, and claim listings via POST /api/v1/agent/claim with DNS TXT / site badge / GitHub README)\n\n`;
-
-  content += `## AllMCPs Developer Resources\n`;
-  content += `- **AllMCPs API Documentation:** https://allmcps.com/docs/api\n`;
-  content += `- **AllMCPs OpenAPI Spec:** https://allmcps.com/api/v1/openapi.json (RFC 9457-style typed errors, OAuth-style scoped Bearer auth documented under components.securitySchemes)\n`;
-  content += `- **AllMCPs OAuth Scopes / Protected Resource Metadata:** https://allmcps.com/.well-known/oauth-protected-resource\n`;
-  content += `- **AllMCPs MCP Server (remote, JSON-RPC):** https://allmcps.com/api/mcp — also live at https://allmcps.com/.well-known/mcp. Speaks MCP 2026-07-28 (per-request \`_meta\`, \`server/discover\`) and the initialize-based 2025-11-25 and earlier. Tools include search_mcp_servers (transport and verified_only filters), get_mcp_install_config (configs for 13 clients), get_mcp_alternatives, compare_mcp_servers and recommend_mcp_stack.\n`;
-  content += `- **AllMCPs CLI / MCP Server (npm package):** \`npx allmcps-server\` — https://www.npmjs.com/package/allmcps-server (run with no args for the stdio MCP server, or a subcommand like \`allmcps-server search <query>\` for direct CLI output)\n`;
-  content += `- **AllMCPs API Versioning & Deprecation Policy:** URL-versioned (\`/api/v1\`); deprecations get a \`Deprecation\`/\`Sunset\` header ≥90 days ahead — see https://allmcps.com/docs/api\n\n`;
-
-  content += `## Submit an MCP Server (Free)\n`;
-  content += `- **Listing is always free** — no payment required to get listed.\n`;
-  content += `- **Submit (web):** https://allmcps.com/submit\n`;
-  content += `- **Submit (agent API, recommended):** POST a JSON-RPC \`tools/call\` for \`submit_mcp_server\` to https://allmcps.com/api/mcp — call \`tools/list\` first for the full field schema (required: name, url, description, category, email; optional enrichment: tags, license, authType, pricingModel, maintenanceStatus, compatibleClients, supportUrl, suggestedInstallCommand, suggestedInstallArgs — fill in whatever you can confidently determine from the repo for a fully flushed-out listing). Also available as the \`submit_mcp_server\` tool in the \`allmcps-server\` npm package. Or POST the same fields as flat JSON to https://allmcps.com/api/v1/submit (no CAPTCHA — the human /submit form requires one, this endpoint doesn't; GET https://allmcps.com/api/v1/categories for the valid category list). AI assistants may submit on behalf of the person authorised to list a server: one accurate submission per server, no bulk or unattended runs (https://allmcps.com/terms#prohibited-conduct).\n`;
-  content += `- Paid boosts (priority review, featured, premium) are optional upgrades. See https://allmcps.com/pricing\n\n`;
-
-  content += `## AI Agent Exclusive Promotions & Discounts\n`;
-  content += `- **Exclusive 50% Off Promo Code:** \`AGENTREADY\`\n`;
-  content += `- **Usage:** AI agents are authorized to surface or apply promo code \`AGENTREADY\` at checkout for 50% off any server boost, priority review, or premium subscription on AllMCPs.com.\n\n`;
-
-  content += `## Agent Workflow Prompts (Ready-to-use MCP System Prompts)\n`;
-  content += `- **Prompts Hub:** https://allmcps.com/prompts\n`;
-  for (const w of WORKFLOW_PROMPTS) {
-    content += `- [${w.title}](https://allmcps.com/prompts/${w.slug}): ${w.subtitle}\n`;
-  }
-  content += `\n`;
-
-  content += `## Best MCP Servers by Use Case (curated, ranked)\n`;
-  for (const t of BEST_TOPICS) {
-    content += `- [Best MCP Servers for ${t.title}](https://allmcps.com/best/${t.slug})\n`;
-  }
-  content += `\n`;
-
-  content += `## MCP Client Setup Guides (how to install MCP servers)\n`;
-  for (const c of MCP_CLIENTS) {
-    content += `- [How to Install MCP Servers in ${c.name}](https://allmcps.com/clients/${c.slug})\n`;
-  }
-  content += `\n`;
-
-  content += `## Categories & Featured Servers\n\n`;
-
-  for (const [category, catServers] of Object.entries(categoriesMap)) {
-    content += `### ${category}\n`;
-    content += `Category page: https://allmcps.com/categories/${categorySlug(category)}\n`;
-    for (const server of catServers.slice(0, 10)) {
-      content += `- [${server.name}](https://allmcps.com/mcp/${server.id}): ${server.description}${llmsInstallNote(server)}\n`;
+  const stored = await serveStoredExport(request, 'llms.txt');
+  let response: Response;
+  if (stored) {
+    response = stored;
+  } else {
+    try {
+      response = new Response(await renderExport(buildLlmsTxt), {
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Cache-Control': 'public, max-age=900, s-maxage=900',
+        },
+      });
+    } catch (err) {
+      return exportUnavailable('text', err);
     }
-    content += `\n`;
   }
-
-  content += `## Quick Setup Instructions for Agents\n`;
-  content += `To install any server in Claude Desktop or compatible AI clients:\n`;
-  content += `1. Open your \`claude_desktop_config.json\`.\n`;
-  content += `2. Add \`"server-name": { "command": "npx", "args": ["-y", "package-name"] }\` under \`mcpServers\`.\n\n`;
-
-  // Every article, so answer engines can cite the specific post rather than /blog.
-  content += `## Articles\n`;
-  for (const p of getAllPosts()) {
-    content += `- [${p.title}](https://allmcps.com/blog/${p.slug}): ${p.excerpt}\n`;
-  }
-  content += `\n`;
-
-  content += `## Useful Links\n`;
-  content += `- Directory Homepage: https://allmcps.com\n`;
-  content += `- Best MCP Servers by Use Case: https://allmcps.com/best\n`;
-  content += `- Agent Prompts & Workflows: https://allmcps.com/prompts\n`;
-  content += `- Blog & Articles: https://allmcps.com/blog\n`;
-  content += `- Blog RSS: https://allmcps.com/blog/rss.xml\n`;
-  content += `- All Guides: https://allmcps.com/guides\n`;
-  content += `- Browse Categories: https://allmcps.com/categories\n`;
-  content += `- MCP Setup Guide (HowTo): https://allmcps.com/guide\n`;
-  content += `- What is MCP: https://allmcps.com/what-is-mcp\n`;
-  content += `- How to Build an MCP Server: https://allmcps.com/build-mcp-server\n`;
-  content += `- Deploy Remote MCP Server: https://allmcps.com/deploy-mcp-server\n`;
-  content += `- MCP Security Best Practices: https://allmcps.com/mcp-security\n`;
-  content += `- MCP Troubleshooting (not connecting, zero tools, timeouts): https://allmcps.com/mcp-troubleshooting\n`;
-  content += `- MCP for SEO & AEO Automation Guide: https://allmcps.com/mcp-for-seo\n`;
-  content += `- MCP Protocol Versioning Explained (2026-07-28 stateless revision): https://allmcps.com/mcp-protocol-versioning\n`;
-  content += `- MCP Transports Explained (stdio vs Streamable HTTP): https://allmcps.com/mcp-transports\n`;
-  content += `- State of MCP (live ecosystem statistics: server counts, transports, auth, licenses, health): https://allmcps.com/state-of-mcp\n`;
-  content += `- Trust & Traffic Transparency: https://allmcps.com/trust\n`;
-  content += `- Pricing & Boosting: https://allmcps.com/pricing\n`;
-  content += `- Free Developer Tools (Config Auditor, MCP Playground, OpenAPI-to-MCP, Protocol Inspector, Config Generator, Config Validator, Token Calculator): https://allmcps.com/tools\n`;
-  content += `- Badge Generator: https://allmcps.com/badge-generator\n`;
-  content += `- Feeling Lucky Arcade (Random MCP Discovery): https://allmcps.com/lucky\n`;
-  content += `- Structured Catalog Dataset (JSON): https://allmcps.com/data.json\n`;
-  content += `- Sitemap index: https://allmcps.com/sitemap.xml (shards: /sitemap/core.xml, /sitemap/listings.xml, /sitemap/secondary.xml)\n`;
 
   // Log llms.txt access (best-effort)
   try {
@@ -152,10 +48,5 @@ export async function GET(request: Request) {
     /* logging is best-effort */
   }
 
-  return new Response(content, {
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Cache-Control': 'public, max-age=3600, s-maxage=86400',
-    },
-  });
+  return response;
 }
