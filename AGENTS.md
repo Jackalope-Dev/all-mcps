@@ -153,17 +153,33 @@ revert their work.
   leaves `main` alone.
 - `bun run worktrees` lists worktrees; `--remove-merged` removes clean, merged ones.
 
+# Deploys need the owner's go-ahead
+
+Pushing or merging to `main` deploys to production. Direct pushes to `main` are welcome,
+but only when the repository owner has approved that specific change in the current
+session (for example "push it", "deploy it", "merge that").
+
+- Without that approval: commit on a branch in `.worktrees/<task>`, push the branch,
+  open a PR, and ask. Don't merge it yourself.
+- An approval covers the change it was given for, not later ones, and never carries over
+  to a new session or to another agent.
+- The same rule covers deploy commands (`bun run deploy`, `bun run deploy:cf`, `wrangler deploy`), production
+  database migrations or writes, and secret changes.
+- With approval: run every gate first. Never `--no-verify`, force-push, or use admin
+  rights to skip required checks.
+
 # Committing
 
 Agents commit their own work, on a branch, as the repo's configured git user:
 
-- Work in `.worktrees/<task>` on a branch cut from the default branch. Never commit
-  or push to the default branch directly; the user merges.
+- Work in `.worktrees/<task>` on a branch cut from the default branch. Commit or push
+  to `main` directly only with the owner's approval (see "Deploys need the owner's
+  go-ahead"); otherwise push the branch and open a PR.
 - Commit when a coherent piece of work passes the Definition of Done. Conventional
   messages (`feat:`, `fix:`, `chore:`), body says why.
 - No `Co-Authored-By` or other agent attribution trailers.
-- Do not push unless the user asks. Never force-push, `git reset --hard`, or
-  `git clean` (they are denied in `.claude/settings.json`).
+- Never force-push, `git reset --hard`, or `git clean` (they are denied in
+  `.claude/settings.json`).
 - Stage only files you changed for this task (`git add <paths>`, not `git add -A`)
   so parallel sessions' work stays out of your commit.
 
