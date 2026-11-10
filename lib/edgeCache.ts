@@ -72,7 +72,7 @@ async function sharedBucket(): Promise<R2Bucket | null> {
 async function readSwrEntry<T>(
   key: string,
   maxAgeSeconds: number,
-): Promise<SwrEntry<T> | null> {
+): Promise<(SwrEntry<T> & { shared?: boolean }) | null> {
   const local = await readEdgeCache<SwrEntry<T>>(key, reviveDates);
   if (local) return local;
   try {
@@ -82,7 +82,7 @@ async function readSwrEntry<T>(
     const ageSeconds = (Date.now() - entry.timestamp) / 1000;
     if (ageSeconds >= maxAgeSeconds) return null;
     await writeEdgeCache(key, entry, maxAgeSeconds - ageSeconds);
-    return entry;
+    return { ...entry, shared: true };
   } catch {
     return null;
   }
@@ -96,6 +96,12 @@ async function readSwrEntry<T>(
  * anywhere waits on `load`. `load` returns null for "no usable data" (D1
  * missing or failed), which is never cached. A background reload gets the
  * stale copy, so a loader can keep a part it failed to recompute.
+ *
+ * A stale colo copy first checks R2 for a fresh one another colo already
+ * loaded. Without that, each colo served its own stale value until its own
+ * reload landed: after the stale-flag cleanup on 2026-11-10 the homepage
+ * (ISR, rendered in one colo) showed 30,533 listings while /trust showed
+ * 31,305, the catalog count's two copies a reload apart.
  */
 export async function swrEdgeCache<T>(
   key: string,
@@ -104,9 +110,10 @@ export async function swrEdgeCache<T>(
 ): Promise<T | null> {
   const entry = await readSwrEntry<T>(key, opts.maxAgeSeconds);
   if (entry) {
-    if (Date.now() - entry.timestamp >= opts.freshMs) {
-      void refreshInBackground(key, opts, () => load(entry.data));
-    }
+    if (Date.now() - entry.timestamp < opts.freshMs) return entry.data;
+    const shared = entry.shared ? null : await freshSharedEntry<T>(key, opts);
+    if (shared) return shared.data;
+    void refreshInBackground(key, opts, () => load(entry.data));
     return entry.data;
   }
   return loadAndStore(key, opts, () => load(null));
@@ -137,7 +144,8 @@ async function loadAndStore<T>(
  * written into this colo's cache, else null. A stale colo copy used to send
  * every colo (and every isolate past SWR_REFRESH_RETRY_MS) back to D1 on its
  * own: newest-in-category, a ~1 s scan, ran ~2.4k times a day for ~25 keys
- * on a 6 h refresh, and those scans pile onto D1 at the cron ticks.
+ * on a 6 h refresh, and those scans pile onto D1 at the cron ticks. It also
+ * served each colo's stale value meanwhile.
  */
 async function freshSharedEntry<T>(
   key: string,
@@ -169,16 +177,9 @@ async function refreshInBackground<T>(
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const { ctx } = getCloudflareContext();
     ctx.waitUntil(
-      freshSharedEntry<T>(key, opts)
-        .then((shared) =>
-          shared ? shared.data : loadAndStore(key, opts, load),
-        )
-        .catch((err) => {
-          console.error(
-            `[edgeCache] background refresh of ${key} failed:`,
-            err,
-          );
-        }),
+      loadAndStore(key, opts, load).catch((err) => {
+        console.error(`[edgeCache] background refresh of ${key} failed:`, err);
+      }),
     );
   } catch {
     // No request context (build, tests): the stale copy stands until next time.
