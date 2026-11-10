@@ -133,7 +133,7 @@ describe('whole-catalog exports', () => {
 
   it('/data.json answers 503, uncached, when D1 fails', async () => {
     state.failing = true;
-    const res = await dataJsonGet();
+    const res = await dataJsonGet(new Request('https://allmcps.com/data.json'));
     expect(res.status).toBe(503);
     expect(res.headers.get('Cache-Control')).toBe('no-store');
     expect(await res.json()).toMatchObject({ error: 'catalog_unavailable' });
@@ -149,6 +149,44 @@ describe('whole-catalog exports', () => {
     }
   });
 
+  it('/llms-full.txt never builds per request: 503 until a stored copy exists', async () => {
+    const res = await llmsFullGet(
+      new Request('https://allmcps.com/llms-full.txt'),
+    );
+    expect(res.status).toBe(503);
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
+    expect(state.serverQueries).toBe(0);
+  });
+
+  it('builds llms-full.txt and data.json as chunks of one whole file', async () => {
+    const { buildDataJson, buildLlmsFull } = await import(
+      './catalogExportBuild'
+    );
+    const full = await buildLlmsFull(null);
+    let text = '';
+    for await (const c of full.chunks) text += c;
+    expect(full.rows).toBe(SERVABLE.length);
+    expect(text).toMatch(/^# AllMCPs - Complete Catalog Export/);
+    for (const id of SERVABLE) expect(text).toContain(id);
+    expect(text).not.toContain('d-flagged');
+
+    const data = await buildDataJson({
+      count: 4,
+      asOf: '2026-11-10T00:00:00Z',
+    });
+    let json = '';
+    for await (const c of data.chunks) json += c;
+    const parsed = JSON.parse(json) as {
+      count: number;
+      catalogCount: number;
+      servers: { id: string; detailUrl: string }[];
+    };
+    expect(parsed.count).toBe(SERVABLE.length);
+    expect(parsed.catalogCount).toBe(4);
+    expect(parsed.servers.map((x) => x.id)).toEqual(SERVABLE);
+    expect(parsed.servers[0].detailUrl).toBe('https://allmcps.com/mcp/a-one');
+  });
+
   it('/llms.txt prints the site-wide count and no agent authorization', async () => {
     const res = await llmsGet(new Request('https://allmcps.com/llms.txt'));
     const text = await res.text();
@@ -158,7 +196,7 @@ describe('whole-catalog exports', () => {
   });
 
   it('/data.json reports the export rows and the site-wide count', async () => {
-    const res = await dataJsonGet();
+    const res = await dataJsonGet(new Request('https://allmcps.com/data.json'));
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       count: number;
