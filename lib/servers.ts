@@ -87,6 +87,22 @@ function servableFilter(): SQL {
 }
 
 /**
+ * servableFilter for keyset paging in id order (the whole-catalog exports).
+ * The unary `+` keeps `status` out of index selection so SQLite walks the
+ * primary key from `afterId`: ~2.7k rows read per 2,000-row page on prod D1.
+ * With a plain `status = ?` it picked a status index and sorted every active
+ * row for each page (~65k rows read per page, ~1M per export), which
+ * overloaded D1 within minutes of deploying the paged exports.
+ */
+function servableAfterIdFilter(afterId: string): SQL {
+  return and(
+    sql`+${serversTable.status} = ${'active'}`,
+    isNull(serversTable.staleFlaggedAt),
+    gt(serversTable.id, afterId),
+  ) as SQL;
+}
+
+/**
  * servableFilter for a batch of ids. The unary `+` keeps `status` out of
  * index selection: D1 has no sqlite_stat1, so the planner guesses `status = ?`
  * matches ~10 rows and walks a status index (all ~34k active rows) instead of
@@ -1122,7 +1138,7 @@ export async function* iterateActiveServers(
     const rows = await searchDb.db
       .select(SCORING_SERVER_COLUMNS)
       .from(serversTable)
-      .where(and(servableFilter(), gt(serversTable.id, after)))
+      .where(servableAfterIdFilter(after))
       .orderBy(serversTable.id)
       .limit(pageSize);
     if (rows.length === 0) break;
@@ -1193,7 +1209,7 @@ export async function getCatalogIndexRows({
             aiSummary: serversTable.aiSummary,
           })
           .from(serversTable)
-          .where(and(servableFilter(), gt(serversTable.id, after)))
+          .where(servableAfterIdFilter(after))
           .orderBy(serversTable.id)
           .limit(limit),
       pageSize,
@@ -1985,7 +2001,7 @@ export async function getServersForLlmsTxt({
             upvotes: serversTable.upvotes,
           })
           .from(serversTable)
-          .where(and(servableFilter(), gt(serversTable.id, after)))
+          .where(servableAfterIdFilter(after))
           .orderBy(serversTable.id)
           .limit(limit),
       pageSize,
