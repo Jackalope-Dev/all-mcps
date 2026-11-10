@@ -31,6 +31,7 @@ import {
 } from './aiContent';
 import type { BestTopic } from './bestTopics';
 import { categoryFromSlug } from './categories';
+import { withD1Retry } from './d1Retry';
 import { cleanListingDescription } from './description';
 import { readEdgeCache, swrEdgeCache, writeEdgeCache } from './edgeCache';
 import {
@@ -1135,12 +1136,15 @@ export async function* iterateActiveServers(
   }
   let after = '';
   for (;;) {
-    const rows = await searchDb.db
-      .select(SCORING_SERVER_COLUMNS)
-      .from(serversTable)
-      .where(servableAfterIdFilter(after))
-      .orderBy(serversTable.id)
-      .limit(pageSize);
+    const from = after;
+    const rows = await withD1Retry('export page', () =>
+      searchDb.db
+        .select(SCORING_SERVER_COLUMNS)
+        .from(serversTable)
+        .where(servableAfterIdFilter(from))
+        .orderBy(serversTable.id)
+        .limit(pageSize),
+    );
     if (rows.length === 0) break;
     yield rows.map((r) => normalizeServer(r as unknown as Server));
     after = rows[rows.length - 1].id;
@@ -1163,7 +1167,11 @@ async function collectExportPages<T extends { id: string }>(
   const out: T[] = [];
   let after = '';
   for (;;) {
-    const rows = await fetchPage(after, pageSize);
+    // One page out of ~16 failing used to fail the whole export.
+    const from = after;
+    const rows = await withD1Retry('export page', () =>
+      fetchPage(from, pageSize),
+    );
     for (const r of rows) out.push(r);
     if (rows.length < pageSize) break;
     after = rows[rows.length - 1].id;
@@ -2398,11 +2406,14 @@ export async function getServerById(id: string): Promise<Server | undefined> {
     const ctx = await getCloudflareContext();
     if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
-      const dbServers = await db
-        .select(PUBLIC_SERVER_COLUMNS)
-        .from(serversTable)
-        .where(eq(serversTable.id, id))
-        .limit(1);
+      // One transient D1 error here used to 500 a fresh render outright.
+      const dbServers = await withD1Retry(`getServerById(${id})`, () =>
+        db
+          .select(PUBLIC_SERVER_COLUMNS)
+          .from(serversTable)
+          .where(eq(serversTable.id, id))
+          .limit(1),
+      );
       if (dbServers.length > 0) {
         // Withdrawn at the owner's request, or a rejected submission waiting
         // on its submitter: no public surface may serve it.

@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import type { CSSProperties } from 'react';
+import { type CSSProperties, cache } from 'react';
 import { CompareLink } from '@/components/listing/CompareLink';
 import { ExpandableDoc } from '@/components/listing/ExpandableDoc';
 import { InstallPanel } from '@/components/listing/InstallPanel';
@@ -144,7 +144,9 @@ import { listingLastMod } from '../../../lib/sitemapHelpers';
 
 // Listing shape and the D1-with-JSON-fallback fetch (incl. README-chrome
 // sanitization) live in lib/servers so every page/route stays consistent.
-const getServer = getServerById;
+// cache(): generateMetadata and the page share one read per render instead
+// of two, so a busy D1 gets half the chances to fail the render.
+const getServer = cache(getServerById);
 
 // Keeps the rendered <title> (this string + the root layout's " | AllMCPs" suffix)
 // within ~60 chars while aligning with developer search intent (config, tools, setup).
