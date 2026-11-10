@@ -130,7 +130,7 @@ export const STATIC_PAGE_LASTMOD: Record<string, string> = {
   '/mcp-for-claude-desktop': '2026-10-14',
   '/mcp-for-windsurf': '2026-10-14',
   '/mcp-for-cline': '2026-10-14',
-  '/trust': '2026-10-14',
+  '/trust': '2026-11-10',
   '/stack': '2026-10-14',
   '/compare': '2026-09-23',
   '/tags': '2026-10-22',

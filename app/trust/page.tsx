@@ -1181,8 +1181,8 @@ export default async function TrustPage() {
               <OpennessCard
                 icon={Bot}
                 color="var(--brand-cyan)"
-                title="Crawlers are allowlisted"
-                detail="Our robots.txt allows GPTBot, ClaudeBot, PerplexityBot, Google-Extended, Amazonbot, and Bytespider to read the catalog, search API, and llms-full.txt."
+                title="Crawler rules, as published"
+                detail="Our robots.txt lets ClaudeBot, PerplexityBot, and Amazonbot read the catalog, llms.txt, llms-full.txt, data.json, /api/v1/, and /api/mcp. It blocks GPTBot, Google-Extended, and Bytespider from the whole site, since they crawl for training first. Other crawlers may read pages, llms.txt, llms-full.txt, and data.json, but not /api/."
               />
               <OpennessCard
                 icon={MessageSquare}
