@@ -58,6 +58,7 @@ vi.mock('@opennextjs/cloudflare', () => ({
 const {
   formatCatalogAsOf,
   getCatalogCount,
+  normalizeCatalogCount,
   queryCatalogCount,
   resetCatalogCountMemo,
 } = await import('./catalogCount');
@@ -135,6 +136,18 @@ describe('getCatalogCount', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('turns an edge-cache-revived Date asOf back into an ISO string', () => {
+    const asOf = new Date('2026-11-10T22:36:14.081Z');
+    expect(normalizeCatalogCount({ count: 5, asOf })).toEqual({
+      count: 5,
+      asOf: '2026-11-10T22:36:14.081Z',
+    });
+    expect(
+      normalizeCatalogCount({ count: 5, asOf: '2026-11-10T22:36:14.081Z' })
+        .asOf,
+    ).toBe('2026-11-10T22:36:14.081Z');
   });
 
   it('formats the as-of time in UTC', () => {

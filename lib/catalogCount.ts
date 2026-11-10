@@ -78,7 +78,8 @@ export async function getCatalogCount(): Promise<CatalogCount | null> {
     { freshMs: FRESH_MS, maxAgeSeconds: MAX_AGE_SECONDS },
     loadCatalogCount,
   )
-    .then((value) => {
+    .then((cached) => {
+      const value = cached ? normalizeCatalogCount(cached) : null;
       if (value) memo = { value, at: Date.now() };
       return value ?? memo?.value ?? null;
     })
@@ -86,6 +87,19 @@ export async function getCatalogCount(): Promise<CatalogCount | null> {
       inflight = null;
     });
   return inflight;
+}
+
+/**
+ * The edge cache revives ISO strings as Dates (lib/edgeCache.ts reviveDates),
+ * so a cached count comes back with a Date `asOf`. Callers treat it as a
+ * string (/state-of-mcp slices it), which 500ed every cached render.
+ */
+export function normalizeCatalogCount(c: {
+  count: number;
+  asOf: string | Date;
+}): CatalogCount {
+  const asOf = c.asOf instanceof Date ? c.asOf.toISOString() : String(c.asOf);
+  return { count: c.count, asOf };
 }
 
 /** "Nov 10, 2026, 22:15 UTC" — for "as of" notes next to the count. */
