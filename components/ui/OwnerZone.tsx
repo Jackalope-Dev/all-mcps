@@ -15,7 +15,8 @@ const PremiumUpgrade = dynamic(
 
 type Props = {
   serverId: string;
-  isOfficial: boolean;
+  /** Approved ownership claim (servers.owner_verified). */
+  ownerVerified: boolean;
   websiteUrl?: string | null;
   isPremium?: boolean;
   websiteBacklinkOk?: boolean;
@@ -33,7 +34,7 @@ type Props = {
  */
 export function OwnerZone({
   serverId,
-  isOfficial,
+  ownerVerified,
   websiteUrl,
   isPremium,
   websiteBacklinkOk,
@@ -65,7 +66,7 @@ export function OwnerZone({
 
   return (
     <>
-      {isOfficial && isOwner && (
+      {ownerVerified && isOwner && (
         <div className="surface" style={{ padding: '1.5rem' }}>
           <h3
             style={{

@@ -33,7 +33,11 @@ import type { BestTopic } from './bestTopics';
 import { categoryFromSlug } from './categories';
 import { cleanListingDescription } from './description';
 import { readEdgeCache, swrEdgeCache, writeEdgeCache } from './edgeCache';
-import { isFeaturedListing } from './featuredStatus';
+import {
+  isFeaturedListing,
+  isVerifiedListing,
+  trustLabel,
+} from './featuredStatus';
 import { publicViewCount } from './format';
 import {
   installConfidenceNote,
@@ -191,6 +195,8 @@ export const PUBLIC_SERVER_COLUMNS = {
   isPremium: serversTable.isPremium,
   websiteVerified: serversTable.websiteVerified,
   isOfficial: serversTable.isOfficial,
+  ownerVerified: serversTable.ownerVerified,
+  officialSource: serversTable.officialSource,
   featuredUntil: serversTable.featuredUntil,
   categorySponsorUntil: serversTable.categorySponsorUntil,
   status: serversTable.status,
@@ -263,6 +269,10 @@ export type Server = {
   description: string;
   category: string;
   isOfficial: boolean;
+  /** Approved ownership claim ("Verified owner"). */
+  ownerVerified?: boolean;
+  /** Why isOfficial is set (OFFICIAL_SOURCES in lib/featuredStatus.ts). */
+  officialSource?: string | null;
   redirectTo?: string | null;
   /** Optional setup note shown above install config. JSON-only until persisted. */
   installNote?: string | null;
@@ -417,6 +427,8 @@ const DISCOVERY_COLUMNS = {
   createdAt: serversTable.createdAt,
   logoUrl: serversTable.logoUrl,
   isOfficial: serversTable.isOfficial,
+  ownerVerified: serversTable.ownerVerified,
+  officialSource: serversTable.officialSource,
   isPremium: serversTable.isPremium,
   featuredUntil: serversTable.featuredUntil,
   views: serversTable.views,
@@ -455,6 +467,8 @@ function snapshotLightServers(limit?: number): Server[] {
     createdAt: s.createdAt,
     logoUrl: s.logoUrl ?? null,
     isOfficial: !!s.isOfficial,
+    ownerVerified: !!s.ownerVerified,
+    officialSource: s.officialSource ?? null,
     isPremium: !!s.isPremium,
     featuredUntil: s.featuredUntil ?? null,
     views: s.views ?? 0,
@@ -863,6 +877,8 @@ const RANKING_COLUMNS = {
   npmDownloads: serversTable.npmDownloads,
   installConfidence: serversTable.installConfidence,
   isOfficial: serversTable.isOfficial,
+  ownerVerified: serversTable.ownerVerified,
+  officialSource: serversTable.officialSource,
   isPremium: serversTable.isPremium,
   isVerifiedActive: serversTable.isVerifiedActive,
   healthStatus: serversTable.healthStatus,
@@ -1981,6 +1997,10 @@ export type DirectoryFeedItem = {
   category: string;
   logoUrl: string | null;
   isOfficial: boolean;
+  /** Approved ownership claim ("Verified owner"). */
+  ownerVerified?: boolean;
+  /** Why isOfficial is set (OFFICIAL_SOURCES in lib/featuredStatus.ts). */
+  officialSource?: string | null;
   isPremium: boolean;
   featuredUntil: string | Date | null;
   githubStars: number | null;
@@ -2069,6 +2089,8 @@ function selectFeedRows(db: D1Drizzle, where: SQL) {
       category: serversTable.category,
       logoUrl: serversTable.logoUrl,
       isOfficial: serversTable.isOfficial,
+      ownerVerified: serversTable.ownerVerified,
+      officialSource: serversTable.officialSource,
       isPremium: serversTable.isPremium,
       featuredUntil: serversTable.featuredUntil,
       githubStars: serversTable.githubStars,
@@ -2120,6 +2142,8 @@ function toFeedItem(r: FeedRow): DirectoryFeedItem {
     category: r.category,
     logoUrl: r.logoUrl ?? null,
     isOfficial: !!r.isOfficial,
+    ownerVerified: !!r.ownerVerified,
+    officialSource: r.officialSource ?? null,
     isPremium: !!r.isPremium,
     featuredUntil: r.featuredUntil ?? null,
     githubStars: r.githubStars ?? null,
@@ -2213,6 +2237,8 @@ export function snapshotFeedPage(
         category: s.category,
         logoUrl: s.logoUrl ?? null,
         isOfficial: !!s.isOfficial,
+        ownerVerified: !!s.ownerVerified,
+        officialSource: s.officialSource ?? null,
         isPremium: !!s.isPremium,
         featuredUntil: s.featuredUntil ?? null,
         githubStars: s.githubStars ?? null,
@@ -2858,7 +2884,8 @@ export function relatedRankingScore(
   else if (conf === 'medium') score += 4;
   else if (conf === 'low') score += 1;
 
-  if (candidate.isOfficial || candidate.isPremium) score += 5;
+  // Verified owner or vendor-official. Premium never boosts organic ranking.
+  if (isVerifiedListing(candidate)) score += 5;
   if (candidate.isVerifiedActive || candidate.healthStatus === 'healthy')
     score += 3;
   if (candidate.reciprocalBadgeOk) score += 2;
@@ -3028,8 +3055,10 @@ export function formatServerAsMarkdown(
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '') || 'mcp-server';
-  const verifiedBadge =
-    server.isOfficial || server.isPremium ? ' [Verified]' : '';
+  // Trust label only (Official / Reference / Verified owner); paid tiers are
+  // never presented as verification.
+  const trust = trustLabel(server);
+  const verifiedBadge = trust ? ` [${trust.label}]` : '';
   const activeBadge = server.isVerifiedActive ? ' [Health: Active]' : '';
 
   let md = `# ${server.name}${verifiedBadge}${activeBadge}\n\n`;
@@ -3240,6 +3269,8 @@ const RELATED_RANKING_COLUMNS = {
   tools: RELATED_TOOLS_SQL,
   installConfidence: serversTable.installConfidence,
   isOfficial: serversTable.isOfficial,
+  ownerVerified: serversTable.ownerVerified,
+  officialSource: serversTable.officialSource,
   isPremium: serversTable.isPremium,
   isVerifiedActive: serversTable.isVerifiedActive,
   healthStatus: serversTable.healthStatus,

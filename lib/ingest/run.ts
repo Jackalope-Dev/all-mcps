@@ -335,9 +335,17 @@ export async function ingestCandidates(
           cleanListingDescription(checked.description) ||
           'No description provided.',
         category,
-        isOfficial: checked.url
+        // modelcontextprotocol reference servers are the one Official grant
+        // made without an admin: the repo itself is the evidence.
+        ...(checked.url
           .toLowerCase()
-          .includes('github.com/modelcontextprotocol/servers'),
+          .includes('github.com/modelcontextprotocol/servers')
+          ? {
+              isOfficial: true,
+              officialSource: 'reference',
+              officialEvidenceUrl: checked.url,
+            }
+          : { isOfficial: false }),
         status: 'pending',
         reviewFlagged,
         githubStars: checked.githubStars ?? null,

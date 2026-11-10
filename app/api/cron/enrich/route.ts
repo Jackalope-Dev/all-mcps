@@ -434,7 +434,8 @@ export async function POST(req: Request) {
             isVerifiedActive = true;
           }
 
-          if (!server.isOfficial) {
+          // Vendor and owner-claimed listings keep their own description.
+          if (!server.isOfficial && !server.ownerVerified) {
             description = pickDescription(description, data.description);
             if (description !== server.description) {
               updates.description = description;

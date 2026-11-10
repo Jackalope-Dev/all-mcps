@@ -16,13 +16,14 @@ export function ListingVisibilityNotice({
   status,
   staleFlaggedAt,
   staleReasons,
-  isOfficial,
+  ownerVerified,
 }: {
   serverId: string;
   status: string;
   staleFlaggedAt?: string | Date | null;
   staleReasons?: string | null;
-  isOfficial?: boolean | null;
+  /** Claimed listings don't need the claim CTA. */
+  ownerVerified?: boolean | null;
 }) {
   let title: string;
   let body: string;
@@ -63,7 +64,7 @@ export function ListingVisibilityNotice({
             ))}
           </ul>
         )}
-        {!isOfficial && status !== 'rejected' && (
+        {!ownerVerified && status !== 'rejected' && (
           <Link
             href={`/mcp/${serverId}/claim`}
             className="btn btn-secondary listing-visibility-notice-cta"

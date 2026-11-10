@@ -32,7 +32,7 @@ async function getServer(id: string) {
     name: string;
     url: string;
     websiteUrl?: string;
-    isOfficial?: boolean;
+    ownerVerified?: boolean;
     reciprocalBadgeOk?: boolean;
     pendingClaimUserId?: string | null;
   }[];
@@ -99,7 +99,7 @@ export default async function ClaimPage({
           serverName={server.name}
           repoUrl={server.url}
           websiteUrl={(server as any).websiteUrl}
-          isOfficial={(server as any).isOfficial}
+          ownerVerified={(server as any).ownerVerified}
           reciprocalBadgeOk={(server as any).reciprocalBadgeOk}
           hasPendingClaim={
             !!session?.user?.id &&

@@ -14,8 +14,10 @@ Exposes a **read-mostly** slice of AllMcps to the Jackalope Hub back office over
 | Action | Effect | Capability |
 | --- | --- | --- |
 | `resolve_report` | set a report's status to `reviewed` / `dismissed` (+ `reviewedAt`) | `content.review` |
+| `set_official` | grant Official (vendor-published) with `source` + `evidenceUrl`, or revoke it | `content.review` |
 
-Nothing here can create, delete, or edit users, listings, billing, or ads. Every
+Nothing here can create, delete, or edit users, billing, or ads, and the only
+listing field it writes is the Official grant. Every
 mutation writes an `admin_audit` row (migration `0047`).
 
 ## Safety properties

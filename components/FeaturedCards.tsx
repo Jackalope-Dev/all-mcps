@@ -2,7 +2,7 @@ import { ArrowRight, ArrowUp, Eye, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { categoryHueClass, getCategoryMeta } from '../lib/categories';
 import { parseServerName } from '../lib/displayName';
-import { isFeaturedListing } from '../lib/featuredStatus';
+import { isFeaturedListing, trustLabel } from '../lib/featuredStatus';
 import { publicViewCount } from '../lib/format';
 import { SponsorAdUnit } from './ads/SponsorAdUnit';
 import { ImpressionBeacon } from './ImpressionTracker';
@@ -15,6 +15,8 @@ type HomeServer = {
   category: string;
   logoUrl?: string | null;
   isOfficial?: boolean | null;
+  ownerVerified?: boolean | null;
+  officialSource?: string | null;
   isPremium?: boolean | null;
   featuredUntil?: Date | string | number | null;
   views?: number | null;
@@ -43,6 +45,7 @@ function ServerCard({ server }: { server: HomeServer }) {
   const { displayName, org } = parseServerName(server.name);
   const cat = getCategoryMeta(server.category);
   const featured = isFeaturedListing(server);
+  const trust = trustLabel(server, displayName);
   const views = publicViewCount(server);
   const upvotes = server.upvotes ?? 0;
 
@@ -65,9 +68,12 @@ function ServerCard({ server }: { server: HomeServer }) {
           </div>
           {featured ? (
             <span className="home-server-flag">Featured</span>
-          ) : server.isOfficial ? (
-            <span className="home-server-flag home-server-flag--quiet">
-              Official
+          ) : trust ? (
+            <span
+              className="home-server-flag home-server-flag--quiet"
+              title={trust.title}
+            >
+              {trust.label}
             </span>
           ) : null}
         </div>

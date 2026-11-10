@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { parseServerName } from '../../../../lib/displayName';
+import { isVerifiedListing } from '../../../../lib/featuredStatus';
 import { publicViewCount } from '../../../../lib/format';
 import { listingRedirectTarget } from '../../../../lib/listingRedirect';
 import { getServerById } from '../../../../lib/servers';
@@ -267,7 +268,8 @@ export async function GET(
     return new NextResponse('Not found', { status: 404 });
   }
   const serverName = server.name || id;
-  const isOfficial = server.isOfficial || false;
+  // "Verified" on the badge: an approved owner claim or vendor-official.
+  const isOfficial = isVerifiedListing(server);
   const upvotes = server.upvotes || 0;
   const views = publicViewCount(server);
   const copies = server.copies || 0;

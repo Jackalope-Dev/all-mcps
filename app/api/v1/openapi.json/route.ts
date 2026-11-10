@@ -235,7 +235,27 @@ export async function GET() {
                             description: { type: 'string' },
                             category: { type: 'string' },
                             url: { type: 'string' },
-                            isOfficial: { type: 'boolean' },
+                            isOfficial: {
+                              type: 'boolean',
+                              description:
+                                'Published by the company behind the product (or a modelcontextprotocol reference server when officialSource is "reference"). Set by AllMCPs admins with evidence, never by payment.',
+                            },
+                            officialSource: {
+                              type: 'string',
+                              nullable: true,
+                              enum: [
+                                'github-org',
+                                'vendor-endpoint',
+                                'registry-namespace',
+                                'vendor-docs',
+                                'reference',
+                              ],
+                            },
+                            ownerVerified: {
+                              type: 'boolean',
+                              description:
+                                'The listing owner proved control of it (approved ownership claim).',
+                            },
                             isVerifiedActive: { type: 'boolean' },
                             upvotes: { type: 'integer' },
                             installName: { type: 'string' },
@@ -646,7 +666,12 @@ export async function GET() {
               properties: {
                 success: { type: 'boolean' },
                 pending: { type: 'boolean', enum: [false] },
-                isOfficial: { type: 'boolean', enum: [true] },
+                ownerVerified: {
+                  type: 'boolean',
+                  enum: [true],
+                  description:
+                    'The claim sets "Verified owner". It never sets isOfficial, which admins grant only to vendor-published servers.',
+                },
                 reciprocalBadgeOk: {
                   type: 'boolean',
                   description:

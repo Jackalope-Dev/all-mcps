@@ -103,6 +103,7 @@ type Server = {
   featuredUntil?: string | null;
   categorySponsorUntil?: string | null;
   isOfficial?: boolean;
+  ownerVerified?: boolean;
   reciprocalBadgeOk?: boolean;
   readmeBadgeOk?: boolean;
   websiteBacklinkOk?: boolean;
@@ -3120,7 +3121,11 @@ function QualityScoreCard({ server }: { server: Server }) {
 
   // Actionable tips to improve quality score
   const tips: string[] = [];
-  if (!server.isOfficial && !server.reciprocalBadgeOk && !server.isPremium) {
+  if (
+    !server.isOfficial &&
+    !server.ownerVerified &&
+    !server.reciprocalBadgeOk
+  ) {
     tips.push('Claim ownership or get the reciprocal badge detected (+20 pts)');
   }
   if (!server.tools || server.tools === '[]') {

@@ -102,7 +102,9 @@ import {
 import { parseServerName } from '../../../lib/displayName';
 import {
   isFeaturedListing,
-  isVerifiedListing,
+  isOperatorListing,
+  OPERATOR_DISCLOSURE,
+  trustLabel,
 } from '../../../lib/featuredStatus';
 import {
   formatCommitAge,
@@ -360,6 +362,8 @@ export default async function MCPDetail({
   // so it doesn't contradict the verified badge shown elsewhere on the page.
   const hasIntrospectedTools = server.toolsSource === 'introspected';
   const { displayName, org } = parseServerName(server.name, server.url);
+  const trust = trustLabel(server, displayName);
+  const madeByOperator = isOperatorListing(server);
   const catMeta = getCategoryMeta(server.category);
   const catSlug = categorySlug(server.category);
   const categoryLabel = catMeta.label;
@@ -786,10 +790,10 @@ export default async function MCPDetail({
                   Our automated checks couldn&rsquo;t reach the source
                   repository, so we&rsquo;ve removed it from search, browse, and
                   the API — this page stays reachable at this direct link only.
-                  {!server.isOfficial &&
+                  {!server.ownerVerified &&
                     ' If this is your project, claim it to fix the link and restore visibility.'}
                 </p>
-                {!server.isOfficial && (
+                {!server.ownerVerified && (
                   <Link
                     href={`/mcp/${server.id}/claim`}
                     className="btn btn-secondary btn-sm"
@@ -807,7 +811,7 @@ export default async function MCPDetail({
             status={server.status}
             staleFlaggedAt={server.staleFlaggedAt}
             staleReasons={signals.staleReasons}
-            isOfficial={server.isOfficial}
+            ownerVerified={server.ownerVerified}
           />
 
           {/* ── Header ─────────────────────────────────────────────── */}
@@ -871,36 +875,52 @@ export default async function MCPDetail({
               style={{ '--i': 2 } as CSSProperties}
               aria-label="Listing signals"
             >
-              {isVerifiedListing(server) && (
+              {trust && (
                 <li>
                   <IconTooltip
-                    label={
-                      server.isOfficial
-                        ? 'Ownership verified'
-                        : 'Premium listing'
-                    }
+                    label={trust.label}
                     trigger={
                       <span className="lst-meta-badge lst-meta-badge--accent">
                         <BadgeCheck size={14} aria-hidden="true" />
-                        {server.isOfficial ? 'Verified owner' : 'Premium'}
+                        {trust.label}
                       </span>
                     }
                   >
                     <span className="mcp-icon-tooltip-title">
                       <BadgeCheck size={14} color="var(--accent-color)" />
-                      {server.isOfficial
-                        ? 'Ownership verified'
-                        : 'Premium listing'}
+                      {trust.label}
                     </span>
                     <span className="mcp-icon-tooltip-body">
-                      {server.isOfficial
-                        ? 'The owner proved control of this listing via a GitHub README, site badge, or DNS TXT record.'
-                        : 'This listing has an active Premium subscription. Ownership has not been separately verified.'}
+                      {trust.title}.
+                      {trust.kind !== 'owner' && server.ownerVerified
+                        ? ' Its owner has also verified this listing.'
+                        : ''}
                     </span>
                   </IconTooltip>
                 </li>
               )}
-              {server.isPremium && !isVerifiedListing(server) && (
+              {madeByOperator && (
+                <li>
+                  <IconTooltip
+                    label="Made by AllMCPs' operator"
+                    trigger={
+                      <span className="lst-meta-badge">
+                        <Info size={13} aria-hidden="true" /> Made by Jackalope
+                        Digital
+                      </span>
+                    }
+                  >
+                    <span className="mcp-icon-tooltip-title">
+                      <Info size={14} /> Our own listing
+                    </span>
+                    <span className="mcp-icon-tooltip-body">
+                      {OPERATOR_DISCLOSURE}. It is ranked and scored by the same
+                      rules as every other listing.
+                    </span>
+                  </IconTooltip>
+                </li>
+              )}
+              {server.isPremium && (
                 <li>
                   <IconTooltip
                     label="Premium listing"
@@ -914,9 +934,10 @@ export default async function MCPDetail({
                       <Crown size={14} color="#facc15" /> Premium listing
                     </span>
                     <span className="mcp-icon-tooltip-body">
-                      This owner pays for enhanced visibility — priority
-                      placement in search, category pages, and rotating
-                      spotlight slots across the directory.
+                      The owner pays for a Premium subscription: Featured
+                      placement in labelled slots and listing analytics. Payment
+                      doesn&rsquo;t verify ownership or change the quality score
+                      or search ranking.
                     </span>
                   </IconTooltip>
                 </li>
@@ -937,8 +958,8 @@ export default async function MCPDetail({
                     </span>
                     <span className="mcp-icon-tooltip-body">
                       {server.isPremium
-                        ? 'Included with this listing’s active Premium subscription — boosted placement across search, category pages, and homepage spotlight rotation.'
-                        : 'Currently boosted for extra visibility — priority placement across search, category pages, and homepage spotlight rotation.'}
+                        ? 'Included with this listing’s Premium subscription: a paid placement in the labelled Featured slots on the homepage, browse and category pages. Organic search order is unchanged.'
+                        : 'A paid placement in the labelled Featured slots on the homepage, browse and category pages. Organic search order is unchanged.'}
                     </span>
                   </IconTooltip>
                 </li>
@@ -1117,11 +1138,11 @@ export default async function MCPDetail({
                 >
                   <FolderGit2 size={15} aria-hidden="true" />
                   <span className="lst-btn-label">Repository</span>
-                  {server.isOfficial && (
+                  {trust && (
                     <BadgeCheck
                       size={14}
                       className="lst-accent-icon"
-                      aria-label="Verified owner"
+                      aria-label={trust.label}
                     />
                   )}
                 </OutboundLink>
@@ -1202,7 +1223,7 @@ export default async function MCPDetail({
                   <Code2 size={15} aria-hidden="true" /> Embed widget
                 </Link>
                 <span className="lst-menu-sep" aria-hidden="true" />
-                {!server.isOfficial && (
+                {!server.ownerVerified && (
                   <Link
                     href={`/mcp/${server.id}/claim`}
                     className="lst-menu-item"
@@ -1424,7 +1445,7 @@ export default async function MCPDetail({
                           {formatCommitAge(verification.checkedAt)
                             ? ` Last checked ${formatCommitAge(verification.checkedAt)}.`
                             : ''}{' '}
-                          {!server.isOfficial && (
+                          {!server.ownerVerified && (
                             <ClaimHintLink serverId={server.id} />
                           )}
                         </p>
@@ -1578,9 +1599,7 @@ export default async function MCPDetail({
                     history={healthHistory}
                     verification={verification}
                     hasRemoteEndpoint={!!server.remoteEndpointUrl}
-                    isOfficial={
-                      server.isOfficial || server.id === 'allmcps-server'
-                    }
+                    selfHosted={server.id === 'allmcps-server'}
                   />
                 </div>
 
@@ -1768,9 +1787,12 @@ export default async function MCPDetail({
                                 <span className="lst-pill lst-pill--accent">
                                   Featured
                                 </span>
-                              ) : rel.isOfficial ? (
-                                <span className="lst-pill lst-pill--accent">
-                                  Verified
+                              ) : trustLabel(rel) ? (
+                                <span
+                                  className="lst-pill lst-pill--accent"
+                                  title={trustLabel(rel)?.title}
+                                >
+                                  {trustLabel(rel)?.label}
                                 </span>
                               ) : null}
                             </span>
@@ -2082,7 +2104,7 @@ export default async function MCPDetail({
                 </ul>
               </div>
 
-              {!server.isOfficial && (
+              {!server.ownerVerified && (
                 <div className="lst-card lst-claim">
                   <h2 className="lst-side-title">
                     <BadgeCheck size={16} aria-hidden="true" /> Own this
@@ -2110,7 +2132,7 @@ export default async function MCPDetail({
 
               <OwnerZone
                 serverId={server.id}
-                isOfficial={!!server.isOfficial}
+                ownerVerified={!!server.ownerVerified}
                 websiteUrl={server.websiteUrl}
                 isPremium={server.isPremium}
                 websiteBacklinkOk={server.websiteBacklinkOk}

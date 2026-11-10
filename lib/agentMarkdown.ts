@@ -13,6 +13,7 @@ import {
   parseCategoryLabel,
 } from './categories';
 import { MCP_CLIENTS, type McpClient, mcpClientBySlug } from './clients';
+import { trustLabel } from './featuredStatus';
 import { resolveInstallConfig } from './installConfig';
 import {
   getWorkflowBySlug,
@@ -342,7 +343,7 @@ export function formatCompareMarkdown(left: Server, right: Server): string {
   md += `| Transport Protocol | ${transportLeft} | ${transportRight} |\n`;
   md += `| Auth Requirement | ${authLeft} | ${authRight} |\n`;
   md += `| Pricing Model | ${pricingLeft} | ${pricingRight} |\n`;
-  md += `| Official / Verified | ${left.isOfficial ? 'Yes (Official)' : left.isVerifiedActive ? 'Verified' : 'Community'} | ${right.isOfficial ? 'Yes (Official)' : right.isVerifiedActive ? 'Verified' : 'Community'} |\n`;
+  md += `| Official / Verified | ${trustLabel(left)?.label ?? 'Community'} | ${trustLabel(right)?.label ?? 'Community'} |\n`;
   md += `| GitHub Stars | ${left.githubStars ?? '—'} | ${right.githubStars ?? '—'} |\n`;
   md += `| Installs / Copies | ${left.copies ?? 0} | ${right.copies ?? 0} |\n`;
   md += `| Upvotes | ${left.upvotes ?? 0} | ${right.upvotes ?? 0} |\n`;

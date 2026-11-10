@@ -38,6 +38,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from '../../components/ui/Toast';
 import { notifyAdminStatsChanged } from '../../lib/adminStatsRefresh';
 import { DIRECTORY_CATEGORIES } from '../../lib/categories';
+import { OFFICIAL_SOURCES } from '../../lib/featuredStatus';
 import type { ModerationReason } from '../../lib/moderationReasons';
 import { AdminEmpty, AdminModal, AdminSkeletonList } from './AdminUi';
 import {
@@ -70,6 +71,9 @@ type Listing = {
   createdAt: string;
   isPremium: boolean;
   isOfficial?: boolean;
+  ownerVerified?: boolean;
+  officialSource?: string | null;
+  officialEvidenceUrl?: string | null;
   reciprocalBadgeOk?: boolean;
   status: string;
   healthStatus: string;
@@ -301,11 +305,15 @@ export default function ManageListings({
       | 'delete'
       | 'feature'
       | 'resend_approval'
-      | 'toggle_official'
+      | 'set_official'
       | 'toggle_reciprocal_badge'
       | 'check_health',
     extra?: {
-      fields?: Partial<EditFields>;
+      fields?: Partial<EditFields> & {
+        officialSource?: string;
+        officialEvidenceUrl?: string;
+      };
+      official?: boolean;
       days?: number;
       reasons?: ModerationReason[];
       reasonNote?: string;
@@ -324,6 +332,7 @@ export default function ManageListings({
         message?: string;
         featuredUntil?: string;
         isOfficial?: boolean;
+        officialSource?: string | null;
         reciprocalBadgeOk?: boolean;
         healthStatus?: string;
       };
@@ -338,11 +347,15 @@ export default function ManageListings({
             s.id === id ? { ...s, isPremium: action === 'set_premium' } : s,
           ),
         );
-      } else if (action === 'toggle_official') {
+      } else if (action === 'set_official') {
         setItems((prev) =>
           prev.map((s) =>
             s.id === id
-              ? { ...s, isOfficial: data.isOfficial ?? !s.isOfficial }
+              ? {
+                  ...s,
+                  isOfficial: data.isOfficial ?? s.isOfficial,
+                  officialSource: data.officialSource ?? null,
+                }
               : s,
           ),
         );
@@ -795,8 +808,14 @@ export default function ManageListings({
                       )}
                       {listing.isOfficial && (
                         <span className="adm-tag hue-green">
-                          <ShieldCheck size={11} aria-hidden="true" /> Official
+                          <ShieldCheck size={11} aria-hidden="true" />{' '}
+                          {listing.officialSource === 'reference'
+                            ? 'Reference'
+                            : 'Official'}
                         </span>
+                      )}
+                      {listing.ownerVerified && (
+                        <span className="adm-tag hue-blue">Verified owner</span>
                       )}
                       {listing.reciprocalBadgeOk && (
                         <span className="adm-tag hue-blue">
@@ -1007,11 +1026,36 @@ export default function ManageListings({
                     <div className="adm-actions">
                       <button
                         type="button"
-                        onClick={() => runAction(listing.id, 'toggle_official')}
+                        onClick={() => {
+                          if (listing.isOfficial) {
+                            if (
+                              window.confirm(
+                                `Remove Official from ${listing.name}?`,
+                              )
+                            )
+                              runAction(listing.id, 'set_official', {
+                                official: false,
+                              });
+                            return;
+                          }
+                          const officialSource = window.prompt(
+                            `Official means the company behind the product publishes it. Evidence type (${OFFICIAL_SOURCES.join(', ')}):`,
+                            'github-org',
+                          );
+                          if (!officialSource) return;
+                          const officialEvidenceUrl = window.prompt(
+                            'URL of the page you checked (vendor GitHub org, docs page, registry namespace):',
+                          );
+                          if (!officialEvidenceUrl) return;
+                          runAction(listing.id, 'set_official', {
+                            official: true,
+                            fields: { officialSource, officialEvidenceUrl },
+                          });
+                        }}
                         disabled={rowLoading}
                         className="btn btn-sm adm-toggle"
                         aria-pressed={Boolean(listing.isOfficial)}
-                        title="Manually toggle Official Project badge"
+                        title="Official = published by the product's own company. Needs evidence; audited."
                       >
                         <ShieldCheck size={14} aria-hidden="true" />
                         {listing.isOfficial ? 'Official: on' : 'Make official'}
@@ -1346,8 +1390,17 @@ export default function ManageListings({
             <dd>{inspectListing.submitterEmail || 'Not recorded'}</dd>
             <dt>Owner user ID</dt>
             <dd>{inspectListing.ownerUserId || 'Unclaimed'}</dd>
-            <dt>Official (admin-approved claim)</dt>
-            <dd>{inspectListing.isOfficial ? 'Yes' : 'No'}</dd>
+            <dt>Verified owner (approved claim)</dt>
+            <dd>{inspectListing.ownerVerified ? 'Yes' : 'No'}</dd>
+            <dt>Official (vendor-published, admin-set)</dt>
+            <dd>
+              {inspectListing.isOfficial
+                ? `Yes (${inspectListing.officialSource || 'evidence not recorded'})`
+                : 'No'}
+              {inspectListing.officialEvidenceUrl
+                ? ` · ${inspectListing.officialEvidenceUrl}`
+                : ''}
+            </dd>
             <dt>Verified (reciprocal badge, SEO dofollow)</dt>
             <dd>
               {inspectListing.reciprocalBadgeOk

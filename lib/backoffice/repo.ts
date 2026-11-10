@@ -29,6 +29,13 @@ export interface Repo {
       a: ListArgs,
     ): Promise<{ rows: Record<string, unknown>[]; total: number }>;
     get(id: string): Promise<Record<string, unknown> | null>;
+    /** Grant (with evidence) or revoke Official: published by the product's own company. */
+    setOfficial(
+      id: string,
+      grant:
+        | { official: true; source: string; evidenceUrl: string }
+        | { official: false },
+    ): Promise<Record<string, unknown>>;
   };
   reports: {
     list(
@@ -109,6 +116,7 @@ export function drizzleRepo(db: DB): Repo {
             category: servers.category,
             premiumStatus: servers.premiumStatus,
             isOfficial: servers.isOfficial,
+            ownerVerified: servers.ownerVerified,
             createdAt: servers.createdAt,
           })
           .from(servers)
@@ -130,13 +138,46 @@ export function drizzleRepo(db: DB): Repo {
             description: servers.description,
             premiumStatus: servers.premiumStatus,
             isOfficial: servers.isOfficial,
+            officialSource: servers.officialSource,
+            officialEvidenceUrl: servers.officialEvidenceUrl,
+            officialReviewedAt: servers.officialReviewedAt,
+            ownerVerified: servers.ownerVerified,
             ownerUserId: servers.ownerUserId,
             createdAt: servers.createdAt,
           })
           .from(servers)
           .where(eq(servers.id, id))
           .limit(1);
-        return r ? { ...r, createdAt: iso(r.createdAt) } : null;
+        return r
+          ? {
+              ...r,
+              createdAt: iso(r.createdAt),
+              officialReviewedAt: iso(r.officialReviewedAt),
+            }
+          : null;
+      },
+      async setOfficial(id, grant) {
+        await db
+          .update(servers)
+          .set(
+            grant.official
+              ? {
+                  isOfficial: true,
+                  officialSource: grant.source,
+                  officialEvidenceUrl: grant.evidenceUrl,
+                  officialReviewedAt: new Date(),
+                }
+              : {
+                  isOfficial: false,
+                  officialSource: null,
+                  officialEvidenceUrl: null,
+                  officialReviewedAt: new Date(),
+                },
+          )
+          .where(eq(servers.id, id));
+        const row = await this.get(id);
+        if (!row) throw new Error(`listing ${id} not found`);
+        return row;
       },
     },
 
