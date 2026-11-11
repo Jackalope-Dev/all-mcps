@@ -377,6 +377,55 @@ const SCAN_FAILURE_COOLDOWN_MS = 5 * 60 * 1000;
 let lastScanFailureAt = 0;
 let lastGoodSummary: SitemapSummary | null = null;
 
+/**
+ * The last good summary, kept globally in R2 (under the ISR bucket's
+ * app-cache/ prefix, which isr-cache-cleanup leaves alone). The per-isolate
+ * copy above is empty in a fresh isolate, so a scan that failed there (D1
+ * overloaded at a cron tick) fell through to the bundled sample, and
+ * /sitemap/listings.xml answered an empty <urlset> with a 200 from that
+ * isolate for the whole cooldown (seen 2026-11-10). Raw JSON, no date
+ * reviving: lastmod values stay strings.
+ */
+const SHARED_SUMMARY_KEY = 'app-cache/sitemap-summary/v2-last-good';
+/** Each isolate refreshes the shared copy at most this often. */
+const SHARED_WRITE_INTERVAL_MS = 30 * 60 * 1000;
+let sharedWrittenAt = 0;
+
+async function summaryBucket(): Promise<R2Bucket | null> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const { env } = await getCloudflareContext({ async: true });
+    return (
+      (env as { NEXT_INC_CACHE_R2_BUCKET?: R2Bucket })
+        .NEXT_INC_CACHE_R2_BUCKET ?? null
+    );
+  } catch {
+    return null;
+  }
+}
+
+async function readSharedSummary(): Promise<SitemapSummary | null> {
+  try {
+    const obj = await (await summaryBucket())?.get(SHARED_SUMMARY_KEY);
+    if (!obj) return null;
+    const summary = JSON.parse(await obj.text()) as SitemapSummary;
+    return summary.listings?.length ? summary : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveSharedSummary(summary: SitemapSummary): void {
+  if (!summary.listings.length) return;
+  if (Date.now() - sharedWrittenAt < SHARED_WRITE_INTERVAL_MS) return;
+  sharedWrittenAt = Date.now();
+  void summaryBucket()
+    .then((b) => b?.put(SHARED_SUMMARY_KEY, JSON.stringify(summary)))
+    .catch(() => {
+      // Best-effort: the next isolate to scan writes it.
+    });
+}
+
 /** Catalog summary for sitemap generation (D1 when available). */
 export async function getSitemapSummary(): Promise<SitemapSummary> {
   let summary: SitemapSummary | null = null;
@@ -387,6 +436,7 @@ export async function getSitemapSummary(): Promise<SitemapSummary> {
     try {
       summary = await getCachedSitemapSummaryFromD1();
       lastGoodSummary = summary;
+      saveSharedSummary(summary);
     } catch (e) {
       // The scan itself just failed: retrying it at once only adds D1 load.
       if (e instanceof SitemapSummaryUnavailable) {
@@ -401,6 +451,14 @@ export async function getSitemapSummary(): Promise<SitemapSummary> {
       }
     }
   if (summary) return summary;
+
+  // No good scan in this isolate yet: the global last good copy, before the
+  // bundled sample (which holds almost no indexable listings).
+  summary = await readSharedSummary();
+  if (summary) {
+    lastGoodSummary = summary;
+    return summary;
+  }
 
   const summarizer = createSitemapSummarizer();
   summarizer.add(
