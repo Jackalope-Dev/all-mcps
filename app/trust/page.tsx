@@ -927,8 +927,12 @@ export default async function TrustPage() {
                       marginBottom: '0.65rem',
                     }}
                   >
-                    Listing Quality Tier Distribution (
-                    {formatNumber(totalQualityServers)} total active servers):
+                    {/* No total here: the one listing count is the page's
+                        catalog count (lib/catalogCount.ts). This scan is
+                        cached separately and printed a second, different
+                        "total active servers". */}
+                    Listing Quality Tier Distribution (share of scored
+                    listings):
                   </div>
                   <div
                     style={{
