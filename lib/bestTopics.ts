@@ -57,14 +57,14 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     title: 'Databases',
     lead: 'The best MCP servers for connecting AI agents to SQL and NoSQL databases — query, inspect schemas, and safely read or write real records from Claude, Cursor, and other clients.',
     guidance: [
-      'Start with the engine-specific page for your database (Postgres, MySQL, MongoDB, SQLite) rather than a generic multi-database server — a purpose-built server usually has better schema introspection and fewer surprises than a lowest-common-denominator wrapper.',
+      "If you work with one engine, start with its own page (PostgreSQL, MySQL, MongoDB, SQLite). If you work across several, a multi-engine server saves running one server per database: DBHub covers Postgres, MySQL, SQL Server, Oracle, MariaDB and SQLite, and Google's MCP Toolbox for Databases adds Google Cloud databases and lets you predefine the exact queries a production agent may run.",
       'The single biggest decision is read vs. write access. Most database MCP servers default to read-only, which is the right starting point: connect with a database role that can only SELECT, watch how the agent actually uses it for a while, and only grant write access to specific tables once you trust the workflow.',
       'Never point one of these at a database credential with admin/superuser rights. Create a dedicated, least-privilege user for the MCP server — most engines support scoping a role to specific schemas or tables, which limits the blast radius if a prompt goes wrong.',
     ],
     faq: [
       {
         q: 'What is the best MCP server for databases?',
-        a: 'It depends on your database. For Postgres, crystaldba/postgres-mcp is a widely used, maintained option; the original reference server, modelcontextprotocol/server-postgres, has been archived. The ranking on this page is ordered with servers we have seen run first, then by popularity.',
+        a: "It depends on your database. Our editor's picks: DBHub for several SQL engines at once, Google's MCP Toolbox for Databases for Google Cloud and locked-down production tools, MongoDB's official server for MongoDB and Atlas, and benborla/mcp-server-mysql for MySQL. For Postgres, see the PostgreSQL page. The ranked list puts servers we have seen run first, then orders by popularity.",
       },
       {
         q: 'Can an MCP server write to my database, or only read?',
@@ -106,10 +106,15 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     categorySlug: 'search-and-data-extraction',
     title: 'Web Search & Scraping',
     lead: 'The best MCP servers for web search and data extraction — let AI agents search the web, scrape pages, and pull structured data out of unstructured sources.',
+    guidance: [
+      'Decide first whether you need search results or page content. Search APIs such as Exa, Tavily and Brave return ranked results and snippets; scrapers and crawlers such as Firecrawl and the reference Fetch server return the full content of pages. Many agents need one of each.',
+      "Most of the strongest options are vendor servers that need an account and API key (Firecrawl, Tavily, Brave). If you can't use a paid API, open-webSearch needs no key, and MCP-SearXNG searches through a SearXNG instance you run, which keeps your queries private.",
+      'Treat fetched pages as untrusted input: a page can contain text written to steer the model. Keep web tools apart from tools that can write files or send data, or require confirmation for those actions.',
+    ],
     faq: [
       {
         q: 'What is the best MCP server for web search?',
-        a: 'Popular options wrap search APIs and headless scraping. This page ranks web search and extraction servers with servers we have seen run first, then by popularity, so you can pick a proven one.',
+        a: "Our editor's picks: Firecrawl for scraping and crawling, Exa for a hosted search API built for LLMs, Tavily for search plus light extraction, open-webSearch if you need a free option with no API key, and MCP-SearXNG for private, self-hosted search. The ranked list puts servers we have seen run first, then orders by popularity.",
       },
       {
         q: 'Can MCP servers scrape any website?',
@@ -117,7 +122,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
       },
       {
         q: 'Do web search MCP servers need an API key?',
-        a: 'Those backed by a commercial search API (e.g. Brave, Tavily, SerpAPI) need your own key; fully self-contained scrapers usually do not.',
+        a: 'Those backed by a commercial API (for example Firecrawl, Tavily and Brave) need your own key. open-webSearch needs none, and MCP-SearXNG needs only a SearXNG instance you run or trust.',
       },
     ],
   },
@@ -147,14 +152,15 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     title: 'Browser Automation',
     lead: 'The best MCP servers for browser automation — drive a real browser from an AI agent to navigate, click, fill forms, and extract page content.',
     guidance: [
-      "Microsoft's official playwright-mcp is the most widely used starting point — it exposes Playwright's accessibility-tree snapshot to the agent instead of raw screenshots, which tends to make click/fill actions more reliable than vision-based automation.",
+      "Microsoft's official playwright-mcp is the most-downloaded browser server we track (about 32 million npm downloads a month). It exposes Playwright's accessibility-tree snapshot to the agent instead of raw screenshots, which tends to make click and fill actions more reliable than vision-based automation.",
+      "Pick by job: Playwright for scripted flows, Chrome DevTools MCP when you need network, console and performance data to debug a page, Browser MCP when the agent must use your own signed-in Chrome, and Mozilla's Firefox DevTools MCP for Firefox.",
       "Run browser automation servers headless by default; switch to a headed/visible browser only when you're debugging a flow that isn't working, since watching the browser act is the fastest way to see where a selector or step is failing.",
       'If a workflow needs to log into a site, use a scoped or disposable test account wherever the site supports one — an agent driving a real browser session has the same access a logged-in human would.',
     ],
     faq: [
       {
         q: 'What is the best MCP server for browser automation?',
-        a: 'Servers wrapping Playwright, Puppeteer, and browser-use are the most common. This page ranks browser automation servers with servers we have seen run first, then by popularity.',
+        a: "Our editor's picks: Microsoft's Playwright MCP for reliable scripted automation, Chrome DevTools MCP for debugging and performance work, Browser MCP for driving your own signed-in browser, and Firefox DevTools MCP for Firefox. The ranked list puts servers we have seen run first, then orders by popularity.",
       },
       {
         q: 'Do browser automation MCP servers run headless?',
@@ -653,14 +659,14 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     title: 'PostgreSQL',
     lead: 'The best MCP servers for PostgreSQL — let AI agents run queries, inspect schemas, and read or write records in your Postgres database from Claude, Cursor, and other MCP clients.',
     guidance: [
-      'The original reference server, modelcontextprotocol/server-postgres, has been archived by the MCP project, so prefer a maintained server. crystaldba/postgres-mcp covers schema introspection and querying and also ships EXPLAIN-based query analysis, which is useful if you want the agent to help diagnose slow queries rather than just run them.',
+      "The original reference server, modelcontextprotocol/server-postgres, has been archived by the MCP project, so prefer a maintained server. For most people DBHub is the simplest choice: one server with a small two-tool footprint and read-only mode, row limits and timeouts built in. Choose crystaldba/postgres-mcp (Postgres MCP Pro) when you want EXPLAIN plans, index recommendations and health checks, and Neon's official server only if your database runs on Neon.",
       'Connect with a read-only role first (`GRANT SELECT ON ALL TABLES IN SCHEMA public TO ...`). If you later want the agent to write, most Postgres servers gate that behind an explicit flag or a separate write-capable connection string — treat that as a deliberate opt-in, not the default.',
       'For managed Postgres (Supabase, Neon, RDS), use the connection string your provider issues for a scoped/read replica role if one is available, rather than the primary admin connection string.',
     ],
     faq: [
       {
         q: 'What is the best Postgres MCP server?',
-        a: 'crystaldba/postgres-mcp is a widely used, maintained option; the original reference modelcontextprotocol/server-postgres has been archived. This page ranks Postgres MCP servers with servers we have seen run first, then by popularity, so you can start with a proven one.',
+        a: "Our editor's picks: DBHub as a general-purpose server, Postgres MCP Pro (crystaldba/postgres-mcp) for query tuning and health checks, Neon's official server if your database is on Neon, and Timescale's pg-aiguide to help coding agents write better SQL. The original reference server, modelcontextprotocol/server-postgres, has been archived.",
       },
       {
         q: 'Can a Postgres MCP server write to my database?',
@@ -750,14 +756,14 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     title: 'GitHub',
     lead: 'The best MCP servers for GitHub — let AI agents read repositories, search code, manage issues and pull requests, and drive GitHub Actions right from your client.',
     guidance: [
-      'The official github/github-mcp-server is maintained by GitHub itself and is the safest default — it tracks the GitHub API directly, supports both repository-scoped and org-scoped tokens, and is the one most other MCP clients document by name.',
+      "The official github/github-mcp-server, maintained by GitHub, is the safest default: it covers repositories, issues, pull requests, Actions and security alerts, runs locally with a token or as GitHub's hosted remote server, and its --toolsets flag lets you load only the tool groups you need.",
       'Use a fine-grained personal access token scoped to the specific repositories you want the agent working in, not a classic token with account-wide access. If you only need the agent to read code and open PRs for review (not merge them), a token without admin/merge scopes is enough.',
       'For read-heavy workflows — searching code, reading issues, summarizing PRs — a token with only `contents:read` and `issues:read` is sufficient and meaningfully lower-risk than a full read/write token.',
     ],
     faq: [
       {
         q: 'What is the best GitHub MCP server?',
-        a: 'The official GitHub MCP server is the most widely installed — it covers issues, pull requests, code search, and Actions. This page ranks GitHub MCP servers with servers we have seen run first, then by popularity.',
+        a: "GitHub's official server (about 34.4k GitHub stars) covers issues, pull requests, code search and Actions, and is our top pick. For narrower jobs: GitMCP grounds an agent in a project's docs, Octocode researches code across GitHub, and GitDiagram explains a public repo's architecture.",
       },
       {
         q: 'Can a GitHub MCP server open pull requests?',
@@ -765,7 +771,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
       },
       {
         q: 'Do I need a personal access token?',
-        a: 'Yes — you provide a GitHub token via an environment variable. Scope it to only the repositories and permissions the agent actually needs.',
+        a: "For the local server, yes: pass a GitHub token through an environment variable. GitHub's hosted remote server can use OAuth instead in clients that support it. Either way, scope access to only the repositories and permissions the agent needs.",
       },
     ],
   },
@@ -1414,6 +1420,17 @@ function mentionsAny(text: string, terms: string[]): boolean {
   return new RegExp(`\\b(?:${escaped.join('|')})\\b`, 'i').test(text);
 }
 
+/**
+ * The part of a listing name that says what the server is: "io.github.Owner/repo"
+ * and "owner/repo" reduce to "repo". Matching the whole name put an Apple Health
+ * server (io.github.PhilipAD/health-export-mcp) and a user called tadas-github in
+ * the /best/github top 10.
+ */
+function subjectName(name: string): string {
+  const slash = name.lastIndexOf('/');
+  return slash >= 0 ? name.slice(slash + 1) : name;
+}
+
 /** A category holding at least this share of a topic's name matches is one of its homes. */
 const HOME_CATEGORY_MIN_SHARE = 0.15;
 /** Below this many name matches there's too little signal to infer home categories. */
@@ -1458,11 +1475,13 @@ export function selectServersForTopic<
     const mentioning = servers.filter((s) =>
       mentionsAny(`${s.name} ${s.description || ''}`, match),
     );
-    const nameMatches = mentioning.filter((s) => mentionsAny(s.name, match));
+    const nameMatches = mentioning.filter((s) =>
+      mentionsAny(subjectName(s.name), match),
+    );
     if (nameMatches.length < MIN_NAME_MATCHES_FOR_HOMES) return mentioning;
     const homes = homeCategories(nameMatches);
     return mentioning.filter(
-      (s) => mentionsAny(s.name, match) || homes.has(s.category),
+      (s) => mentionsAny(subjectName(s.name), match) || homes.has(s.category),
     );
   }
   const category = topic.categorySlug

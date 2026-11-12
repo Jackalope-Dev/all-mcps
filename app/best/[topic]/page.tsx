@@ -13,8 +13,14 @@ import {
   bestTopicHue,
 } from '../../../lib/bestTopics';
 import { parseServerName } from '../../../lib/displayName';
+import {
+  formatReviewedAt,
+  type HubEditorial,
+  hubEditorial,
+  listingVerdict,
+} from '../../../lib/editorial';
 import { isFeaturedListing, trustLabel } from '../../../lib/featuredStatus';
-import { getServersForTopic } from '../../../lib/servers';
+import { getServersForTopic, hydrateServersByIds } from '../../../lib/servers';
 import { hubReason, rankServersForTopic } from '../../../lib/topicRanking';
 
 const SITE = 'https://allmcps.com';
@@ -85,6 +91,21 @@ export async function generateMetadata({
   };
 }
 
+/** Editor's picks with their listings; a pick whose listing is gone or inactive is skipped. */
+async function resolvePicks(editorial: HubEditorial) {
+  const servers = await hydrateServersByIds(
+    editorial.picks.map((p) => p.serverId),
+  );
+  const byId = new Map(servers.map((s) => [s.id, s]));
+  return editorial.picks.flatMap((pick) => {
+    const server = byId.get(pick.serverId);
+    const verdict = listingVerdict(pick.serverId)?.verdict;
+    if (!server || !verdict) return [];
+    if (server.status && server.status !== 'active') return [];
+    return [{ pick, server, verdict }];
+  });
+}
+
 export default async function BestTopicPage({
   params,
 }: {
@@ -98,6 +119,8 @@ export default async function BestTopicPage({
   // #1 is gold (amber); #2–#3 carry the topic's own hue.
   const topicHue = bestTopicHue(t);
   const ranked = rankServersForTopic(t, all).slice(0, TOP_N);
+  const editorial = hubEditorial(t.slug);
+  const picks = editorial ? await resolvePicks(editorial) : [];
 
   const year = new Date().getFullYear();
   const url = `${SITE}/best/${t.slug}`;
@@ -199,6 +222,36 @@ export default async function BestTopicPage({
             downloads and installs · refreshed hourly
           </p>
         </header>
+
+        {editorial && picks.length > 0 && (
+          <section
+            className="dir-section dir-picks"
+            aria-labelledby="editors-picks"
+          >
+            <h2 id="editors-picks" className="dir-section-title">
+              Editor&rsquo;s picks
+            </h2>
+            <p className="dir-picks-meta">
+              Reviewed {formatReviewedAt(editorial.reviewedAt)} by the AllMCPs
+              editors. Facts come from our own handshake, sandbox and health
+              checks or from each project&rsquo;s README, as noted.{' '}
+              <Link href="/trust">How we verify servers</Link>.
+            </p>
+            <ol className="dir-picks-list">
+              {picks.map(({ pick, server, verdict }) => (
+                <li key={server.id} className="dir-picks-item">
+                  <p className="dir-picks-label">{pick.label}</p>
+                  <h3 className="dir-picks-name">
+                    <Link href={`/mcp/${server.id}`}>
+                      {parseServerName(server.name).displayName}
+                    </Link>
+                  </h3>
+                  <p className="dir-picks-verdict">{verdict}</p>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
 
         <div className="dir-best-layout">
           {ranked.length > 0 ? (

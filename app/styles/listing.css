@@ -1459,6 +1459,39 @@ details[open] > summary .lst-chevron {
   color: var(--text-primary);
 }
 
+/* Editor's verdict (lib/editorial.ts): hand-reviewed, shown above the AI overview. */
+.lst-verdict {
+  margin: 0 0 1.25rem;
+  padding: 1rem 1.1rem;
+  max-width: 44rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--accent-color);
+  background: var(--bg-muted);
+}
+
+.lst-verdict-title {
+  margin: 0 0 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--accent-color);
+}
+
+.lst-verdict-body {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--text-primary);
+}
+
+.lst-verdict-meta {
+  margin: 0.6rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
 .lst-lead {
   font-size: 1rem;
   line-height: 1.75;

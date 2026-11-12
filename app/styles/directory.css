@@ -2340,6 +2340,66 @@
   top: calc(var(--header-height) + 1.25rem);
 }
 
+/* Editor's picks on /best/[topic] (lib/editorial.ts). */
+.dir-picks {
+  margin-top: 1.5rem;
+}
+
+.dir-picks-meta {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  max-width: 44rem;
+}
+
+.dir-picks-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dir-picks-item {
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  background: var(--bg-muted);
+}
+
+.dir-picks-label {
+  margin: 0 0 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--accent-color);
+}
+
+.dir-picks-name {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.dir-picks-name a {
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.dir-picks-name a:hover,
+.dir-picks-name a:focus-visible {
+  text-decoration: underline;
+}
+
+.dir-picks-verdict {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
 .dir-best-card {
   padding: 1.1rem;
   border-radius: var(--radius-lg);

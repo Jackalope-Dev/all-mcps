@@ -36,6 +36,7 @@ import {
 import { ListingVisibilityNotice } from '@/components/listing/ListingVisibilityNotice';
 import { MCP_CLIENTS } from '@/lib/clients';
 import { comparePath, curatedPairsFor } from '@/lib/comparePairs';
+import { formatReviewedAt, listingVerdict } from '@/lib/editorial';
 import { assessInstallRisk } from '@/lib/installRisk';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { isServerRowIndexable } from '@/lib/listingIndexability';
@@ -717,6 +718,7 @@ export default async function MCPDetail({
     Boolean(parseSecurityProfile(serverWithSignals.securityProfile)) ||
     assessInstallRisk(serverWithSignals).length > 0;
   const hasVulnCard = server.vulnScannedAt != null;
+  const verdict = listingVerdict(server.id);
   const hasAiOverview = Boolean(
     server.aiOverview ||
       (server.aiUseCases?.length ?? 0) > 0 ||
@@ -1473,6 +1475,23 @@ export default async function MCPDetail({
                     Overview
                   </h2>
                 </header>
+
+                {verdict && (
+                  <aside
+                    className="lst-verdict"
+                    aria-labelledby="editors-verdict-h"
+                  >
+                    <h3 id="editors-verdict-h" className="lst-verdict-title">
+                      Editor&rsquo;s verdict
+                    </h3>
+                    <p className="lst-verdict-body">{verdict.verdict}</p>
+                    <p className="lst-verdict-meta">
+                      Reviewed {formatReviewedAt(verdict.reviewedAt)} by the
+                      AllMCPs editors.{' '}
+                      <Link href="/trust">How we verify servers</Link>.
+                    </p>
+                  </aside>
+                )}
 
                 {listingTags.length > 0 && (
                   <ul className="lst-tags" aria-label="Tags">

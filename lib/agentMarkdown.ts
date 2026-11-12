@@ -8,6 +8,7 @@ import {
   parseCategoryLabel,
 } from './categories';
 import { MCP_CLIENTS, type McpClient, mcpClientBySlug } from './clients';
+import { formatReviewedAt, hubEditorial, listingVerdict } from './editorial';
 import { trustLabel } from './featuredStatus';
 import { resolveInstallConfig } from './installConfig';
 import {
@@ -144,6 +145,22 @@ export async function renderCategoryIndexMarkdown(): Promise<string> {
   return formatCategoryIndexMarkdown(counts);
 }
 
+/** The hub's editor's picks (lib/editorial.ts), or '' when it has none. */
+function formatEditorsPicksMarkdown(slug: string, servers: Server[]): string {
+  const editorial = hubEditorial(slug);
+  if (!editorial) return '';
+  const names = new Map(servers.map((s) => [s.id, s.name]));
+  let md = `## Editor's picks\n\n`;
+  md += `Reviewed ${formatReviewedAt(editorial.reviewedAt)} by the AllMCPs editors.\n\n`;
+  for (const pick of editorial.picks) {
+    const verdict = listingVerdict(pick.serverId);
+    if (!verdict) continue;
+    const name = names.get(pick.serverId) ?? pick.name;
+    md += `- **${pick.label}:** [${name}](${SITE}/mcp/${pick.serverId}). ${verdict.verdict}\n`;
+  }
+  return `${md}\n`;
+}
+
 /** `servers` arrive already ranked (lib/topicRanking.ts), the order the HTML page shows. */
 export function formatBestTopicMarkdown(
   topic: BestTopic,
@@ -155,6 +172,7 @@ export function formatBestTopicMarkdown(
   md += `${topic.lead}\n\n`;
   md += `**Page:** ${SITE}/best/${topic.slug}\n`;
   md += `**Ranked servers:** ${ranked.length}\n\n`;
+  md += formatEditorsPicksMarkdown(topic.slug, ranked);
 
   if (ranked.length === 0) {
     md += `No servers currently match this topic.\n`;

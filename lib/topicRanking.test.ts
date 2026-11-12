@@ -54,6 +54,35 @@ describe('selectServersForTopic (keyword hubs)', () => {
     ]);
   });
 
+  it('matches the repo part of a name, not a registry prefix or owner', () => {
+    const github: BestTopic = {
+      ...postgres,
+      slug: 'github',
+      match: ['github'],
+    };
+    const VC = '🔄 Version Control';
+    const rows = [
+      row({ name: 'github/github-mcp-server', category: VC }),
+      row({ name: 'github-issues', category: VC }),
+      row({ name: 'octo/github-actions-mcp', category: VC }),
+      row({
+        name: 'io.github.PhilipAD/health-export-mcp',
+        description: 'Apple Health metrics',
+        category: DEFAULT_SUBMIT_CATEGORY,
+      }),
+      row({
+        name: 'tadas-github/a2asearch-mcp',
+        description: 'Search MCP servers on GitHub',
+        category: DEFAULT_SUBMIT_CATEGORY,
+      }),
+    ];
+    expect(selectServersForTopic(github, rows).map((s) => s.name)).toEqual([
+      'github/github-mcp-server',
+      'github-issues',
+      'octo/github-actions-mcp',
+    ]);
+  });
+
   it('falls back to any mention when there are too few name matches', () => {
     const few = [servers[0], servers[3], servers[4]];
     expect(selectServersForTopic(postgres, few)).toHaveLength(3);
