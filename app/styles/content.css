@@ -972,6 +972,13 @@ a.content-tag:hover {
   color: var(--text-secondary);
 }
 
+/* "Updated ..." / "refreshed hourly" lines under headers and list headings. */
+.freshness-note {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+}
+
 .content-hub-lede a {
   color: var(--text-primary);
   text-decoration: underline;

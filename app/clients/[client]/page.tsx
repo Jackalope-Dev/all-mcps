@@ -221,6 +221,10 @@ export default async function ClientPage({
                 </Link>
               ) : null}
             </div>
+            <p className="freshness-note">
+              Ranked by views, installs and upvotes on AllMCPs, refreshed
+              hourly.
+            </p>
 
             {popular.length > 0 ? (
               <ul className="cl-servers">

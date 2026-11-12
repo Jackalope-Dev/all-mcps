@@ -403,6 +403,10 @@ export function MultiServerCompareView({
           {enriched.length} MCP servers side by side — trust, install, adoption
           and tools. Rows that differ are marked.
         </p>
+        <p className="freshness-note">
+          Health and adoption come from our own checks. This page refreshes
+          hourly.
+        </p>
       </header>
 
       <div className="cmp-controls">
