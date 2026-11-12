@@ -7,7 +7,9 @@ import { SafeMarkdown } from '@/components/ui/SafeMarkdown';
 import { ServerAvatar } from '@/components/ui/ServerAvatar';
 import { mcpClientBySlug } from '@/lib/clients';
 import { parseServerName } from '@/lib/displayName';
+import { formatPageDate } from '@/lib/format';
 import type { Server } from '@/lib/servers';
+import { STATIC_PAGE_LASTMOD } from '@/lib/sitemapHelpers';
 
 interface ClientLandingProps {
   slug: string;
@@ -41,6 +43,7 @@ export function ClientLanding({
   servers,
 }: ClientLandingProps) {
   const client = mcpClientBySlug(slug);
+  const updated = STATIC_PAGE_LASTMOD[`/mcp-for-${slug}`];
 
   return (
     <main className="page-shell content-page cl-page">
@@ -69,6 +72,11 @@ export function ClientLanding({
             {titleLead} {titleName}
           </h1>
           <p className="content-hub-lede">{lede}</p>
+          {updated ? (
+            <p className="freshness-note">
+              Updated <time dateTime={updated}>{formatPageDate(updated)}</time>
+            </p>
+          ) : null}
           <div className="cl-head-actions">
             <Link href="#top-servers" className="btn btn-primary btn-md">
               {primaryLabel}

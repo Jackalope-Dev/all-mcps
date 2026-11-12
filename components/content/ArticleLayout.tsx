@@ -2,6 +2,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import type React from 'react';
 import { TableOfContents, type TocItem } from '@/components/ui/TableOfContents';
+import { formatPageDate } from '@/lib/format';
 import { SITE_AUTHOR } from '@/lib/siteAuthor';
 import { STATIC_PAGE_LASTMOD } from '@/lib/sitemapHelpers';
 import {
@@ -39,15 +40,6 @@ interface ArticleLayoutProps {
   progress?: boolean;
   /** Identity tile shown above the title (e.g. a prompt workflow's icon). */
   icon?: React.ReactNode;
-}
-
-function formatArticleDate(date: string): string {
-  return new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
 }
 
 /**
@@ -123,7 +115,7 @@ export function ArticleLayout({
                 {date ? (
                   <span>
                     {updatedLabel}{' '}
-                    <time dateTime={date}>{formatArticleDate(date)}</time>
+                    <time dateTime={date}>{formatPageDate(date)}</time>
                   </span>
                 ) : null}
                 {minutes ? <span>{minutes} min read</span> : null}

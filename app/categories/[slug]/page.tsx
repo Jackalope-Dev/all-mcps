@@ -277,7 +277,8 @@ export default async function CategoryLandingPage({
                   Top picks
                 </h2>
                 <p className="dir-section-sub">
-                  The most-used {label} servers on AllMCPs right now.
+                  The most-used {label} servers on AllMCPs right now. Rankings
+                  refresh hourly.
                 </p>
               </div>
               <ol className="dir-picks">

@@ -68,6 +68,7 @@ import {
   AdminTopBar,
 } from '../../../components/ui/AdminListingControls';
 import { AdoptionSignals } from '../../../components/ui/AdoptionSignals';
+import { CheckedAt } from '../../../components/ui/CheckedAt';
 import { ClaimHintLink } from '../../../components/ui/ClaimHintLink';
 import { CopyBlock } from '../../../components/ui/CopyBlock';
 import { DirectoryBadgeCard } from '../../../components/ui/DirectoryBadgeCard';
@@ -108,9 +109,11 @@ import {
   trustLabel,
 } from '../../../lib/featuredStatus';
 import {
+  formatCheckAge,
   formatCommitAge,
   formatCompactNumber,
   formatFullDate,
+  formatUtcDateTime,
   publicViewCount,
 } from '../../../lib/format';
 import {
@@ -999,7 +1002,7 @@ export default async function MCPDetail({
                   </span>
                   <span className="mcp-icon-tooltip-meta">
                     {server.lastCheckedAt
-                      ? `Last checked ${new Date(server.lastCheckedAt).toLocaleString()}`
+                      ? `Last checked ${formatCheckAge(server.lastCheckedAt)} · ${formatUtcDateTime(server.lastCheckedAt)}`
                       : 'No health check has run yet.'}
                   </span>
                 </IconTooltip>
@@ -1315,8 +1318,8 @@ export default async function MCPDetail({
                                 aria-hidden="true"
                               />
                               {remoteHealthy ? 'Live' : 'Unreachable'}
-                              {formatCommitAge(server.remoteEndpointCheckedAt)
-                                ? ` · ${formatCommitAge(server.remoteEndpointCheckedAt)}`
+                              {formatCheckAge(server.remoteEndpointCheckedAt)
+                                ? ` · ${formatCheckAge(server.remoteEndpointCheckedAt)}`
                                 : ''}
                             </span>
                           }
@@ -1333,7 +1336,7 @@ export default async function MCPDetail({
                           </span>
                           <span className="mcp-icon-tooltip-meta">
                             {server.remoteEndpointCheckedAt
-                              ? `Last checked ${new Date(server.remoteEndpointCheckedAt).toLocaleString()}`
+                              ? `Last checked ${formatCheckAge(server.remoteEndpointCheckedAt)} · ${formatUtcDateTime(server.remoteEndpointCheckedAt)}`
                               : 'Live on-site API endpoint.'}
                           </span>
                         </IconTooltip>
@@ -1393,9 +1396,12 @@ export default async function MCPDetail({
                         <span>
                           — started and listed {verification.toolCount ?? 'its'}{' '}
                           tools correctly
-                          {formatCommitAge(verification.checkedAt)
-                            ? ` (${formatCommitAge(verification.checkedAt)})`
-                            : ''}
+                          {verification.checkedAt ? (
+                            <>
+                              {' '}
+                              (<CheckedAt at={verification.checkedAt} />)
+                            </>
+                          ) : null}
                           .
                         </span>
                       </p>
@@ -1446,9 +1452,13 @@ export default async function MCPDetail({
                           false negatives — missing environment variables, a
                           slow cold install, etc. It doesn&rsquo;t necessarily
                           mean something&rsquo;s wrong.
-                          {formatCommitAge(verification.checkedAt)
-                            ? ` Last checked ${formatCommitAge(verification.checkedAt)}.`
-                            : ''}{' '}
+                          {verification.checkedAt ? (
+                            <>
+                              {' '}
+                              Last checked{' '}
+                              <CheckedAt at={verification.checkedAt} />.
+                            </>
+                          ) : null}{' '}
                           {!server.ownerVerified && (
                             <ClaimHintLink serverId={server.id} />
                           )}
@@ -1610,9 +1620,13 @@ export default async function MCPDetail({
                       {healthUi.label.replace('Health: ', '')}
                     </span>
                     <span className="lst-muted-sm">
-                      {server.lastCheckedAt
-                        ? `Last checked ${formatCommitAge(server.lastCheckedAt) ?? new Date(server.lastCheckedAt).toLocaleDateString()}`
-                        : 'No health check has run yet.'}
+                      {server.lastCheckedAt ? (
+                        <>
+                          Last checked <CheckedAt at={server.lastCheckedAt} />
+                        </>
+                      ) : (
+                        'No health check has run yet.'
+                      )}
                     </span>
                   </div>
                   <p className="lst-muted-sm">{healthUi.detail}</p>
