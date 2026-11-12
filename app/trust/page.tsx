@@ -560,10 +560,14 @@ export default async function TrustPage() {
   // Sandbox outcomes. "Pass rate" used to be ok / all runs, but a third of
   // runs time out (the check fell over, no signal about the server), and a
   // server that starts and asks for API keys installed fine. So: started out
-  // of the runs with a clear answer. `?? 0` covers a cached stats copy from
-  // before these counts existed.
+  // of the runs with a clear answer.
   const sv = stats.stdioVerifyStats;
+  // A cached stats copy from before these counts existed (site-stats/v3 is
+  // kept up to 24h) has no breakdown; reading it as zeros showed "100%
+  // started". Show no share until a fresh copy lands.
+  const hasBreakdown = sv.needsCredentialsCount != null;
   const sandbox = {
+    hasBreakdown,
     needsCredentials: sv.needsCredentialsCount ?? 0,
     handshakeFailed: sv.handshakeFailedCount ?? 0,
     installFailed: sv.installFailedCount ?? 0,
@@ -901,9 +905,11 @@ export default async function TrustPage() {
                       color: 'var(--text-primary)',
                     }}
                   >
-                    {sandbox.conclusive > 0
-                      ? `${pct(sandbox.started, sandbox.conclusive)} started`
-                      : 'No runs yet'}
+                    {!sandbox.hasBreakdown
+                      ? `${formatNumber(sv.okCount)} clean starts`
+                      : sandbox.conclusive > 0
+                        ? `${pct(sandbox.started, sandbox.conclusive)} started`
+                        : 'No runs yet'}
                   </div>
                   <div
                     style={{
@@ -914,13 +920,20 @@ export default async function TrustPage() {
                   >
                     {formatNumber(stats.stdioVerifyStats.totalTested)} stdio
                     packages run in isolated sandboxes.{' '}
-                    {formatNumber(sandbox.conclusive)} gave a clear result:{' '}
-                    {formatNumber(sandbox.started)} started (
-                    {formatNumber(sandbox.needsCredentials)} of them asked for
-                    API keys), {formatNumber(sandbox.handshakeFailed)} installed
-                    but never completed the MCP handshake, and{' '}
-                    {formatNumber(sandbox.installFailed)} would not install. The
-                    rest timed out or are queued, which says nothing either way
+                    {!sandbox.hasBreakdown ? (
+                      'The full breakdown is refreshing'
+                    ) : (
+                      <>
+                        {formatNumber(sandbox.conclusive)} gave a clear result:{' '}
+                        {formatNumber(sandbox.started)} started (
+                        {formatNumber(sandbox.needsCredentials)} of them asked
+                        for API keys), {formatNumber(sandbox.handshakeFailed)}{' '}
+                        installed but never completed the MCP handshake, and{' '}
+                        {formatNumber(sandbox.installFailed)} would not install.
+                        The rest timed out or are queued, which says nothing
+                        either way
+                      </>
+                    )}
                     {stats.stdioVerifyStats.avgDurationMs > 0
                       ? ` (avg time to a clean start: ${(stats.stdioVerifyStats.avgDurationMs / 1000).toFixed(1)}s)`
                       : ''}
