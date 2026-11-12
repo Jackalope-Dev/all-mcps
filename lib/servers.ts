@@ -902,6 +902,12 @@ const RANKING_COLUMNS = {
   reciprocalBadgeOk: serversTable.reciprocalBadgeOk,
   featuredUntil: serversTable.featuredUntil,
   categorySponsorUntil: serversTable.categorySponsorUntil,
+  // Proof-it-runs signals (lib/listingIndexability.ts hasVerifiedRun): /best
+  // ranks servers we have seen work above ones we haven't, and says so.
+  toolsSource: serversTable.toolsSource,
+  installNeedsConfig: serversTable.installNeedsConfig,
+  remoteEndpointHealthy: serversTable.remoteEndpointHealthy,
+  remoteEndpointHealthyAt: serversTable.remoteEndpointHealthyAt,
 } as const;
 
 /**

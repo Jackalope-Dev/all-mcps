@@ -11,12 +11,11 @@ import {
   BEST_TOPICS,
   bestTopicBySlug,
   bestTopicHue,
-  selectServersForTopic,
 } from '../../../lib/bestTopics';
 import { parseServerName } from '../../../lib/displayName';
 import { isFeaturedListing, trustLabel } from '../../../lib/featuredStatus';
-import { engagementScore } from '../../../lib/search';
-import { getServersForTopic, type Server } from '../../../lib/servers';
+import { getServersForTopic } from '../../../lib/servers';
+import { hubReason, rankServersForTopic } from '../../../lib/topicRanking';
 
 const SITE = 'https://allmcps.com';
 const TOP_N = 10;
@@ -86,20 +85,6 @@ export async function generateMetadata({
   };
 }
 
-/** A short, factual reason each server earns its rank — no invented claims. */
-function reasonFor(server: Server, index: number): string {
-  if (index === 0) return 'Most popular in this category on AllMCPs';
-  // Rank comes from engagement only; a paid listing gets no "why" of its own.
-  const trust = trustLabel(server);
-  if (trust?.kind === 'official') return 'Official server from the vendor';
-  if (trust?.kind === 'reference')
-    return 'Reference server from the MCP project';
-  const bits: string[] = [];
-  if (server.copies) bits.push(`${server.copies.toLocaleString()} installs`);
-  if (server.upvotes) bits.push(`${server.upvotes.toLocaleString()} upvotes`);
-  return bits.length ? `Popular pick — ${bits.join(', ')}` : 'Community pick';
-}
-
 export default async function BestTopicPage({
   params,
 }: {
@@ -112,9 +97,7 @@ export default async function BestTopicPage({
   const all = await getServersForTopic(t);
   // #1 is gold (amber); #2–#3 carry the topic's own hue.
   const topicHue = bestTopicHue(t);
-  const ranked = selectServersForTopic(t, all)
-    .sort((a, b) => engagementScore(b) - engagementScore(a))
-    .slice(0, TOP_N);
+  const ranked = rankServersForTopic(t, all).slice(0, TOP_N);
 
   const year = new Date().getFullYear();
   const url = `${SITE}/best/${t.slug}`;
@@ -212,8 +195,8 @@ export default async function BestTopicPage({
           </h1>
           <p className="text-lead">{t.lead}</p>
           <p className="dir-best-meta">
-            Top {ranked.length} · ranked by installs, upvotes, stars and views ·
-            refreshed hourly
+            Top {ranked.length} · servers we have seen run first, then by stars,
+            downloads and installs · refreshed hourly
           </p>
         </header>
 
@@ -278,7 +261,7 @@ export default async function BestTopicPage({
                           <span className="dir-rank-why-label">
                             Why it&rsquo;s here
                           </span>
-                          {reasonFor(server, i)}
+                          {hubReason(server)}
                         </p>
                         <p className="dir-rank-desc">
                           <InlineMarkdown
@@ -321,9 +304,13 @@ export default async function BestTopicPage({
             <div className="dir-best-card">
               <h2 className="dir-best-card-title">How this list is ranked</h2>
               <p>
-                Servers are scored on real usage in the AllMCPs directory —
-                installs, community upvotes, GitHub stars and views — and the
-                list refreshes every hour.
+                Only servers about {t.title} are ranked. Servers we have seen
+                work (tools confirmed over a live MCP handshake, a start in our
+                sandbox, or a hosted endpoint that passed our health check) rank
+                above ones we have not verified, then by GitHub stars, npm
+                downloads and installs, upvotes and views on AllMCPs. Payment
+                never changes the order. The list refreshes every hour.{' '}
+                <Link href="/trust">How we verify servers</Link>.
               </p>
               {ranked.length > 0 && (
                 <ol className="dir-best-index">

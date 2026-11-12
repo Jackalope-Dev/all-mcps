@@ -98,7 +98,7 @@ export function isServerRowIndexable(row: IndexabilityRow): boolean {
 }
 
 /** We saw the server work: live tools, a sandbox start that asked for keys, or a recently healthy remote endpoint. */
-function hasVerifiedRun(
+export function hasVerifiedRun(
   s: Pick<
     IndexabilityInput,
     | 'toolsSource'

@@ -9,6 +9,7 @@
 import {
   categoryFromSlug,
   categoryHue,
+  DEFAULT_SUBMIT_CATEGORY,
   categorySlug as slugFromCategory,
 } from './categories';
 import { type Hue, hueFor } from './palette';
@@ -63,7 +64,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best MCP server for databases?',
-        a: 'It depends on your database. For Postgres, the official modelcontextprotocol/server-postgres and crystaldba/postgres-mcp are the most widely installed. The ranking on this page is ordered by real usage across the AllMCPs directory.',
+        a: 'It depends on your database. For Postgres, crystaldba/postgres-mcp is a widely used, maintained option; the original reference server, modelcontextprotocol/server-postgres, has been archived. The ranking on this page is ordered with servers we have seen run first, then by popularity.',
       },
       {
         q: 'Can an MCP server write to my database, or only read?',
@@ -108,7 +109,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best MCP server for web search?',
-        a: 'Popular options wrap search APIs and headless scraping. This page ranks web search and extraction servers by real usage so you can pick a proven one.',
+        a: 'Popular options wrap search APIs and headless scraping. This page ranks web search and extraction servers with servers we have seen run first, then by popularity, so you can pick a proven one.',
       },
       {
         q: 'Can MCP servers scrape any website?',
@@ -153,7 +154,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best MCP server for browser automation?',
-        a: 'Servers wrapping Playwright, Puppeteer, and browser-use are the most installed. This page ranks browser automation servers by real usage.',
+        a: 'Servers wrapping Playwright, Puppeteer, and browser-use are the most common. This page ranks browser automation servers with servers we have seen run first, then by popularity.',
       },
       {
         q: 'Do browser automation MCP servers run headless?',
@@ -177,7 +178,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best MCP server for Slack?',
-        a: 'Community Slack MCP servers are the most installed for reading and posting messages. This page ranks communication servers by real usage.',
+        a: 'Community Slack MCP servers are the most common for reading and posting messages. This page ranks communication servers with servers we have seen run first, then by popularity.',
       },
       {
         q: 'Can MCP servers send messages on my behalf?',
@@ -217,7 +218,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What are the best MCP servers for finance?',
-        a: 'Finance MCP servers cover market data, payments, and accounting. This page ranks them by real usage across the AllMCPs directory.',
+        a: 'Finance MCP servers cover market data, payments, and accounting. This page ranks them with servers we have seen run first, then by popularity.',
       },
       {
         q: 'Can AI agents move money through MCP servers?',
@@ -257,7 +258,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What are the best MCP servers for coding agents?',
-        a: 'These servers add planning, task tracking, and multi-step orchestration to coding assistants. This page ranks them by real usage.',
+        a: 'These servers add planning, task tracking, and multi-step orchestration to coding assistants. This page ranks them with servers we have seen run first, then by popularity.',
       },
       {
         q: 'How are coding-agent MCP servers different from developer tools?',
@@ -297,7 +298,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best MCP server for file access?',
-        a: 'The official filesystem server is the most widely used, alongside servers for cloud storage. This page ranks file-system servers by real usage.',
+        a: 'The official filesystem server is the most widely used, alongside servers for cloud storage. This page ranks file-system servers with servers we have seen run first, then by popularity.',
       },
       {
         q: 'How do I limit which files an agent can access?',
@@ -317,7 +318,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best MCP server for GitHub?',
-        a: 'The official GitHub MCP server is the most widely installed — it covers issues, pull requests, code search, and Actions. This page ranks version-control servers by real usage across the AllMCPs directory.',
+        a: 'The official GitHub MCP server is the most widely installed — it covers issues, pull requests, code search, and Actions. This page ranks version-control servers with servers we have seen run first, then by popularity.',
       },
       {
         q: 'Can an MCP server open pull requests for me?',
@@ -337,7 +338,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What are the best MCP servers for productivity tools?',
-        a: 'Servers for Notion, Google Workspace, Linear, and calendar apps are the most installed. This page ranks productivity MCP servers by real usage so you can start with proven options.',
+        a: 'Servers for Notion, Google Workspace, Linear, and calendar apps are the most common. This page ranks productivity MCP servers with servers we have seen run first, then by popularity, so you can start with proven options.',
       },
       {
         q: 'Can an AI agent manage my calendar or tasks over MCP?',
@@ -363,7 +364,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best MCP server for marketing?',
-        a: 'The most popular marketing MCP servers connect analytics and ad or email platforms. This page ranks them by real usage across the AllMCPs directory.',
+        a: 'The most popular marketing MCP servers connect analytics and ad or email platforms. This page ranks them with servers we have seen run first, then by popularity.',
       },
       {
         q: 'Can MCP servers pull marketing analytics data?',
@@ -383,7 +384,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best MCP server for social media?',
-        a: 'It depends on the platform — servers for X, Reddit, and Discord are the most installed. This page ranks social media MCP servers by real usage.',
+        a: 'It depends on the platform — servers for X, Reddit, and Discord are the most common. This page ranks social media MCP servers with servers we have seen run first, then by popularity.',
       },
       {
         q: 'Can an AI agent post to social media through MCP?',
@@ -423,7 +424,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best MCP server for a data warehouse?',
-        a: 'Servers for Snowflake, BigQuery, and ClickHouse are the most widely installed. This page ranks data-platform MCP servers by real usage across the AllMCPs directory.',
+        a: 'Servers for Snowflake, BigQuery, and ClickHouse are the most widely installed. This page ranks data-platform MCP servers with servers we have seen run first, then by popularity.',
       },
       {
         q: 'Can an agent run analytics queries safely?',
@@ -443,7 +444,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best MCP server for academic research?',
-        a: 'Servers wrapping arXiv, PubMed, and scholarly search APIs are the most installed. This page ranks research MCP servers by real usage so you can pick a proven one.',
+        a: 'Servers wrapping arXiv, PubMed, and scholarly search APIs are the most common. This page ranks research MCP servers with servers we have seen run first, then by popularity, so you can pick a proven one.',
       },
       {
         q: 'Can MCP servers return citations, not just summaries?',
@@ -463,7 +464,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What are the best MCP servers for data science?',
-        a: 'Servers that run Python, Jupyter, or dataframe operations are the most installed. This page ranks data-science MCP servers by real usage across the AllMCPs directory.',
+        a: 'Servers that run Python, Jupyter, or dataframe operations are the most common. This page ranks data-science MCP servers with servers we have seen run first, then by popularity.',
       },
       {
         q: 'Can an MCP server run Python code for analysis?',
@@ -483,7 +484,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best MCP server for running code?',
-        a: 'Sandboxed code-execution servers that support Python and JavaScript are the most installed. This page ranks code-execution MCP servers by real usage.',
+        a: 'Sandboxed code-execution servers that support Python and JavaScript are the most common. This page ranks code-execution MCP servers with servers we have seen run first, then by popularity.',
       },
       {
         q: 'Is it safe to let an AI agent execute code?',
@@ -503,7 +504,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best MCP server for terminal access?',
-        a: 'Shell and terminal MCP servers that support allow-lists and working-directory limits are the most trusted. This page ranks command-line MCP servers by real usage.',
+        a: 'Shell and terminal MCP servers that support allow-lists and working-directory limits are the most trusted. This page ranks command-line MCP servers with servers we have seen run first, then by popularity.',
       },
       {
         q: 'How do I stop an agent from running dangerous commands?',
@@ -523,7 +524,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best MCP server for e-commerce?',
-        a: 'Servers for Shopify and major payment processors are the most installed. This page ranks e-commerce MCP servers by real usage across the AllMCPs directory.',
+        a: 'Servers for Shopify and major payment processors are the most common. This page ranks e-commerce MCP servers with servers we have seen run first, then by popularity.',
       },
       {
         q: 'Can an agent manage orders and products over MCP?',
@@ -543,7 +544,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What are the best MCP servers for legal research?',
-        a: 'Servers wrapping case-law and legal-database APIs are the most installed. This page ranks legal MCP servers by real usage across the AllMCPs directory.',
+        a: 'Servers wrapping case-law and legal-database APIs are the most common. This page ranks legal MCP servers with servers we have seen run first, then by popularity.',
       },
       {
         q: 'Can an MCP server review contracts?',
@@ -563,7 +564,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best MCP server for image or video processing?',
-        a: 'Servers for image generation, transcription, and media conversion are the most installed. This page ranks multimedia MCP servers by real usage.',
+        a: 'Servers for image generation, transcription, and media conversion are the most common. This page ranks multimedia MCP servers with servers we have seen run first, then by popularity.',
       },
       {
         q: 'Can an AI agent transcribe audio through MCP?',
@@ -583,7 +584,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What are the best MCP servers for gaming?',
-        a: 'Servers for game engines and popular platform APIs are the most installed. This page ranks gaming MCP servers by real usage across the AllMCPs directory.',
+        a: 'Servers for game engines and popular platform APIs are the most common. This page ranks gaming MCP servers with servers we have seen run first, then by popularity.',
       },
       {
         q: 'Can an AI agent control a game through MCP?',
@@ -603,7 +604,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best MCP server for maps?',
-        a: 'Servers wrapping major mapping and geocoding APIs are the most installed. This page ranks location MCP servers by real usage across the AllMCPs directory.',
+        a: 'Servers wrapping major mapping and geocoding APIs are the most common. This page ranks location MCP servers with servers we have seen run first, then by popularity.',
       },
       {
         q: 'Can an agent get directions or geocode addresses over MCP?',
@@ -623,7 +624,7 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What are the best MCP servers for travel?',
-        a: 'Servers for flight search, transit data, and booking platforms are the most installed. This page ranks travel MCP servers by real usage across the AllMCPs directory.',
+        a: 'Servers for flight search, transit data, and booking platforms are the most common. This page ranks travel MCP servers with servers we have seen run first, then by popularity.',
       },
       {
         q: 'Can an AI agent book travel through MCP?',
@@ -652,14 +653,14 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     title: 'PostgreSQL',
     lead: 'The best MCP servers for PostgreSQL — let AI agents run queries, inspect schemas, and read or write records in your Postgres database from Claude, Cursor, and other MCP clients.',
     guidance: [
-      'The official modelcontextprotocol/server-postgres and crystaldba/postgres-mcp are the two most widely deployed Postgres servers — both cover schema introspection and querying, and crystaldba/postgres-mcp additionally ships EXPLAIN-based query analysis, which is useful if you want the agent to help diagnose slow queries rather than just run them.',
+      'The original reference server, modelcontextprotocol/server-postgres, has been archived by the MCP project, so prefer a maintained server. crystaldba/postgres-mcp covers schema introspection and querying and also ships EXPLAIN-based query analysis, which is useful if you want the agent to help diagnose slow queries rather than just run them.',
       'Connect with a read-only role first (`GRANT SELECT ON ALL TABLES IN SCHEMA public TO ...`). If you later want the agent to write, most Postgres servers gate that behind an explicit flag or a separate write-capable connection string — treat that as a deliberate opt-in, not the default.',
       'For managed Postgres (Supabase, Neon, RDS), use the connection string your provider issues for a scoped/read replica role if one is available, rather than the primary admin connection string.',
     ],
     faq: [
       {
         q: 'What is the best Postgres MCP server?',
-        a: 'The official modelcontextprotocol/server-postgres and crystaldba/postgres-mcp are the most widely installed. This page ranks Postgres MCP servers by real usage across the AllMCPs directory so you can start with a proven one.',
+        a: 'crystaldba/postgres-mcp is a widely used, maintained option; the original reference modelcontextprotocol/server-postgres has been archived. This page ranks Postgres MCP servers with servers we have seen run first, then by popularity, so you can start with a proven one.',
       },
       {
         q: 'Can a Postgres MCP server write to my database?',
@@ -678,12 +679,12 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     lead: 'The best MCP servers for SQLite — give AI agents direct access to a local SQLite database file to query tables, inspect schemas, and analyze data without a separate database server.',
     guidance: [
       "SQLite is file-based, so there's no network access or connection string to scope — the entire security model comes down to which .db file path you point the server at and whether that file is writable. Copy the file to a scratch location first if you want the agent to experiment without risk to the original.",
-      "The official modelcontextprotocol/server-sqlite is a reasonable default for straightforward query/inspect workflows; reach for a community alternative only if you need something it doesn't support, like full-text search extensions.",
+      'The original reference server, modelcontextprotocol/server-sqlite, has been archived by the MCP project. For straightforward query and inspect workflows, pick a maintained community server from the ranking; check that it supports anything specific you need, like full-text search extensions.',
     ],
     faq: [
       {
         q: 'What is the best SQLite MCP server?',
-        a: 'The official modelcontextprotocol/server-sqlite is the most widely installed. This page ranks SQLite MCP servers by real usage so you can pick a maintained option.',
+        a: 'The original reference modelcontextprotocol/server-sqlite has been archived by the MCP project, so prefer a maintained community server. This page ranks SQLite MCP servers with servers we have seen run first, then by popularity, so you can pick a maintained option.',
       },
       {
         q: 'Do I need a running database server to use SQLite over MCP?',
@@ -707,7 +708,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best MySQL MCP server?',
-        a: 'Several community MySQL/MariaDB servers are widely used. This page ranks them by real usage across the AllMCPs directory.',
+        a: 'Several community MySQL/MariaDB servers are widely used. This page ranks them with servers we have seen run first, then by popularity.',
       },
       {
         q: 'Is it safe to give an agent MySQL access?',
@@ -731,7 +732,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best MongoDB MCP server?',
-        a: 'This page ranks MongoDB MCP servers by real usage across the AllMCPs directory so you can start with a maintained, popular option.',
+        a: 'This page ranks MongoDB MCP servers with servers we have seen run first, then by popularity, so you can start with a maintained, popular option.',
       },
       {
         q: 'Can an agent run aggregation pipelines over MCP?',
@@ -756,7 +757,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best GitHub MCP server?',
-        a: 'The official GitHub MCP server is the most widely installed — it covers issues, pull requests, code search, and Actions. This page ranks GitHub MCP servers by real usage.',
+        a: 'The official GitHub MCP server is the most widely installed — it covers issues, pull requests, code search, and Actions. This page ranks GitHub MCP servers with servers we have seen run first, then by popularity.',
       },
       {
         q: 'Can a GitHub MCP server open pull requests?',
@@ -780,7 +781,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best GitLab MCP server?',
-        a: 'This page ranks GitLab MCP servers by real usage across the AllMCPs directory so you can pick a maintained option.',
+        a: 'This page ranks GitLab MCP servers with servers we have seen run first, then by popularity, so you can pick a maintained option.',
       },
       {
         q: 'Does it work with self-hosted GitLab?',
@@ -804,7 +805,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best Docker MCP server?',
-        a: 'This page ranks Docker MCP servers by real usage across the AllMCPs directory so you can start with a proven integration.',
+        a: 'This page ranks Docker MCP servers with servers we have seen run first, then by popularity, so you can start with a proven integration.',
       },
       {
         q: 'Can an agent start and stop containers?',
@@ -824,7 +825,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best Kubernetes MCP server?',
-        a: 'This page ranks Kubernetes MCP servers by real usage across the AllMCPs directory so you can pick a maintained option.',
+        a: 'This page ranks Kubernetes MCP servers with servers we have seen run first, then by popularity, so you can pick a maintained option.',
       },
       {
         q: 'Can an agent make changes to my cluster?',
@@ -844,7 +845,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best AWS MCP server?',
-        a: 'This page ranks AWS MCP servers by real usage across the AllMCPs directory. Many focus on specific services (S3, EC2, Lambda, CloudWatch), so pick by the service you need.',
+        a: 'This page ranks AWS MCP servers with servers we have seen run first, then by popularity. Many focus on specific services (S3, EC2, Lambda, CloudWatch), so pick by the service you need.',
       },
       {
         q: 'Is it safe to let an agent manage AWS?',
@@ -868,7 +869,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
       },
       {
         q: 'What is the best OpenAPI-to-MCP server?',
-        a: 'This page ranks OpenAPI/Swagger MCP servers by real usage across the AllMCPs directory so you can start with a maintained generator.',
+        a: 'This page ranks OpenAPI/Swagger MCP servers with servers we have seen run first, then by popularity, so you can start with a maintained generator.',
       },
       {
         q: 'Do these handle authentication to the API?',
@@ -884,7 +885,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best Notion MCP server?',
-        a: 'This page ranks Notion MCP servers by real usage across the AllMCPs directory so you can pick a maintained option.',
+        a: 'This page ranks Notion MCP servers with servers we have seen run first, then by popularity, so you can pick a maintained option.',
       },
       {
         q: 'Can an agent edit my Notion pages?',
@@ -904,7 +905,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best Jira MCP server?',
-        a: 'This page ranks Jira MCP servers by real usage across the AllMCPs directory so you can start with a maintained integration.',
+        a: 'This page ranks Jira MCP servers with servers we have seen run first, then by popularity, so you can start with a maintained integration.',
       },
       {
         q: 'Can an agent create and update Jira issues?',
@@ -924,7 +925,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best Google MCP server?',
-        a: 'It depends which service you need — Drive, Sheets, Calendar, and Gmail all have dedicated servers. This page ranks Google-related MCP servers by real usage across the AllMCPs directory.',
+        a: 'It depends which service you need — Drive, Sheets, Calendar, and Gmail all have dedicated servers. This page ranks Google-related MCP servers with servers we have seen run first, then by popularity.',
       },
       {
         q: 'How does a Google MCP server authenticate?',
@@ -944,7 +945,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best Slack MCP server?',
-        a: 'This page ranks Slack MCP servers by real usage across the AllMCPs directory so you can pick a proven one.',
+        a: 'This page ranks Slack MCP servers with servers we have seen run first, then by popularity, so you can pick a proven one.',
       },
       {
         q: 'Can an agent post messages to Slack?',
@@ -964,7 +965,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best Discord MCP server?',
-        a: 'This page ranks Discord MCP servers by real usage across the AllMCPs directory so you can start with a maintained bot.',
+        a: 'This page ranks Discord MCP servers with servers we have seen run first, then by popularity, so you can start with a maintained bot.',
       },
       {
         q: 'Can an agent send messages to Discord?',
@@ -984,7 +985,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best YouTube MCP server?',
-        a: 'Many focus on transcript extraction and metadata. This page ranks YouTube MCP servers by real usage across the AllMCPs directory so you can pick a reliable one.',
+        a: 'Many focus on transcript extraction and metadata. This page ranks YouTube MCP servers with servers we have seen run first, then by popularity, so you can pick a reliable one.',
       },
       {
         q: 'Can an MCP server get a YouTube video transcript?',
@@ -1004,7 +1005,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best PDF MCP server?',
-        a: 'This page ranks PDF MCP servers by real usage across the AllMCPs directory. Options range from simple text extraction to full layout and table parsing.',
+        a: 'This page ranks PDF MCP servers with servers we have seen run first, then by popularity. Options range from simple text extraction to full layout and table parsing.',
       },
       {
         q: 'Can an agent read a scanned PDF?',
@@ -1024,7 +1025,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best Stripe MCP server?',
-        a: 'This page ranks Stripe MCP servers by real usage across the AllMCPs directory, including Stripe’s own official integration.',
+        a: 'This page ranks Stripe MCP servers with servers we have seen run first, then by popularity, including Stripe’s own official integration.',
       },
       {
         q: 'Is it safe to connect an agent to Stripe?',
@@ -1044,7 +1045,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best Playwright MCP server?',
-        a: 'Microsoft’s official Playwright MCP is the most widely installed, alongside several community builds. This page ranks Playwright MCP servers by real usage across the AllMCPs directory.',
+        a: 'Microsoft’s official Playwright MCP is the most widely installed, alongside several community builds. This page ranks Playwright MCP servers with servers we have seen run first, then by popularity.',
       },
       {
         q: 'Does a Playwright MCP server run headless?',
@@ -1070,7 +1071,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best MCP server for SEO?',
-        a: 'It depends on the job: Google Search Console servers are the most widely installed for performance and indexing data, alongside dedicated technical-audit and backlink-intelligence servers. This page ranks SEO MCP servers by real usage across the AllMCPs directory so you can start with a proven one.',
+        a: 'It depends on the job: Google Search Console servers are the most widely installed for performance and indexing data, alongside dedicated technical-audit and backlink-intelligence servers. This page ranks SEO MCP servers with servers we have seen run first, then by popularity, so you can start with a proven one.',
       },
       {
         q: 'Can an AI agent run a technical SEO audit automatically?',
@@ -1104,7 +1105,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best Figma MCP server?',
-        a: 'It depends on whether you need read-only design context or write access. This page ranks Figma MCP servers by real usage across the AllMCPs directory, so start with the most installed option that matches your use case.',
+        a: 'It depends on whether you need read-only design context or write access. This page ranks Figma MCP servers with servers we have seen run first, then by popularity, so start with the most installed option that matches your use case.',
       },
       {
         q: 'Can an AI agent turn a Figma design into code with MCP?',
@@ -1129,7 +1130,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best Obsidian MCP server?',
-        a: 'This page ranks Obsidian MCP servers by real usage across the AllMCPs directory. Choose between servers that read the vault folder directly and servers that use the Local REST API plugin.',
+        a: 'This page ranks Obsidian MCP servers with servers we have seen run first, then by popularity. Choose between servers that read the vault folder directly and servers that use the Local REST API plugin.',
       },
       {
         q: 'Can Claude read my Obsidian notes?',
@@ -1154,7 +1155,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best Shopify MCP server?',
-        a: 'This page ranks Shopify MCP servers by real usage across the AllMCPs directory. Pick a development-focused server for building apps and themes, or an Admin API server for managing store data.',
+        a: 'This page ranks Shopify MCP servers with servers we have seen run first, then by popularity. Pick a development-focused server for building apps and themes, or an Admin API server for managing store data.',
       },
       {
         q: 'Can an AI agent manage my Shopify store?',
@@ -1179,7 +1180,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best Gmail MCP server?',
-        a: 'This page ranks Gmail MCP servers by real usage across the AllMCPs directory. For broader Google access (Calendar, Drive, Docs) see the Google Workspace page.',
+        a: 'This page ranks Gmail MCP servers with servers we have seen run first, then by popularity. For broader Google access (Calendar, Drive, Docs) see the Google Workspace page.',
       },
       {
         q: 'Can an AI agent send email from my Gmail?',
@@ -1204,7 +1205,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best Redis MCP server?',
-        a: "This page ranks Redis MCP servers by real usage across the AllMCPs directory. Decide first whether you want to inspect an existing Redis instance or use Redis as the agent's memory store.",
+        a: "This page ranks Redis MCP servers with servers we have seen run first, then by popularity. Decide first whether you want to inspect an existing Redis instance or use Redis as the agent's memory store.",
       },
       {
         q: 'Is it safe to connect an AI agent to production Redis?',
@@ -1229,7 +1230,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best Cloudflare MCP server?',
-        a: 'This page ranks Cloudflare-related MCP servers by real usage across the AllMCPs directory, including account-management servers and servers deployed on Cloudflare Workers.',
+        a: 'This page ranks Cloudflare-related MCP servers with servers we have seen run first, then by popularity, including account-management servers and servers deployed on Cloudflare Workers.',
       },
       {
         q: 'Can I host my own MCP server on Cloudflare Workers?',
@@ -1254,7 +1255,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best Supabase MCP server?',
-        a: 'This page ranks Supabase MCP servers by real usage across the AllMCPs directory. For generic Postgres access without Supabase-specific tools, see the PostgreSQL page.',
+        a: 'This page ranks Supabase MCP servers with servers we have seen run first, then by popularity. For generic Postgres access without Supabase-specific tools, see the PostgreSQL page.',
       },
       {
         q: 'Can an AI agent run Supabase migrations?',
@@ -1275,7 +1276,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best Confluence MCP server?',
-        a: 'This page ranks Confluence MCP servers by real usage across the AllMCPs directory. Many also cover Jira, which is useful if your team documents work next to tickets.',
+        a: 'This page ranks Confluence MCP servers with servers we have seen run first, then by popularity. Many also cover Jira, which is useful if your team documents work next to tickets.',
       },
       {
         q: 'How do I connect an AI agent to Confluence?',
@@ -1300,7 +1301,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best BigQuery MCP server?',
-        a: 'This page ranks BigQuery MCP servers by real usage across the AllMCPs directory. Prefer servers that support dry runs or byte limits to keep query costs predictable.',
+        a: 'This page ranks BigQuery MCP servers with servers we have seen run first, then by popularity. Prefer servers that support dry runs or byte limits to keep query costs predictable.',
       },
       {
         q: 'How do I limit BigQuery costs when an agent runs queries?',
@@ -1321,7 +1322,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best n8n MCP server?',
-        a: 'This page ranks n8n MCP servers by real usage across the AllMCPs directory, including servers that manage workflows and servers that turn workflows into agent tools.',
+        a: 'This page ranks n8n MCP servers with servers we have seen run first, then by popularity, including servers that manage workflows and servers that turn workflows into agent tools.',
       },
       {
         q: 'Can n8n act as an MCP server?',
@@ -1342,7 +1343,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best Salesforce MCP server?',
-        a: 'This page ranks Salesforce MCP servers by real usage across the AllMCPs directory. Compare them on whether they support SOQL queries, record writes, and metadata or Apex tools.',
+        a: 'This page ranks Salesforce MCP servers with servers we have seen run first, then by popularity. Compare them on whether they support SOQL queries, record writes, and metadata or Apex tools.',
       },
       {
         q: 'How do I connect an AI agent to Salesforce?',
@@ -1366,7 +1367,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     faq: [
       {
         q: 'What is the best Terraform MCP server?',
-        a: 'This page ranks Terraform MCP servers by real usage across the AllMCPs directory. Registry and documentation servers are the most common and lowest-risk starting point.',
+        a: 'This page ranks Terraform MCP servers with servers we have seen run first, then by popularity. Registry and documentation servers are the most common and lowest-risk starting point.',
       },
       {
         q: 'Should an AI agent run terraform apply?',
@@ -1413,17 +1414,55 @@ function mentionsAny(text: string, terms: string[]): boolean {
   return new RegExp(`\\b(?:${escaped.join('|')})\\b`, 'i').test(text);
 }
 
+/** A category holding at least this share of a topic's name matches is one of its homes. */
+const HOME_CATEGORY_MIN_SHARE = 0.15;
+/** Below this many name matches there's too little signal to infer home categories. */
+const MIN_NAME_MATCHES_FOR_HOMES = 3;
+
 /**
- * The candidate listings for a topic's ranking: a whole category (category hubs) or every
- * listing mentioning a keyword (integration hubs). Ranking/sorting is left to the caller.
+ * The categories where a keyword topic's listings actually live, inferred from the
+ * listings that carry the keyword in their name. The catch-all default category
+ * never counts: it means "we could not tell" as often as "a developer tool".
+ */
+function homeCategories<T extends { category: string }>(
+  nameMatches: T[],
+): Set<string> {
+  const counts = new Map<string, number>();
+  for (const s of nameMatches) {
+    if (s.category === DEFAULT_SUBMIT_CATEGORY) continue;
+    counts.set(s.category, (counts.get(s.category) ?? 0) + 1);
+  }
+  const homes = new Set<string>();
+  for (const [category, n] of counts) {
+    if (n / nameMatches.length >= HOME_CATEGORY_MIN_SHARE) homes.add(category);
+  }
+  return homes;
+}
+
+/**
+ * The candidate listings for a topic's ranking: a whole category (category hubs) or the
+ * listings about a keyword (integration hubs). Ranking/sorting is left to the caller.
+ *
+ * Keyword hubs used to take every listing that mentioned the keyword anywhere in its
+ * description, so /best/postgres ranked a TikTok downloader (it archives to
+ * "PostgreSQL") and an SSH manager in its top 10: an off-topic list on a page aimed
+ * at a head search term. Now a name match always qualifies, and a description-only
+ * match qualifies when the listing sits in one of the topic's home categories.
+ * With too few name matches to infer homes, any mention still counts.
  */
 export function selectServersForTopic<
   T extends { name: string; description?: string | null; category: string },
 >(topic: BestTopic, servers: T[]): T[] {
   const match = topic.match;
   if (match && match.length > 0) {
-    return servers.filter((s) =>
+    const mentioning = servers.filter((s) =>
       mentionsAny(`${s.name} ${s.description || ''}`, match),
+    );
+    const nameMatches = mentioning.filter((s) => mentionsAny(s.name, match));
+    if (nameMatches.length < MIN_NAME_MATCHES_FOR_HOMES) return mentioning;
+    const homes = homeCategories(nameMatches);
+    return mentioning.filter(
+      (s) => mentionsAny(s.name, match) || homes.has(s.category),
     );
   }
   const category = topic.categorySlug

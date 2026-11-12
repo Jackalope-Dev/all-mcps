@@ -1,9 +1,4 @@
-import {
-  BEST_TOPICS,
-  type BestTopic,
-  bestTopicBySlug,
-  selectServersForTopic,
-} from './bestTopics';
+import { BEST_TOPICS, type BestTopic, bestTopicBySlug } from './bestTopics';
 import { type BlogPost, getAllPosts, getPostBySlug } from './blog';
 import {
   categoryFromSlug,
@@ -31,6 +26,7 @@ import {
   relatedRankingScore,
   type Server,
 } from './servers';
+import { rankServersForTopic } from './topicRanking';
 
 const SITE = 'https://allmcps.com';
 
@@ -148,13 +144,12 @@ export async function renderCategoryIndexMarkdown(): Promise<string> {
   return formatCategoryIndexMarkdown(counts);
 }
 
+/** `servers` arrive already ranked (lib/topicRanking.ts), the order the HTML page shows. */
 export function formatBestTopicMarkdown(
   topic: BestTopic,
   servers: Server[],
 ): string {
-  const ranked = [...servers].sort(
-    (a, b) => relatedRankingScore(b) - relatedRankingScore(a),
-  );
+  const ranked = servers;
 
   let md = `# Best ${topic.title} MCP Servers\n\n`;
   md += `${topic.lead}\n\n`;
@@ -396,8 +391,7 @@ export async function renderBestTopicMarkdown(
   const topic = bestTopicBySlug(slug);
   if (!topic) return null;
   const servers = await getServersForTopic(topic);
-  const selected = selectServersForTopic(topic, servers);
-  return formatBestTopicMarkdown(topic, selected);
+  return formatBestTopicMarkdown(topic, rankServersForTopic(topic, servers));
 }
 
 export async function renderBestIndexMarkdown(): Promise<string> {
