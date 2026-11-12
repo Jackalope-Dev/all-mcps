@@ -1689,6 +1689,10 @@
   margin-top: 0.75rem;
 }
 
+.acct-success-similar {
+  margin: 0 0 1.5rem;
+}
+
 .acct-success-steps {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

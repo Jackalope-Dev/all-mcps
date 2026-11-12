@@ -2,7 +2,11 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
 import { z } from 'zod';
 import { servers } from '../db/schema';
-import { prepareListingIntake } from './listingIntake';
+import {
+  fileSimilarListingReport,
+  prepareListingIntake,
+  publicSimilarListing,
+} from './listingIntake';
 import { getEmailEnv, sendNotificationEmail } from './notify';
 import { checkRateLimit, rateLimitHeaders } from './rateLimit';
 import {
@@ -48,6 +52,8 @@ type SubmitListingSuccess = {
   status: 'pending';
   claim_url: string;
   badge_markdown: string;
+  /** An existing listing this may duplicate; the submission went in anyway. */
+  similar: { id: string; name: string; url: string; claim_url: string } | null;
 };
 
 export type SubmitListingOutcome =
@@ -147,6 +153,10 @@ export async function submitListing(
       console.error('Failed to store intake review:', e),
     );
   }
+  if (prepared.similar) {
+    await fileSimilarListingReport(db, id, prepared.similar);
+  }
+  const similar = publicSimilarListing(prepared.similar);
 
   await syncSequenzySubscriber({
     email,
@@ -188,7 +198,9 @@ export async function submitListing(
     status: 200,
     body: {
       success: true,
-      message: `Server "${name}" submitted successfully via Agent API!`,
+      message: similar
+        ? `Server "${name}" submitted successfully via Agent API! It looks similar to "${similar.name}" (${appUrl}/mcp/${similar.id}); if that listing is the same project, claim it instead.`
+        : `Server "${name}" submitted successfully via Agent API!`,
       id,
       name,
       url,
@@ -196,6 +208,13 @@ export async function submitListing(
       status: 'pending',
       claim_url: claimUrl,
       badge_markdown: badgeMarkdown,
+      similar: similar
+        ? {
+            ...similar,
+            url: `${appUrl}/mcp/${similar.id}`,
+            claim_url: `${appUrl}/mcp/${similar.id}/claim`,
+          }
+        : null,
     },
   };
 }

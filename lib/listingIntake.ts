@@ -1,4 +1,5 @@
 import type { drizzle } from 'drizzle-orm/d1';
+import { reports } from '../db/schema';
 import { DEFAULT_SUBMIT_CATEGORY, normalizeCategory } from './categories';
 import { classifyCategory } from './categoryClassifier';
 import { endpointClaimedElsewhere } from './endpointOwnership';
@@ -90,6 +91,8 @@ export type ListingIntakeReady = {
   values: Record<string, unknown>;
   /** Jev review for the listing_signals row, written after the insert succeeds. Empty when Jev did not answer. */
   signals: ReturnType<typeof reviewColumns>;
+  /** A listing this may duplicate. Not certain, so it was not refused. */
+  similar: ExistingListingMatch | null;
 };
 
 /**
@@ -160,6 +163,74 @@ export function buildListingSlug(name: string): string {
       .slice(0, 64)
       .replace(/-+$/, '') || `mcp-${Date.now()}`
   );
+}
+
+/**
+ * The first existing listing Jev thinks is (or may be) the same project, or,
+ * with Jev down, the one with the same name and website.
+ */
+export async function findSimilarListing(
+  db: ReturnType<typeof drizzle>,
+  submitted: {
+    url: string;
+    name: string;
+    description: string;
+    websiteUrl: string;
+  },
+): Promise<ExistingListingMatch | null> {
+  const near = await findNearDuplicateCandidates(db, submitted);
+  const submittedNameSite = normalizeNameSiteKey(
+    submitted.name,
+    submitted.websiteUrl,
+  );
+  for (const candidate of near) {
+    const alignment = await alignListings(submitted, {
+      name: candidate.name,
+      description: candidate.description,
+      url: candidate.url,
+    });
+    if (alignment === 'same' || alignment === 'needs_review') return candidate;
+    if (alignment === 'different') continue;
+    // Jev down: only the name+site match, not a fuzzy name match.
+    if (
+      submittedNameSite &&
+      submittedNameSite ===
+        normalizeNameSiteKey(candidate.name, candidate.websiteUrl)
+    )
+      return candidate;
+  }
+  return null;
+}
+
+/**
+ * Files the intake's near match as an open duplicate report for admin →
+ * Reports, in the weekly sweep's format so the sweep sees the pair as reported.
+ * Best-effort: the listing is already in.
+ */
+export async function fileSimilarListingReport(
+  db: ReturnType<typeof drizzle>,
+  id: string,
+  similar: ExistingListingMatch,
+): Promise<void> {
+  await db
+    .insert(reports)
+    .values({
+      serverId: id,
+      reason: 'duplicate',
+      details: `Intake: possible duplicate of /mcp/${similar.id} (${similar.url ?? similar.name}). Submitted anyway because a near match is not certain. Merge it in /admin if it is the same project, or dismiss if they differ.`,
+      status: 'open',
+      createdAt: new Date(),
+    })
+    .catch((e) => console.error('Failed to file similar-listing report:', e));
+}
+
+/** The near match a submitter may see: only a live listing has a page to claim. */
+export function publicSimilarListing(
+  similar: ExistingListingMatch | null,
+): { id: string; name: string } | null {
+  return similar?.status === 'active'
+    ? { id: similar.id, name: similar.name }
+    : null;
 }
 
 export async function prepareListingIntake(
@@ -253,54 +324,16 @@ export async function prepareListingIntake(
     };
   }
 
-  const near = await findNearDuplicateCandidates(db, {
+  // A near match is a guess (another org's wrapper for the same product, a
+  // fork, a rename), so it never blocks: the submission goes in and the match
+  // goes to the admin as a duplicate report (fileSimilarListingReport). Only the
+  // exact URL match above is certain enough to refuse.
+  const similar = await findSimilarListing(db, {
     url,
     name,
+    description,
     websiteUrl,
   });
-  const submittedNameSite = normalizeNameSiteKey(name, websiteUrl);
-  for (const candidate of near) {
-    const alignment = await alignListings(
-      { name, description, url },
-      {
-        name: candidate.name,
-        description: candidate.description,
-        url: candidate.url,
-      },
-    );
-    if (alignment === 'different') continue;
-    if (alignment === 'same' || alignment === 'needs_review') {
-      return {
-        ok: false,
-        status: 409,
-        body: {
-          error: `This server looks like "${candidate.name}" (${candidate.status}). Visit /mcp/${candidate.id} to view or claim it instead of submitting a duplicate.`,
-          duplicate: true,
-          existing: candidate,
-        },
-      };
-    }
-    // Jev down: only keep the pre-Jev name+site block, not a fuzzy name match.
-    const candidateNameSite = normalizeNameSiteKey(
-      candidate.name,
-      candidate.websiteUrl,
-    );
-    if (
-      submittedNameSite &&
-      candidateNameSite &&
-      submittedNameSite === candidateNameSite
-    ) {
-      return {
-        ok: false,
-        status: 409,
-        body: {
-          error: `This server is already listed as "${candidate.name}" (${candidate.status}). Visit /mcp/${candidate.id} to view or claim it instead of submitting a duplicate.`,
-          duplicate: true,
-          existing: candidate,
-        },
-      };
-    }
-  }
 
   const tags = normalizeTags(input.tags);
   const compatibleClients = normalizeCompatibleClients(input.compatibleClients);
@@ -367,6 +400,7 @@ export async function prepareListingIntake(
     websiteUrl,
     category: resolvedCategory,
     signals: reviewColumns(review),
+    similar,
     values: {
       id,
       name,

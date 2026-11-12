@@ -96,6 +96,10 @@ export function SubmitForm() {
   >('idle');
   const [token, setToken] = useState<string>('');
   const [submittedId, setSubmittedId] = useState<string | null>(null);
+  const [similarListing, setSimilarListing] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [prefillLoading, setPrefillLoading] = useState(false);
   const [prefilledFrom, setPrefilledFrom] = useState<string | null>(null);
   const [duplicateMatch, setDuplicateMatch] = useState<{
@@ -305,6 +309,7 @@ export function SubmitForm() {
   const resetForm = () => {
     setStatus('idle');
     setSubmittedId(null);
+    setSimilarListing(null);
     setToken('');
     setName('');
     setUrl('');
@@ -393,8 +398,10 @@ export function SubmitForm() {
       if (res.ok) {
         const payload = (await res.json().catch(() => null)) as {
           id?: string;
+          similar?: { id: string; name: string } | null;
         } | null;
         setSubmittedId(payload?.id || null);
+        setSimilarListing(payload?.similar ?? null);
         setStatus('success');
         window.scrollTo({ top: 0, behavior: 'smooth' });
         trackSubmitLead({
@@ -446,6 +453,7 @@ export function SubmitForm() {
       <SubmitSuccess
         name={name}
         submittedId={submittedId}
+        similar={similarListing}
         isGithub={isGitHubRepoUrl(url)}
         onSubmitAnother={resetForm}
       />

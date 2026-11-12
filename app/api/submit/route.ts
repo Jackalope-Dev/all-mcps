@@ -7,7 +7,11 @@ import {
   normalizeHeardFrom,
 } from '../../../lib/attribution';
 import { recordConversion } from '../../../lib/conversions';
-import { prepareListingIntake } from '../../../lib/listingIntake';
+import {
+  fileSimilarListingReport,
+  prepareListingIntake,
+  publicSimilarListing,
+} from '../../../lib/listingIntake';
 import { getEmailEnv, sendNotificationEmail } from '../../../lib/notify';
 import {
   checkRateLimit,
@@ -157,6 +161,9 @@ export async function POST(req: Request) {
         console.error('Failed to store intake review:', e),
       );
     }
+    if (prepared.similar) {
+      await fileSimilarListingReport(db, id, prepared.similar);
+    }
 
     await recordConversion(db, {
       kind: 'submission',
@@ -204,6 +211,7 @@ export async function POST(req: Request) {
       success: true,
       message: 'Server submitted successfully for review!',
       id,
+      similar: publicSimilarListing(prepared.similar),
     });
   } catch (error) {
     console.error('Submission error:', error);

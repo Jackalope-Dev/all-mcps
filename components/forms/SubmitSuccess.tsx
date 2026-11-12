@@ -5,6 +5,7 @@ import {
   BadgeCheck,
   Check,
   Copy,
+  Info,
   Mail,
   Rocket,
   SearchCheck,
@@ -39,11 +40,14 @@ const STEPS = [
 export function SubmitSuccess({
   name,
   submittedId,
+  similar,
   isGithub,
   onSubmitAnother,
 }: {
   name: string;
   submittedId: string | null;
+  /** A live listing the submission may duplicate (submitted anyway). */
+  similar: { id: string; name: string } | null;
   isGithub: boolean;
   onSubmitAnother: () => void;
 }) {
@@ -129,6 +133,38 @@ export function SubmitSuccess({
           )}
         </div>
       </header>
+
+      {similar && (
+        <div
+          role="note"
+          className="acct-callout acct-callout--info acct-success-similar"
+        >
+          <Info size={18} aria-hidden="true" />
+          <div>
+            <p className="acct-callout-title">This looks similar</p>
+            <p className="acct-callout-body">
+              &ldquo;{similar.name}&rdquo; is already in the directory. If
+              it&rsquo;s the same project and it&rsquo;s yours, claim it
+              instead. Otherwise you&rsquo;re all set: we&rsquo;ll check both
+              during review.
+            </p>
+            <div className="acct-callout-actions">
+              <Link
+                href={`/mcp/${similar.id}/claim`}
+                className="btn btn-primary btn-sm"
+              >
+                Claim this listing
+              </Link>
+              <Link
+                href={`/mcp/${similar.id}`}
+                className="btn btn-secondary btn-sm"
+              >
+                View listing
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ol className="acct-success-steps reveal-stagger">
         {STEPS.map(({ icon: Icon, title, body }, i) => (
