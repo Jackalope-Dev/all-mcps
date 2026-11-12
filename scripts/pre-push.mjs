@@ -77,12 +77,18 @@ function changed(pattern, dir = '') {
   );
 }
 
-/** A package's binary, from `dir`'s node_modules or the nearest one above it. */
+/**
+ * A package's binary, from `dir`'s node_modules or the nearest one above it.
+ * The search goes past the repo root on purpose: a `.worktrees/<task>`
+ * checkout has no node_modules of its own and uses the main checkout's.
+ */
 function bin(dir, path) {
   for (let at = join(root, dir); ; at = dirname(at)) {
     const file = join(at, 'node_modules', path);
     if (existsSync(file)) return file;
-    if (at === root || dirname(at) === at) return null;
+    if (dirname(at) === at) {
+      throw new Error(`pre-push: ${path} not found in any node_modules`);
+    }
   }
 }
 
