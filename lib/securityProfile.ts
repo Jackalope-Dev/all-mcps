@@ -103,7 +103,9 @@ const POISONING_PATTERNS: { label: string; re: RegExp }[] = [
   },
   {
     label: 'hidden instruction block',
-    re: /<\s*(important|system|instructions?|secret|hidden)\s*>/i,
+    // Not <instructions> or <secret>: honest tools use those to structure a
+    // description or as a URL placeholder (see isStrongFinding below).
+    re: /<\s*(important|system|hidden)\s*>/i,
   },
   {
     label: 'reaches for local secrets',
@@ -118,29 +120,67 @@ const POISONING_PATTERNS: { label: string; re: RegExp }[] = [
 /**
  * Findings strong enough to hide a listing for review. Left out: 'reaches
  * for local secrets' (honest tools read `.env` files) and 'tries to chain
- * into other tools' (honest tools say "call list_tables first"). Hiding
- * something from the user counts unless it is about not revealing a secret.
+ * into other tools' (honest tools say "call list_tables first").
+ *
+ * The other two are judged on the stored excerpt, so tightening them here
+ * re-judges every existing profile on the next stale sweep without a rescan.
+ * In Nov 2026, 154 servable listings were hidden for 'tool-poisoning'; nearly
+ * all were honest tools:
+ *  - an `<instructions>` or `<usecase>` section used to structure a long
+ *    description, or a `<secret>` placeholder in a URL template, matched the
+ *    hidden-block pattern. Only the tags attackers use (`<IMPORTANT>`,
+ *    `<system>`, `<hidden>`) count now;
+ *  - "do not tell the user it is in their account yet" or "never tell the
+ *    user one result is better than another" matched the hide pattern. It is
+ *    strong now only when what stays hidden is something the tool itself does
+ *    with the user's data or money (saves, sends, uploads, charges...).
+ *    Weaker findings still show on the listing's security card.
  */
-const STRONG_POISONING = new Set([
-  'overrides prior instructions',
-  'hidden instruction block',
-]);
+/**
+ * The block tags attackers use, written as a real block: shouted (`<IMPORTANT>`)
+ * or closed (`</system>`). A lowercase `<system>` alone is usually a usage
+ * placeholder ("/cmd <system>").
+ */
+const ATTACK_TAG_SHOUTED = /<\s*(IMPORTANT|SYSTEM|HIDDEN)\s*>/;
+const ATTACK_TAG_CLOSED = /<\s*\/\s*(important|system|hidden)\s*>/i;
+
+/**
+ * "ignore previous instructions" in quotes or as an example value is a
+ * prompt-injection *detector* naming what it blocks, not an injection.
+ */
+const QUOTED_OVERRIDE = /["'“‘`=(]\s*(ignore|disregard|forget)\b/i;
 
 /** Honest tools tell the model not to reveal secrets to the user; that is not concealment. */
 const SECRET_WORDS =
   /\b(key|token|secret|password|credential|api[_ ]?key)s?\b/i;
 
+/**
+ * "Do not tell the user (that) you saved it": the assistant or tool hiding
+ * its own action. "Do not tell the user a message was sent" (unless it was)
+ * is honesty guidance and doesn't match, because the subject isn't us.
+ */
+const CONCEALED_ACTION =
+  /\b(do not|don't|never|not)\s+(\w+\s+){0,2}?(tell|inform|mention|reveal|show)\b.{0,15}\buser\b[\s,:]+(that\s+)?(you|we|i|this tool|the tool|it)\s+((have|has|had|are|is|will|did|just)\s+)?(sav(e|ed|es|ing)|stor(e|ed|es|ing)|sen(d|t|ds|ding)|forward\w*|upload\w*|record\w*|log(s|ged|ging)?|track\w*|cop(y|ied|ies)|shar(e|ed|es|ing)|charg\w*|bill\w*|purchas\w*|transmit\w*|collect\w*|exfiltrat\w*)\b/i;
+
+function isStrongFinding(f: PoisoningFinding): boolean {
+  switch (f.pattern) {
+    case 'overrides prior instructions':
+      return !QUOTED_OVERRIDE.test(f.excerpt);
+    case 'hidden instruction block':
+      return (
+        ATTACK_TAG_SHOUTED.test(f.excerpt) || ATTACK_TAG_CLOSED.test(f.excerpt)
+      );
+    case 'asks the assistant to hide something from the user':
+      return CONCEALED_ACTION.test(f.excerpt) && !SECRET_WORDS.test(f.excerpt);
+    default:
+      return false;
+  }
+}
+
 export function hasStrongPoisoning(
   findings: PoisoningFinding[] | null | undefined,
 ): boolean {
-  return Boolean(
-    findings?.some(
-      (f) =>
-        STRONG_POISONING.has(f.pattern) ||
-        (f.pattern === 'asks the assistant to hide something from the user' &&
-          !SECRET_WORDS.test(f.excerpt)),
-    ),
-  );
+  return Boolean(findings?.some(isStrongFinding));
 }
 
 function toolText(t: ToolDefinition): string {
