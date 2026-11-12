@@ -22,6 +22,14 @@ const BADGES: DirectoryBadge[] = [
     rel: 'noopener noreferrer',
   },
   {
+    id: 'toolradar',
+    name: 'AllMCPs on Toolradar',
+    href: 'https://toolradar.com/tools/allmcps',
+    imageUrl:
+      'https://toolradar.com/api/badge/allmcps?type=review&style=dark&shape=crest&v=5',
+    rel: 'noopener',
+  },
+  {
     id: 'nicklaunches',
     name: 'Featured on Nick Launches',
     href: 'https://nicklaunches.com/products/allmcps/?utm_source=allmcps.com&utm_medium=badge&utm_campaign=featured',
