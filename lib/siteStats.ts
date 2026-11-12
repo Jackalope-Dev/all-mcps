@@ -96,6 +96,12 @@ export type SiteStats = {
   stdioVerifyStats: {
     totalTested: number;
     okCount: number;
+    /** Started, then asked for API keys or config: the install works. */
+    needsCredentialsCount: number;
+    /** Installed but never completed the MCP handshake. */
+    handshakeFailedCount: number;
+    /** The package would not install. */
+    installFailedCount: number;
     avgDurationMs: number;
   };
   /**
@@ -231,7 +237,14 @@ function getSnapshotFallback(): SiteStats {
       unparsed: snapshotUnparsed,
     },
     // No sandbox data in the snapshot — zeros, never invented sample numbers.
-    stdioVerifyStats: { totalTested: 0, okCount: 0, avgDurationMs: 0 },
+    stdioVerifyStats: {
+      totalTested: 0,
+      okCount: 0,
+      needsCredentialsCount: 0,
+      handshakeFailedCount: 0,
+      installFailedCount: 0,
+      avgDurationMs: 0,
+    },
     qualityTierBreakdown: snapshotQualityTiers,
     reciprocalBadgeCount: snapshotReciprocalBadges,
     recentCommitCount30d: snapshotRecentCommits,
@@ -552,6 +565,9 @@ async function querySiteStats(
         .select({
           totalTested: count(),
           okCount: sql<number>`sum(case when ${stdioVerifications.status} = 'ok' then 1 else 0 end)`,
+          needsCredentialsCount: sql<number>`sum(case when ${stdioVerifications.status} = 'needs_credentials' then 1 else 0 end)`,
+          handshakeFailedCount: sql<number>`sum(case when ${stdioVerifications.status} = 'handshake_failed' then 1 else 0 end)`,
+          installFailedCount: sql<number>`sum(case when ${stdioVerifications.status} = 'install_failed' then 1 else 0 end)`,
           avgDurationMs: sql<number>`avg(case when ${stdioVerifications.status} = 'ok' then ${stdioVerifications.durationMs} else null end)`,
         })
         .from(stdioVerifications)
@@ -725,6 +741,13 @@ async function querySiteStats(
       stdioVerifyStats: {
         totalTested: verifyTotal,
         okCount: verifyOk,
+        needsCredentialsCount: Number(
+          stdioVerifyRows[0]?.needsCredentialsCount ?? 0,
+        ),
+        handshakeFailedCount: Number(
+          stdioVerifyRows[0]?.handshakeFailedCount ?? 0,
+        ),
+        installFailedCount: Number(stdioVerifyRows[0]?.installFailedCount ?? 0),
         avgDurationMs: verifyAvgMs,
       },
       qualityTierBreakdown: qualityTierRows,

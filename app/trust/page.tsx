@@ -557,6 +557,23 @@ function OpennessCard({
 
 export default async function TrustPage() {
   const stats = await getSiteStats();
+  // Sandbox outcomes. "Pass rate" used to be ok / all runs, but a third of
+  // runs time out (the check fell over, no signal about the server), and a
+  // server that starts and asks for API keys installed fine. So: started out
+  // of the runs with a clear answer. `?? 0` covers a cached stats copy from
+  // before these counts existed.
+  const sv = stats.stdioVerifyStats;
+  const sandbox = {
+    needsCredentials: sv.needsCredentialsCount ?? 0,
+    handshakeFailed: sv.handshakeFailedCount ?? 0,
+    installFailed: sv.installFailedCount ?? 0,
+    started: sv.okCount + (sv.needsCredentialsCount ?? 0),
+    conclusive:
+      sv.okCount +
+      (sv.needsCredentialsCount ?? 0) +
+      (sv.handshakeFailedCount ?? 0) +
+      (sv.installFailedCount ?? 0),
+  };
 
   const aiRows = stats.callerBreakdown30d.filter((r) =>
     AI_SYSTEM_CLASSES.includes(r.class),
@@ -884,11 +901,8 @@ export default async function TrustPage() {
                       color: 'var(--text-primary)',
                     }}
                   >
-                    {stats.stdioVerifyStats.totalTested > 0
-                      ? `${pct(
-                          stats.stdioVerifyStats.okCount,
-                          stats.stdioVerifyStats.totalTested,
-                        )} pass rate`
+                    {sandbox.conclusive > 0
+                      ? `${pct(sandbox.started, sandbox.conclusive)} started`
                       : 'No runs yet'}
                   </div>
                   <div
@@ -899,10 +913,16 @@ export default async function TrustPage() {
                     }}
                   >
                     {formatNumber(stats.stdioVerifyStats.totalTested)} stdio
-                    packages isolated and tested in automated execution
-                    sandboxes
+                    packages run in isolated sandboxes.{' '}
+                    {formatNumber(sandbox.conclusive)} gave a clear result:{' '}
+                    {formatNumber(sandbox.started)} started (
+                    {formatNumber(sandbox.needsCredentials)} of them asked for
+                    API keys), {formatNumber(sandbox.handshakeFailed)} installed
+                    but never completed the MCP handshake, and{' '}
+                    {formatNumber(sandbox.installFailed)} would not install. The
+                    rest timed out or are queued, which says nothing either way
                     {stats.stdioVerifyStats.avgDurationMs > 0
-                      ? ` (avg time to a passing run: ${(stats.stdioVerifyStats.avgDurationMs / 1000).toFixed(1)}s)`
+                      ? ` (avg time to a clean start: ${(stats.stdioVerifyStats.avgDurationMs / 1000).toFixed(1)}s)`
                       : ''}
                     .
                   </div>
