@@ -30,6 +30,7 @@ const POLICY_FLAGS = [
   'lead_gen',
   'brochure',
   'directory',
+  'test_listing',
 ] as const;
 export type PolicyFlag = (typeof POLICY_FLAGS)[number];
 
@@ -42,7 +43,18 @@ export const POLICY_FLAG_LABEL: Record<PolicyFlag, string> = {
   lead_gen: 'lead-gen or SEO page for one business',
   brochure: 'brochure: tools only describe the publisher',
   directory: 'source URL is a directory or curated list',
+  test_listing: 'a test, demo or proof-of-concept listing',
 };
+
+/**
+ * A listing that says it is a test, not a server for people: "an echo tool for
+ * testing purposes", a registry ingestion probe ("canary with spoofed
+ * repository.id ... fallback test"), a PoC. In Nov 2026 a handful sat in the
+ * live catalog after the registry import. Testing *tools* ("E2E test runner",
+ * "test coverage") don't match: the wording has to describe the listing itself.
+ */
+const TEST_LISTING_RE =
+  /\b(for\s+test(ing)?\s+purposes|just\s+a\s+test|this\s+is\s+a\s+test|(test|demo|dummy|placeholder)\s+(listing|submission|entry)|proof[-\s]of[-\s]concept|poc\s+(alpha|beta|server|test)|registry\s+(\w+\s+){0,2}test|canary\s+with\s+spoofed)\b/i;
 
 /** Odds and sports-data APIs are fine; casinos and tipster services are held. */
 const GAMBLING_RE =
@@ -168,5 +180,7 @@ export function policyFlags(l: PolicyInput): PolicyFlag[] {
   if (LEAD_GEN_RE.test(text)) flags.push('lead_gen');
   if (isBrochureToolset(toolNames(l.tools))) flags.push('brochure');
   if (isDirectoryUrl(l.url)) flags.push('directory');
+  if (TEST_LISTING_RE.test([l.name, l.description].filter(Boolean).join('\n')))
+    flags.push('test_listing');
   return flags;
 }

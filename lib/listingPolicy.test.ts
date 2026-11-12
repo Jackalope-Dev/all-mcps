@@ -173,3 +173,35 @@ describe('isDirectoryUrl', () => {
     expect(isDirectoryUrl(url)).toBe(false);
   });
 });
+
+describe('test_listing flag', () => {
+  const flagsFor = (name: string, description: string) =>
+    policyFlags({
+      name,
+      description,
+      url: 'https://github.com/a/b',
+      websiteUrl: null,
+    });
+
+  it.each([
+    ['mcp-test', 'A simple MCP server with an echo tool for testing purposes'],
+    [
+      'mcp-multi-poc-alpha',
+      'PoC alpha server - base install from a shared PyPI package.',
+    ],
+    [
+      'empty-public-canary',
+      'Public-repo MCP canary with spoofed private repository.id for owned-account registry fallback test.',
+    ],
+  ])('holds %s', (name, description) => {
+    expect(flagsFor(name, description)).toContain('test_listing');
+  });
+
+  it.each([
+    ['test-coverage-mcp', 'Analyze test coverage from LCOV files'],
+    ['e2e-runner', 'JSON-driven E2E test runner with parallel execution'],
+    ['Canary MCP', 'Canary MCP server for Interactive Brokers market data'],
+  ])('leaves testing tools like %s alone', (name, description) => {
+    expect(flagsFor(name, description)).not.toContain('test_listing');
+  });
+});
