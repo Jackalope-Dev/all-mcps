@@ -507,6 +507,8 @@ export async function POST(req: Request) {
         installCommand: servers.installCommand,
         installArgs: servers.installArgs,
         installPackage: servers.installPackage,
+        // assessInstallRisk also checks the endpoint for a temporary host.
+        remoteEndpointUrl: servers.remoteEndpointUrl,
         packageRepo: listingSignals.packageRepo,
         // Only the findings, not the whole profile JSON, for 400 rows.
         poisoning: sql<

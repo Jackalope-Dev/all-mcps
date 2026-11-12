@@ -58,4 +58,43 @@ describe('assessInstallRisk', () => {
       }),
     ).toEqual(['remote-archive']);
   });
+
+  it('flags temporary tunnels and bare IPs', () => {
+    expect(
+      codes({
+        installCommand: 'uvx',
+        installArgs: [
+          '--index-url',
+          'https://x-y-z.trycloudflare.com/pypi/simple/',
+          'pkg',
+        ],
+      }),
+    ).toEqual(['temporary-host']);
+    expect(
+      codes({
+        url: 'https://candy-josh.trycloudflare.com/pypi/simple/pkg/',
+      }),
+    ).toEqual(['temporary-host']);
+    expect(
+      codes({ remoteEndpointUrl: 'https://95.216.126.169.sslip.io/mcp' }),
+    ).toEqual(['temporary-host']);
+    expect(codes({ remoteEndpointUrl: 'http://203.0.113.7:8080/mcp' })).toEqual(
+      ['temporary-host'],
+    );
+  });
+
+  it('leaves local service arguments and real domains alone', () => {
+    expect(
+      codes({
+        installCommand: 'npx',
+        installArgs: ['-y', 'ollama-mcp', '--api', 'http://localhost:11434'],
+        url: 'https://github.com/acme/ollama-mcp',
+        remoteEndpointUrl: 'https://mcp.acme.com/mcp',
+      }),
+    ).toEqual([]);
+    expect(codes({ installPackage: 'http://localhost:8000/mcp' })).toEqual([]);
+    expect(codes({ remoteEndpointUrl: 'http://192.168.1.5:3000/mcp' })).toEqual(
+      [],
+    );
+  });
 });

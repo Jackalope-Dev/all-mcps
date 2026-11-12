@@ -323,7 +323,8 @@ export const STALE_REASON_LABEL: Record<StaleReason, string> = {
   'not-mcp': 'Jev: probably not an MCP server',
   'jev-reject': 'Jev: reject, and probably not an MCP server',
   'tool-poisoning': 'A tool description tries to instruct the AI assistant',
-  'risky-install': 'Install command downloads and runs code outside a registry',
+  'risky-install':
+    'Install runs code from outside a registry, or points at a temporary host',
   typosquat: 'Package name imitates a much more popular package',
   'package-repo-mismatch':
     "The install package comes from a different repo than this listing's",
