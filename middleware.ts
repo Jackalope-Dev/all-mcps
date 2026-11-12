@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import { hasAgentMarkdown } from './lib/agentMarkdownRoutes';
 import { BLOG_REDIRECTS } from './lib/blogRedirects';
 
 export function middleware(req: NextRequest) {
@@ -175,7 +176,10 @@ export function middleware(req: NextRequest) {
       searchParams.get('format') === 'md') &&
     !pathname.startsWith('/api/') &&
     !pathname.startsWith('/_next/') &&
-    !pathname.startsWith('/.well-known/')
+    !pathname.startsWith('/.well-known/') &&
+    // Only pages with a real Markdown rendering; the rest serve their HTML
+    // rather than a stub (lib/agentMarkdownRoutes.ts).
+    hasAgentMarkdown(pathname)
   ) {
     // Query params set on the rewrite target URL don't reach the destination Route
     // Handler's `request.url` (confirmed empirically — the rewritten pathname is

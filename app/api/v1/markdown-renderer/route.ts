@@ -14,6 +14,7 @@ import {
   renderPromptIndexMarkdown,
   renderPromptMarkdown,
 } from '@/lib/agentMarkdown';
+import { normalizeAgentPath } from '@/lib/agentMarkdownRoutes';
 
 // This route is always reached via middleware.ts rewriting many different client
 // paths (e.g. /blog, /pricing, /categories/{slug}) onto this SAME destination
@@ -29,20 +30,17 @@ const HOME_MARKDOWN = `# AllMCPs - The Model Context Protocol Directory & Search
 Welcome to AllMCPs.com, the premier index of Model Context Protocol (MCP) servers, web tools, and AI agent integrations.
 
 ## Quick Links
-- **API Catalog**: [https://allmcps.com/.well-known/api-catalog](file:///.well-known/api-catalog)
-- **API Documentation**: [https://allmcps.com/docs/api](file:///docs/api)
-- **OpenAPI Spec**: [https://allmcps.com/api/v1/openapi.json](file:///api/v1/openapi.json)
-- **Agent Skills**: [https://allmcps.com/.well-known/agent-skills/index.json](file:///.well-known/agent-skills/index.json)
-- **MCP Server Card**: [https://allmcps.com/.well-known/mcp/server-card.json](file:///.well-known/mcp/server-card.json)
-- **Auth Metadata**: [https://allmcps.com/auth.md](file:///auth.md)
-
-## Categories
-- Developer Tools
-- Databases & Storage
-- Cloud & Infrastructure
-- AI & LLM Utilities
-- Search & Knowledge Base
-- Workflow Automation
+- **Best MCP servers by topic**: https://allmcps.com/best
+- **All categories**: https://allmcps.com/categories
+- **How we verify servers (live handshakes, sandbox runs)**: https://allmcps.com/trust
+- **State of MCP report**: https://allmcps.com/state-of-mcp
+- **API Catalog**: https://allmcps.com/.well-known/api-catalog
+- **API Documentation**: https://allmcps.com/docs/api
+- **OpenAPI Spec**: https://allmcps.com/api/v1/openapi.json
+- **Agent Skills**: https://allmcps.com/.well-known/agent-skills/index.json
+- **MCP Server Card**: https://allmcps.com/.well-known/mcp/server-card.json
+- **Auth Metadata**: https://allmcps.com/auth.md
+- **Full catalog for LLMs**: https://allmcps.com/llms.txt
 
 ## Search API
 Perform programmatic queries against our directory:
@@ -50,11 +48,7 @@ Perform programmatic queries against our directory:
 `;
 
 async function resolveMarkdownForPath(path: string): Promise<string | null> {
-  // A loop, not /\/+$/: that regex backtracks quadratically on a path with a
-  // long run of slashes that does not end in one.
-  let end = path.length;
-  while (end > 0 && path[end - 1] === '/') end--;
-  const normalized = path.slice(0, end) || '/';
+  const normalized = normalizeAgentPath(path);
 
   if (normalized === '/') {
     return HOME_MARKDOWN;
@@ -103,14 +97,9 @@ async function resolveMarkdownForPath(path: string): Promise<string | null> {
     return renderAlternativesMarkdown(alternativesMatch[1]);
   }
 
-  return `# AllMCPs - Path: ${normalized}
-
-Content requested in Markdown format for AI Agents.
-
-- **URL**: https://allmcps.com${normalized}
-- **API Catalog**: https://allmcps.com/.well-known/api-catalog
-- **Documentation**: https://allmcps.com/docs/api
-`;
+  // middleware.ts only rewrites paths in lib/agentMarkdownRoutes.ts here, so this
+  // is a direct call for a page with no Markdown rendering: 404 rather than a stub.
+  return null;
 }
 
 export async function GET(req: NextRequest) {
