@@ -66,6 +66,29 @@ describe('endpointCandidates', () => {
     });
   });
 
+  it('asks a listing URL that is itself an endpoint before the catalog beside it', () => {
+    const c = endpointCandidates({
+      url: 'https://www.acme.dev/mcp/sanctions',
+      websiteUrl: 'https://www.acme.dev/mcp/sanctions',
+    });
+    expect(c[0]).toEqual({
+      url: 'https://www.acme.dev/mcp/sanctions',
+      source: 'stated',
+    });
+    expect(urls(c)).toContain('https://www.acme.dev/mcp');
+  });
+
+  it("doesn't treat a code host path or a bare api host as the listing's endpoint", () => {
+    expect(endpointCandidates({ url: 'https://github.com/acme/mcp' })).toEqual(
+      [],
+    );
+    expect(
+      endpointCandidates({ url: 'https://api.brainscanner.dev/' }).find(
+        (c) => c.source === 'stated',
+      ),
+    ).toBeUndefined();
+  });
+
   it('guesses the usual paths and subdomains on a hosted product site', () => {
     expect(
       urls(endpointCandidates({ url: 'https://www.brainscanner.dev/' })),
