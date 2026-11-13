@@ -3,6 +3,7 @@
 import { ExternalLink, PackagePlus, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { trackFeatureUse } from '../../lib/gtag';
+import { formatArgsText, parseArgsText } from '../../lib/tools/argsText';
 import {
   CLIENT_CONFIG_PATHS,
   type ClientFormat,
@@ -271,7 +272,7 @@ function RowEditor({
 }) {
   // Keep the raw text for list-ish fields locally so typing a space or comma
   // isn't swallowed by the parse → re-join round trip.
-  const [argsText, setArgsText] = useState((row.args || []).join(' '));
+  const [argsText, setArgsText] = useState(formatArgsText(row.args || []));
   const [envText, setEnvText] = useState(
     Object.entries(row.env || {})
       .map(([k, v]) => `${k}=${v}`)
@@ -340,16 +341,19 @@ function RowEditor({
         </label>
         <label className="tl-field">
           <span className="tl-label">
-            Args <span className="tl-label-opt">(space-separated)</span>
+            Args{' '}
+            <span className="tl-label-opt">
+              (space-separated; quote paths with spaces)
+            </span>
           </span>
           <input
             className="tl-input is-mono"
             value={argsText}
-            placeholder="-y @scope/package"
+            placeholder='-y @scope/package "C:/My Files"'
             disabled={isRemote}
             onChange={(e) => {
               setArgsText(e.target.value);
-              onChange({ args: e.target.value.split(/\s+/).filter(Boolean) });
+              onChange({ args: parseArgsText(e.target.value) });
             }}
           />
         </label>

@@ -193,6 +193,37 @@ describe('browseCatalog against real SQLite', () => {
     ]);
   });
 
+  it('sorts A-Z by the displayed name, not the org prefix', async () => {
+    // Cards title "acme/postgresql-mcp" as "Postgresql MCP"; the org must not
+    // decide the order. A bare "mcp" repo is titled (and sorted) by its org.
+    const rows: Array<[string, string]> = [
+      ['az-1', 'aaa/zeta-server'],
+      ['az-2', 'zzz/alpha-tools'],
+      ['az-3', '@mmm/Beta_Kit'],
+      ['az-4', 'delta/mcp'],
+      ['az-5', 'Gamma'],
+    ];
+    const insert = sqlite.prepare(
+      `INSERT INTO servers (id, name, url, status, category, views, copies, upvotes, is_premium, is_official, created_at)
+       VALUES (?, ?, ?, 'active', 'Files', 0, 0, 0, 0, 0, ?)`,
+    );
+    for (const [id, name] of rows) {
+      insert.run(id, name, `https://github.com/acme/${id}`, nowSec - DAY);
+    }
+    try {
+      const order = ids(await browse('sort=alpha'));
+      expect(order.filter((id) => id.startsWith('az-'))).toEqual([
+        'az-2', // alpha-tools
+        'az-3', // Beta_Kit
+        'az-4', // delta/mcp -> "Delta MCP"
+        'az-5', // Gamma
+        'az-1', // zeta-server
+      ]);
+    } finally {
+      sqlite.prepare("DELETE FROM servers WHERE id LIKE 'az-%'").run();
+    }
+  });
+
   it('counts on page one only', async () => {
     expect((await browse('sort=alpha')).total).toBe(4);
     const next = await browse('sort=alpha&offset=30');
