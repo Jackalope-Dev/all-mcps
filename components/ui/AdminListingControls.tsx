@@ -14,6 +14,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import type React from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
+import { fetchListingOwnership } from '../../lib/listingOwnershipClient';
 import type { SetupStep } from '../../lib/setupSteps';
 import type { AdminTopBarProps } from './AdminListingEditors';
 
@@ -42,22 +43,9 @@ export function AdminProvider({
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(`/api/mcp/${serverId}/is-owner`);
-        if (res.ok) {
-          const data = (await res.json()) as {
-            isOwner?: boolean;
-            isAdmin?: boolean;
-          };
-          if (!cancelled && data?.isAdmin) {
-            setIsAdmin(true);
-          }
-        }
-      } catch {
-        // Leave default false
-      }
-    })();
+    fetchListingOwnership(serverId).then((data) => {
+      if (!cancelled && data?.isAdmin) setIsAdmin(true);
+    });
     return () => {
       cancelled = true;
     };

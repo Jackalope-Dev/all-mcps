@@ -216,11 +216,15 @@ export function HeroSection({ totalCount, featuredSlot }: HeroSectionProps) {
         >
           <span className="home-hero-chips-label">Popular</span>
           <div className="home-hero-chip-row">
+            {/* No prefetch: six search pages prefetched on every homepage
+                view ran six catalog searches on D1 and competed with the
+                page's own load, for a click most visitors never make. */}
             {POPULAR_QUERIES.map((q) => (
               <Link
                 key={q}
                 href={`/browse?q=${encodeURIComponent(q)}`}
                 className="chip"
+                prefetch={false}
               >
                 {q}
               </Link>

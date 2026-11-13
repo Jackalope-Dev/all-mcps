@@ -4,6 +4,7 @@ import { Globe, Sparkles } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { fetchListingOwnership } from '../../lib/listingOwnershipClient';
 
 // Owner-only, and never rendered until the client-side ownership check
 // resolves — so load the checkout UI on demand instead of shipping it in every
@@ -46,17 +47,10 @@ export function OwnerZone({
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(`/api/mcp/${serverId}/is-owner`);
-        const data = res.ok
-          ? ((await res.json()) as { isOwner?: boolean })
-          : null;
-        if (!cancelled) setIsOwner(Boolean(data?.isOwner));
-      } catch {
-        // Network error — leave the logged-out/non-owner default in place.
-      }
-    })();
+    // On failure keep the logged-out/non-owner default.
+    fetchListingOwnership(serverId).then((data) => {
+      if (!cancelled && data) setIsOwner(data.isOwner);
+    });
     return () => {
       cancelled = true;
     };

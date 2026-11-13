@@ -243,30 +243,12 @@ export function AsciiCodeCanvas({
       targetY = -1;
     };
 
-    window.addEventListener('mousemove', onMove, { passive: true });
-    document.addEventListener('mouseleave', onLeave, { passive: true });
-    window.addEventListener('resize', resize, { passive: true });
-
     const observer = new IntersectionObserver(
       (entries) => {
         visible = entries[0]?.isIntersecting ?? false;
       },
       { threshold: 0.05 },
     );
-    observer.observe(canvas);
-
-    resize();
-    tick();
-    draw();
-
-    if (reduceMotion) {
-      return () => {
-        window.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseleave', onLeave);
-        window.removeEventListener('resize', resize);
-        observer.disconnect();
-      };
-    }
 
     const loop = (t: number) => {
       raf = requestAnimationFrame(loop);
@@ -282,9 +264,37 @@ export function AsciiCodeCanvas({
       tick();
       draw();
     };
-    raf = requestAnimationFrame(loop);
+
+    // Decorative only, so it waits until the page has loaded and the main
+    // thread is idle: drawing ~1-2k glyphs every 85ms from hydration onward
+    // competed with first paint and hydration on phones (Total Blocking Time).
+    function start() {
+      window.addEventListener('mousemove', onMove, { passive: true });
+      document.addEventListener('mouseleave', onLeave, { passive: true });
+      window.addEventListener('resize', resize, { passive: true });
+      observer.observe(canvas as HTMLCanvasElement);
+      resize();
+      tick();
+      draw();
+      if (!reduceMotion) raf = requestAnimationFrame(loop);
+    }
+
+    let idleId: number | undefined;
+    let fallbackTimer: number | undefined;
+    const scheduleStart = () => {
+      if (typeof window.requestIdleCallback === 'function') {
+        idleId = window.requestIdleCallback(start, { timeout: 2000 });
+      } else {
+        fallbackTimer = window.setTimeout(start, 300);
+      }
+    };
+    if (document.readyState === 'complete') scheduleStart();
+    else window.addEventListener('load', scheduleStart, { once: true });
 
     return () => {
+      window.removeEventListener('load', scheduleStart);
+      if (idleId !== undefined) window.cancelIdleCallback(idleId);
+      if (fallbackTimer !== undefined) window.clearTimeout(fallbackTimer);
       cancelAnimationFrame(raf);
       window.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseleave', onLeave);

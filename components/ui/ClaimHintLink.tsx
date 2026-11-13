@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { trackFeatureUse } from '../../lib/gtag';
+import { fetchListingOwnership } from '../../lib/listingOwnershipClient';
 
 /**
  * Renders the "own this listing?" nudge only for confirmed non-owners. Fetched
@@ -16,17 +17,10 @@ export function ClaimHintLink({ serverId }: { serverId: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(`/api/mcp/${serverId}/is-owner`);
-        const data = res.ok
-          ? ((await res.json()) as { isOwner?: boolean })
-          : null;
-        if (!cancelled) setShowHint(!data?.isOwner);
-      } catch {
-        // Network error — leave the hint hidden rather than guessing.
-      }
-    })();
+    // A failed check (null) leaves the hint hidden rather than guessing.
+    fetchListingOwnership(serverId).then((data) => {
+      if (!cancelled && data) setShowHint(!data.isOwner);
+    });
     return () => {
       cancelled = true;
     };

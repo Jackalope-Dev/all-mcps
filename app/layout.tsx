@@ -9,6 +9,7 @@ import { Suspense } from 'react';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { CommandPaletteLazy } from '../components/CommandPaletteLazy';
 import { CookieBanner } from '../components/CookieBanner';
+import { DeferredAnalytics } from '../components/DeferredAnalytics';
 import { DeferredChrome } from '../components/DeferredChrome';
 import { MotionRuntime } from '../components/MotionRuntime';
 import { PostHogIdentify } from '../components/PostHogIdentify';
@@ -50,10 +51,15 @@ const sans = Atkinson_Hyperlegible_Next({
 // Geist Mono is Firecrawl's code/data face — used here for ASCII motifs,
 // section kickers, terminal chrome, and tabular figures. Atkinson stays
 // on all UI and prose (see BRAND_GUIDE.md).
+//
+// Not preloaded: it only styles small kickers and code chrome, never the
+// largest paint, and preloading it put another ~24KB font ahead of first
+// render on every page.
 const mono = Geist_Mono({
   subsets: ['latin'],
   variable: '--font-geist-mono',
   display: 'swap',
+  preload: false,
 });
 
 // Plus Jakarta Sans: High-impact geometric display face for the AllMCPs logo/wordmark
@@ -209,44 +215,11 @@ export default function RootLayout({
           `}
         </Script>
         {/*
-          Analytics load on idle (lazyOnload) so they stay off the critical path for
-          LCP / TBT. Consent defaults above still run early via beforeInteractive.
+          Google Analytics and PostHog are injected by <DeferredAnalytics />
+          (lib/analyticsLoader.ts) on first interaction or a few seconds after
+          load, so their ~300KB of script stays off the hydration path. The
+          consent defaults above still run first.
         */}
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-NZ92KYZX74"
-          strategy="lazyOnload"
-        />
-        <Script id="google-analytics" strategy="lazyOnload">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-
-            gtag('config', 'G-NZ92KYZX74');
-          `}
-        </Script>
-        {/*
-          PostHog product analytics. Starts opted-out (opt_out_capturing_by_default)
-          so nothing is captured until the CookieBanner grants consent — mirroring the
-          Google consent-mode gate above. person_profiles: 'identified_only' keeps
-          anonymous visitors out of person profiles.
-
-          api_host points at our first-party managed reverse proxy (p.allmcps.com)
-          to reduce ad-blocker/tracking-prevention loss; ui_host keeps PostHog UI
-          links (e.g. session replay) pointing back to us.posthog.com.
-        */}
-        <Script id="posthog-init" strategy="lazyOnload">
-          {`
-            !function(t,e){var o,n,p,r;e.__SV||(window.posthog&&window.posthog.__loaded)||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="an ln init xn Cn Br kn In capture Fn nn calculateEventProperties On register register_once register_for_session unregister unregister_for_session Ln getFeatureFlag getFeatureFlagPayload getFeatureFlagResult getAllFeatureFlags isFeatureEnabled reloadFeatureFlags updateFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSurveysLoaded onSessionId getSurveys getActiveMatchingSurveys renderSurvey displaySurvey cancelPendingSurvey canRenderSurvey canRenderSurveyAsync Dn identify setPersonProperties unsetPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset shutdown setIdentity clearIdentity get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException addExceptionStep captureLog startExceptionAutocapture stopExceptionAutocapture loadToolbar get_property getSessionProperty An Rn createPersonProfile setInternalOrTestUser $n yn jn opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing get_explicit_consent_status is_capturing clear_opt_in_out_capturing Tn debug Ur Rt getPageViewId captureTraceFeedback captureTraceMetric pn".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
-            posthog.init('phc_r8gEwaQjDhxSLZVbQEYpdxqbNMLExUwjFyvj94DkyPY5', {
-              api_host: 'https://p.allmcps.com',
-              ui_host: 'https://us.posthog.com',
-              defaults: '2026-05-30',
-              person_profiles: 'identified_only',
-              opt_out_capturing_by_default: true
-            });
-          `}
-        </Script>
       </head>
       <body className={sans.className}>
         <a href="#main-content" className="skip-link">
@@ -259,6 +232,7 @@ export default function RootLayout({
         <MotionRuntime />
         <CommandPaletteLazy />
         <CookieBanner />
+        <DeferredAnalytics />
         <ToastProvider />
         <DeferredChrome />
         <script
