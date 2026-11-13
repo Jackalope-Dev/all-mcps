@@ -7,7 +7,7 @@
  * third-party tags"). At `lazyOnload` that work landed right after first
  * paint, while the page was still hydrating, and was most of the Total
  * Blocking Time on / and /mcp/[id]. Now they load on the visitor's first
- * interaction (pointer, key, scroll, touch) or, failing that, a few seconds
+ * interaction (pointer, key, wheel, touch) or, failing that, a few seconds
  * after load once the browser is idle, so every visit is still counted.
  *
  * Consent: the defaults are set by the inline consent-mode script in
@@ -96,11 +96,15 @@ function loadAnalytics() {
   }
 }
 
+// Not 'scroll': with a capturing listener it also fires for element scrolls
+// the page makes itself on mount (e.g. the listing section nav centring its
+// active chip), which loaded analytics mid-hydration. Real scrolling starts
+// with touchstart or wheel.
 const INTERACTION_EVENTS = [
   'pointerdown',
   'keydown',
   'touchstart',
-  'scroll',
+  'wheel',
   'mousemove',
 ] as const;
 
