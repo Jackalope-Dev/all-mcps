@@ -102,8 +102,9 @@ async function loadLogoDataUri(url: string): Promise<string | null> {
     const res = await fetch(url, {
       method: 'GET',
       headers: { Accept: 'image/png,image/jpeg,image/gif;q=0.9,*/*;q=0.1' },
-      // Short budget — OG generation shouldn't stall on a slow logo host.
-      signal: AbortSignal.timeout(2500),
+      // Short budget: an uncached render must finish well inside the ~5s
+      // that crawlers and SEO checkers wait. A slow logo gets the letter tile.
+      signal: AbortSignal.timeout(1500),
     });
     if (!res.ok) return null;
     const declared = Number(res.headers.get('content-length') || 0);
@@ -298,7 +299,8 @@ export default async function Image({
           borderRadius: '24px',
           background: 'rgba(15, 23, 42, 0.55)',
           border: '1px solid rgba(255, 255, 255, 0.12)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+          // No boxShadow: resvg blurs it on the CPU (~30% of the render) and
+          // it is invisible against this near-black background.
           position: 'relative',
         }}
       >
