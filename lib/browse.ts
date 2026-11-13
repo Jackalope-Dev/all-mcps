@@ -104,6 +104,18 @@ function featuredSql(nowSec: number): SQL {
 }
 
 /**
+ * A-Z key matching what the card shows (parseServerName in lib/displayName.ts):
+ * `s.name` is usually "org/repo" and the card titles the repo part, so sorting
+ * the raw name ordered rows by org ("acme/postgres" before "beta/accessibility").
+ * The key is the text after the last "/" (SQLite has no lastIndexOf: rtrim the
+ * name by every character except "/" to get the prefix, then skip its length),
+ * with "-"/"_" read as spaces like humanize(). A bare "mcp" repo is titled by
+ * its org, so those sort by the org instead.
+ */
+const NAME_LEAF_SQL = `substr(s.name, length(rtrim(s.name, replace(s.name, '/', ''))) + 1)`;
+const DISPLAY_NAME_SORT_SQL = `replace(replace(ltrim(CASE WHEN lower(${NAME_LEAF_SQL}) = 'mcp' AND instr(s.name, '/') > 0 THEN s.name ELSE ${NAME_LEAF_SQL} END, '@'), '-', ' '), '_', ' ')`;
+
+/**
  * ORDER BY for a sort mode. Popular mirrors engagementScore in lib/search.ts
  * (with step functions standing in for the logs, which SQLite lacks);
  * trending divides raw engagement by listing age in days + 2 so newer
@@ -149,7 +161,7 @@ function orderBy(p: BrowseParams, nowSec: number, ranked: boolean): SQL {
     case 'newest':
       return sql`s.created_at DESC, s.id DESC`;
     case 'alpha':
-      return sql`s.name COLLATE NOCASE ASC, s.id`;
+      return sql`${sql.raw(DISPLAY_NAME_SORT_SQL)} COLLATE NOCASE ASC, s.name COLLATE NOCASE ASC, s.id`;
   }
 }
 
@@ -198,9 +210,10 @@ async function selectPage(
 }
 
 function cacheKey(p: BrowseParams): string {
-  // v4: Official / owner-verified trust lift in relevance, popular and
-  // trending. v3: organic order no longer puts paid listings first.
-  return `browse/v4/${JSON.stringify(p)}`;
+  // v5: A-Z sorts by the displayed name, not the org prefix. v4: Official /
+  // owner-verified trust lift in relevance, popular and trending. v3: organic
+  // order no longer puts paid listings first.
+  return `browse/v5/${JSON.stringify(p)}`;
 }
 
 async function getDb(): Promise<ReturnType<typeof drizzle> | null> {
