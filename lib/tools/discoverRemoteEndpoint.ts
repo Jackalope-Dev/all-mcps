@@ -186,6 +186,18 @@ export function ownSites(url: string, websiteUrl?: string | null): string[] {
   return out;
 }
 
+/**
+ * Is the listing's own URL an MCP transport path on its own site? Only a path
+ * segment counts (`/mcp`, `/mcp/x`, `/sse`): a bare `api.` host is a product
+ * API as often as a server, and a directory or code host's path is theirs.
+ */
+function isOwnEndpointPath(raw: string): boolean {
+  const host = hostOf(raw);
+  if (!host || hostMatches(host, NO_GUESS_HOSTS)) return false;
+  if (!looksLikeMcpEndpointUrl(raw)) return false;
+  return /(^|\/)(mcp|sse)(\/|$)/i.test(new URL(raw).pathname);
+}
+
 const URL_IN_TEXT = /https?:\/\/[^\s"'<>()`\\]+/g;
 
 function urlsIn(text: string): string[] {
@@ -237,6 +249,13 @@ export function endpointCandidates(input: {
     );
 
   for (const u of input.stated || []) add(u, 'stated');
+  // A hosted server is often submitted by its endpoint itself
+  // (`https://brainiac.software/mcp/exclusion`): the URL a GET answers with
+  // 405 is the server, and guessing `/mcp` beside it finds the vendor's
+  // catalog instead (every sibling then inherits it, or skips it as claimed).
+  for (const u of [input.url, input.websiteUrl]) {
+    if (u && isOwnEndpointPath(u)) add(u, 'stated');
+  }
   for (const u of byDepth(
     urlsIn(input.description || '').filter(looksLikeMcpEndpointUrl),
   )) {
