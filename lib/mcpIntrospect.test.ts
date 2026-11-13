@@ -56,7 +56,11 @@ describe('callMcpEndpoint error reporting', () => {
         ),
     );
     const r = await callMcpEndpoint(URL);
-    expect(r).toEqual({ ok: false, error: 'Bad protocol version' });
+    expect(r).toEqual({
+      ok: false,
+      error: 'Bad protocol version',
+      httpStatus: 400,
+    });
   });
 
   it('includes status and raw error when a JSON-RPC error has no message', async () => {
@@ -84,5 +88,61 @@ describe('callMcpEndpoint error reporting', () => {
     );
     const r = await callMcpEndpoint(URL);
     expect(r).toEqual({ ok: false, error: 'quota exceeded' });
+  });
+});
+
+describe('callMcpEndpoint block signals for the health-cron backoff', () => {
+  it('reports the status and Retry-After of a rate-limited answer', async () => {
+    respondWith(
+      () =>
+        new Response('Too many requests', {
+          status: 429,
+          headers: { 'retry-after': '3600' },
+        }),
+    );
+    const r = await callMcpEndpoint(URL);
+    expect(r).toMatchObject({
+      ok: false,
+      httpStatus: 429,
+      retryAfterSeconds: 3600,
+    });
+  });
+
+  it('keeps the ban text and status of a JSON-RPC error answer', async () => {
+    respondWith(
+      () =>
+        new Response(
+          JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            error: {
+              code: -32003,
+              message:
+                'Agent identification and administrator verification are required. 0 further unauthorized attempts remain before an automatic ban.',
+            },
+          }),
+          { status: 401, headers: { 'content-type': 'application/json' } },
+        ),
+    );
+    const r = await callMcpEndpoint(URL);
+    expect(r.ok).toBe(false);
+    expect(r.httpStatus).toBe(401);
+    expect(r.error).toContain('attempts remain');
+  });
+
+  it('identifies itself with the AllMCPs health-check User-Agent', async () => {
+    const fetchMock = vi.fn(
+      async (_url: string, _init?: RequestInit) =>
+        new Response(null, { status: 503 }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    await callMcpEndpoint(URL);
+    const headers = fetchMock.mock.calls[0]?.[1]?.headers as Record<
+      string,
+      string
+    >;
+    expect(headers['User-Agent']).toBe(
+      'AllMCPs-HealthCheck/1.0 (+https://allmcps.com/contact)',
+    );
   });
 });

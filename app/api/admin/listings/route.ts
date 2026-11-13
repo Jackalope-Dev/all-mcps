@@ -15,8 +15,9 @@ import {
 } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
-import { servers } from '@/db/schema';
+import { listingSignals, servers } from '@/db/schema';
 import { getAuthorizedAdminEmail } from '@/lib/adminAuth';
+import { backoffSummary } from '@/lib/endpointBackoff';
 
 const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 25;
@@ -180,8 +181,12 @@ export async function GET(req: Request) {
           supportUrl: servers.supportUrl,
           suggestedInstallCommand: servers.suggestedInstallCommand,
           suggestedInstallArgs: servers.suggestedInstallArgs,
+          endpointFailures: listingSignals.endpointFailures,
+          endpointRetryAt: listingSignals.endpointRetryAt,
+          endpointBlockedReason: listingSignals.endpointBlockedReason,
         })
         .from(servers)
+        .leftJoin(listingSignals, eq(listingSignals.serverId, servers.id))
         .where(where)
         .orderBy(orderByClause)
         .limit(limit)
@@ -190,25 +195,37 @@ export async function GET(req: Request) {
     ]);
 
     return NextResponse.json({
-      items: items.map((s: (typeof items)[number]) => ({
-        ...s,
-        createdAt:
-          s.createdAt instanceof Date
-            ? s.createdAt.toISOString()
-            : String(s.createdAt),
-        featuredUntil:
-          s.featuredUntil instanceof Date
-            ? s.featuredUntil.toISOString()
-            : s.featuredUntil,
-        categorySponsorUntil:
-          s.categorySponsorUntil instanceof Date
-            ? s.categorySponsorUntil.toISOString()
-            : s.categorySponsorUntil,
-        toolsCheckedAt:
-          s.toolsCheckedAt instanceof Date
-            ? s.toolsCheckedAt.toISOString()
-            : s.toolsCheckedAt,
-      })),
+      items: items.map(
+        ({
+          endpointFailures,
+          endpointRetryAt,
+          endpointBlockedReason,
+          ...s
+        }: (typeof items)[number]) => ({
+          ...s,
+          endpointBackoff: backoffSummary({
+            endpointFailures,
+            endpointRetryAt,
+            endpointBlockedReason,
+          }),
+          createdAt:
+            s.createdAt instanceof Date
+              ? s.createdAt.toISOString()
+              : String(s.createdAt),
+          featuredUntil:
+            s.featuredUntil instanceof Date
+              ? s.featuredUntil.toISOString()
+              : s.featuredUntil,
+          categorySponsorUntil:
+            s.categorySponsorUntil instanceof Date
+              ? s.categorySponsorUntil.toISOString()
+              : s.categorySponsorUntil,
+          toolsCheckedAt:
+            s.toolsCheckedAt instanceof Date
+              ? s.toolsCheckedAt.toISOString()
+              : s.toolsCheckedAt,
+        }),
+      ),
       total: totalRows[0]?.total ?? 0,
     });
   } catch (error) {

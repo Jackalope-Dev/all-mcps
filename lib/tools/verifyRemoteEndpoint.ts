@@ -1,3 +1,4 @@
+import { HEALTH_CHECK_USER_AGENT } from '../endpointBackoff';
 import { isSafeSubmissionUrl } from '../urlSafety';
 
 /**
@@ -137,6 +138,7 @@ export async function postInitialize(url: string): Promise<ProbeResponseFacts> {
   const res = await fetch(url, {
     method: 'POST',
     headers: {
+      'User-Agent': HEALTH_CHECK_USER_AGENT,
       'Content-Type': 'application/json',
       Accept: 'application/json, text/event-stream',
       'MCP-Protocol-Version': PROTOCOL_VERSION,
@@ -165,7 +167,10 @@ export async function postInitialize(url: string): Promise<ProbeResponseFacts> {
 async function getEventStream(url: string): Promise<ProbeResponseFacts> {
   const res = await fetch(url, {
     method: 'GET',
-    headers: { Accept: 'text/event-stream' },
+    headers: {
+      'User-Agent': HEALTH_CHECK_USER_AGENT,
+      Accept: 'text/event-stream',
+    },
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   const facts = {

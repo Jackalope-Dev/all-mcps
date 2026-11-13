@@ -83,6 +83,8 @@ type Listing = {
   tools?: string | null;
   toolsError?: string | null;
   toolsCheckedAt?: string | null;
+  /** Health-cron endpoint backoff or block pause, or null on the normal cadence. */
+  endpointBackoff?: string | null;
   githubStars?: number | null;
   npmDownloads?: number | null;
   views?: number;
@@ -833,6 +835,18 @@ export default function ManageListings({
                       >
                         {listing.healthStatus}
                       </span>
+                      {listing.endpointBackoff && (
+                        <span
+                          className="adm-tag is-dot hue-amber"
+                          title={listing.endpointBackoff}
+                        >
+                          {listing.endpointBackoff.startsWith(
+                            'Endpoint blocked',
+                          )
+                            ? 'endpoint paused (blocked us)'
+                            : 'endpoint backing off'}
+                        </span>
+                      )}
                     </div>
 
                     <div className="adm-listing-links">
@@ -1414,6 +1428,11 @@ export default function ManageListings({
               >
                 {inspectListing.healthStatus}
               </span>
+            </dd>
+            <dt>Endpoint checks</dt>
+            <dd>
+              {inspectListing.endpointBackoff ??
+                'Normal cadence. Check health resets any backoff.'}
             </dd>
             <dt>Created at</dt>
             <dd>{new Date(inspectListing.createdAt).toLocaleString()}</dd>

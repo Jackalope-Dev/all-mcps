@@ -9,6 +9,12 @@ import {
 } from '../../../../db/schema';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
 import { cronServerColumns } from '../../../../lib/cronServerColumns';
+import {
+  backoffChanged,
+  type EndpointBackoffState,
+  nextBackoffState,
+  shouldProbeEndpoint,
+} from '../../../../lib/endpointBackoff';
 import { getGithubToken, githubApiHeaders } from '../../../../lib/githubAuth';
 import {
   batchableRepoSlug,
@@ -178,6 +184,10 @@ async function selectDueListings(db: Db, now: Date) {
       ...cronServerColumns,
       readmeHash: listingSignals.readmeHash,
       latestReleaseTag: listingSignals.latestReleaseTag,
+      endpointFailures: listingSignals.endpointFailures,
+      endpointRetryAt: listingSignals.endpointRetryAt,
+      endpointBlockedReason: listingSignals.endpointBlockedReason,
+      endpointBackoffUrl: listingSignals.endpointBackoffUrl,
     })
     .from(servers)
     .leftJoin(listingSignals, eq(listingSignals.serverId, servers.id))
@@ -248,6 +258,18 @@ async function checkListing(
     server.remoteEndpointHealthy ?? null;
   let remoteEndpointCheckedAt: Date | null =
     server.remoteEndpointCheckedAt ?? null;
+  // Endpoint handshakes back off after failures and stop when the endpoint
+  // says it blocked us (lib/endpointBackoff.ts). While paused, the endpoint's
+  // health and last-checked time stay as last seen: still "Unreachable" with
+  // its real date, never re-stamped as checked.
+  const backoffPrev: EndpointBackoffState = {
+    endpointFailures: server.endpointFailures ?? 0,
+    endpointRetryAt: server.endpointRetryAt ?? null,
+    endpointBlockedReason: server.endpointBlockedReason ?? null,
+    endpointBackoffUrl: server.endpointBackoffUrl ?? null,
+  };
+  // Null = no endpoint handshake this pass.
+  let backoffNext: EndpointBackoffState | null = null;
 
   const npmDownloads = await resolveNpmDownloads(server);
 
@@ -348,7 +370,12 @@ async function checkListing(
         }
       }
 
-      if (isVerifiedActive) {
+      // The primary URL can be the very endpoint that blocked us (a listing
+      // whose url is its hosted endpoint): no handshake while it's paused.
+      if (
+        isVerifiedActive &&
+        shouldProbeEndpoint(backoffPrev, server.url, now)
+      ) {
         const introspection = await callMcpEndpoint(server.url, {
           method: 'tools/list',
         });
@@ -408,11 +435,20 @@ async function checkListing(
   // the authoritative source the owner pointed us at, not a README guess.
   // Independent try/catch so a flaky remote endpoint can't blow away the
   // primary path's result for this run.
-  if (server.remoteEndpointUrl) {
+  if (
+    server.remoteEndpointUrl &&
+    shouldProbeEndpoint(backoffPrev, server.remoteEndpointUrl, now)
+  ) {
     try {
       const remoteIntrospection = await callMcpEndpoint(
         server.remoteEndpointUrl,
         { method: 'tools/list' },
+      );
+      backoffNext = nextBackoffState(
+        backoffPrev,
+        server.remoteEndpointUrl,
+        remoteIntrospection,
+        now,
       );
       toolsCheckedAt = now;
       // A successful initialize means the endpoint is up and speaking MCP,
@@ -450,6 +486,12 @@ async function checkListing(
       // tool list, but health explicitly reflects this as down.
       remoteEndpointHealthy = false;
       remoteEndpointCheckedAt = now;
+      backoffNext = nextBackoffState(
+        backoffPrev,
+        server.remoteEndpointUrl,
+        { ok: false, error: 'Connection failed.' },
+        now,
+      );
     }
   }
 
@@ -547,11 +589,18 @@ async function checkListing(
   if (
     cachedEndpoint &&
     cachedEndpoint !== server.url &&
-    isSafeSubmissionUrl(cachedEndpoint)
+    isSafeSubmissionUrl(cachedEndpoint) &&
+    shouldProbeEndpoint(backoffPrev, cachedEndpoint, now)
   ) {
     const handshake = await callMcpEndpoint(cachedEndpoint, {
       method: 'tools/list',
     }).catch(() => null);
+    backoffNext = nextBackoffState(
+      backoffPrev,
+      cachedEndpoint,
+      handshake ?? { ok: false, error: 'Connection failed.' },
+      now,
+    );
     remoteEndpointCheckedAt = now;
     if (handshake?.ok || handshake?.authRequired) {
       remoteEndpointHealthy = true;
@@ -656,11 +705,16 @@ async function checkListing(
       .where(eq(servers.id, server.id)),
   ];
 
+  const backoffWrite =
+    backoffNext && backoffChanged(backoffPrev, backoffNext)
+      ? backoffNext
+      : null;
   if (
     repoForkOf !== undefined ||
     readmeHash !== (server.readmeHash ?? null) ||
     latestReleaseTag !== (server.latestReleaseTag ?? null) ||
-    contentChanged
+    contentChanged ||
+    backoffWrite
   ) {
     statements.push(
       upsertSignals(db, server.id, {
@@ -668,6 +722,7 @@ async function checkListing(
         readmeHash,
         latestReleaseTag,
         ...(contentChanged ? { contentChangedAt: now } : {}),
+        ...(backoffWrite ?? {}),
       }),
     );
   }

@@ -21,6 +21,7 @@ import {
 } from '../../../../lib/autoDecision';
 import { DEFAULT_SUBMIT_CATEGORY } from '../../../../lib/categories';
 import { cleanListingDescription } from '../../../../lib/description';
+import { recheckEndpointNow } from '../../../../lib/endpointRecheck';
 import { computeFeaturedUntil } from '../../../../lib/featuredGrant';
 import { OFFICIAL_SOURCES } from '../../../../lib/featuredStatus';
 import { getGithubToken } from '../../../../lib/githubAuth';
@@ -683,6 +684,24 @@ export async function POST(req: Request) {
           fieldUpdates.reciprocalBadgeOk = server.readmeBadgeOk;
         }
         await db.update(servers).set(fieldUpdates).where(eq(servers.id, id));
+        // A new endpoint starts with no backoff; handshake it now rather than
+        // on the cron's next pass, after the response is sent.
+        if (
+          'remoteEndpointUrl' in pending.proposed &&
+          (fieldUpdates.remoteEndpointUrl ?? null) !== server.remoteEndpointUrl
+        ) {
+          const recheck = recheckEndpointNow(db, {
+            ...server,
+            remoteEndpointUrl:
+              (fieldUpdates.remoteEndpointUrl as string | null) ?? null,
+          });
+          try {
+            const { ctx } = getCloudflareContext();
+            ctx?.waitUntil?.(recheck);
+          } catch {
+            await recheck;
+          }
+        }
         // The overview, use cases, features and FAQ were written from the old
         // name, description and connection details; queue a rewrite the same
         // way a README change does.
@@ -1100,11 +1119,14 @@ export async function POST(req: Request) {
         .update(servers)
         .set({ healthStatus: nextHealth, lastCheckedAt: new Date() })
         .where(eq(servers.id, id));
+      // A manual check also lifts any endpoint backoff or block pause and
+      // handshakes the hosted endpoint now (lib/endpointRecheck.ts).
+      const endpoint = await recheckEndpointNow(db, server);
 
       refreshListingPageInBackground(id);
       return NextResponse.json({
         success: true,
-        message: `Health check done. Status: ${nextHealth} (Repo HTTP ${repoStatus}${websiteStatus !== null ? `, Site HTTP ${websiteStatus}` : ''})`,
+        message: `Health check done. Status: ${nextHealth} (Repo HTTP ${repoStatus}${websiteStatus !== null ? `, Site HTTP ${websiteStatus}` : ''})${endpoint.endpoint ? `. Endpoint: ${endpoint.note}` : ''}`,
         healthStatus: nextHealth,
       });
     } else if (

@@ -1,3 +1,4 @@
+import { HEALTH_CHECK_USER_AGENT, parseRetryAfter } from './endpointBackoff';
 import { isSafeSubmissionUrl, safeFetch } from './urlSafety';
 
 /**
@@ -32,6 +33,10 @@ export type McpResult = {
    */
   authRequired?: boolean;
   authResourceMetadataUrl?: string;
+  /** HTTP status of a failed answer, when the endpoint gave one. */
+  httpStatus?: number;
+  /** The endpoint's Retry-After, in seconds, when it sent one. */
+  retryAfterSeconds?: number;
   serverInfo?: { name?: string; version?: string };
   tools?: McpTool[];
   result?: unknown;
@@ -41,12 +46,19 @@ export type McpResult = {
 class HttpStatusError extends Error {
   status: number;
   wwwAuthenticate: string | null;
-  constructor(status: number, wwwAuthenticate: string | null, body = '') {
+  retryAfterSeconds?: number;
+  constructor(
+    status: number,
+    wwwAuthenticate: string | null,
+    body = '',
+    retryAfterSeconds?: number,
+  ) {
     const snippet = body.replace(/\s+/g, ' ').trim().slice(0, 200);
     super(snippet ? `HTTP ${status}: ${snippet}` : `HTTP ${status}`);
     this.name = 'HttpStatusError';
     this.status = status;
     this.wwwAuthenticate = wwwAuthenticate;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -103,8 +115,14 @@ async function rpc(
   id: number,
   headers: Record<string, string>,
   sessionId?: string,
-): Promise<{ msg: any; status: number; sessionId?: string }> {
+): Promise<{
+  msg: any;
+  status: number;
+  sessionId?: string;
+  retryAfterSeconds?: number;
+}> {
   const h: Record<string, string> = {
+    'User-Agent': HEALTH_CHECK_USER_AGENT,
     'Content-Type': 'application/json',
     Accept: 'application/json, text/event-stream',
     'MCP-Protocol-Version': PROTOCOL_VERSION,
@@ -119,6 +137,7 @@ async function rpc(
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   const returnedSession = res.headers.get('mcp-session-id') || sessionId;
+  const retryAfterSeconds = parseRetryAfter(res.headers.get('retry-after'));
   const text = await res.text();
 
   // Checked before any body parsing — confirmed in practice against a real
@@ -133,7 +152,12 @@ async function rpc(
   }
 
   if (!res.ok && !text) {
-    throw new HttpStatusError(res.status, res.headers.get('www-authenticate'));
+    throw new HttpStatusError(
+      res.status,
+      res.headers.get('www-authenticate'),
+      '',
+      retryAfterSeconds,
+    );
   }
   const msg = extractJsonRpc(text, res.headers.get('content-type') || '', id);
   // A non-2xx body like {"error":"forbidden"} parses as JSON but is not a
@@ -144,8 +168,14 @@ async function rpc(
       res.status,
       res.headers.get('www-authenticate'),
       text,
+      retryAfterSeconds,
     );
-  return { msg, status: res.status, sessionId: returnedSession || undefined };
+  return {
+    msg,
+    status: res.status,
+    sessionId: returnedSession || undefined,
+    retryAfterSeconds,
+  };
 }
 
 /**
@@ -220,6 +250,8 @@ export async function callMcpEndpoint(
       return {
         ok: false,
         error: errorText(init.msg.error, init.status, 'initialize failed'),
+        ...(init.status >= 400 ? { httpStatus: init.status } : {}),
+        retryAfterSeconds: init.retryAfterSeconds,
       };
     const serverInfo = init.msg.result?.serverInfo;
     const session = init.sessionId;
@@ -229,6 +261,7 @@ export async function callMcpEndpoint(
       await safeFetch(targetUrl, {
         method: 'POST',
         headers: {
+          'User-Agent': HEALTH_CHECK_USER_AGENT,
           'Content-Type': 'application/json',
           Accept: 'application/json, text/event-stream',
           'MCP-Protocol-Version': PROTOCOL_VERSION,
@@ -277,7 +310,14 @@ export async function callMcpEndpoint(
       e?.name === 'TimeoutError'
         ? 'Connection timed out.'
         : e?.message || 'Connection failed.';
-    return { ok: false, error: msg };
+    return e instanceof HttpStatusError
+      ? {
+          ok: false,
+          error: msg,
+          httpStatus: e.status,
+          retryAfterSeconds: e.retryAfterSeconds,
+        }
+      : { ok: false, error: msg };
   }
 }
 

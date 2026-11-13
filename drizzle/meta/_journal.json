@@ -379,6 +379,13 @@
       "when": 1794348699251,
       "tag": "0072_official_owner_split",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "6",
+      "when": 1794592650557,
+      "tag": "0073_endpoint_backoff",
+      "breakpoints": true
     }
   ]
 }

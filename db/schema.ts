@@ -770,6 +770,17 @@ export const listingSignals = sqliteTable(
       .default(0),
     /** Where ingest first found this listing: official-registry | awesome-list | npm | pypi | github-topic | submission. */
     discoveredVia: text('discovered_via'),
+    /**
+     * Remote-endpoint handshake backoff (lib/endpointBackoff.ts). Consecutive
+     * failed handshakes of endpoint_backoff_url; 0 = normal cadence.
+     */
+    endpointFailures: integer('endpoint_failures').notNull().default(0),
+    /** The health cron leaves the endpoint alone until this time. */
+    endpointRetryAt: integer('endpoint_retry_at', { mode: 'timestamp' }),
+    /** Set when the endpoint signalled it blocked or rate-limited us: an excerpt of what it said. */
+    endpointBlockedReason: text('endpoint_blocked_reason'),
+    /** The endpoint URL this state was earned by. A different URL starts fresh. */
+    endpointBackoffUrl: text('endpoint_backoff_url'),
   },
   (table) => ({
     staleCheckedIdx: index('idx_listing_signals_stale_checked').on(
