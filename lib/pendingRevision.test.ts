@@ -3,6 +3,7 @@ import {
   diffEditableFields,
   EDITABLE_KEYS,
   type EditableServerFields,
+  editChangesWriteupInputs,
   parsePendingRevision,
   pendingRevisionToDbPatch,
   serializePendingRevision,
@@ -98,5 +99,57 @@ describe('owner-editable setup steps', () => {
       setupSource: null,
       setupExtractedAt: null,
     });
+  });
+});
+
+describe('editChangesWriteupInputs', () => {
+  const live = {
+    name: 'NAIF FixGraph',
+    description: 'Diagnoses MCP failures.',
+    remoteEndpointUrl: 'https://old.sslip.io/mcp',
+    suggestedInstallCommand: null,
+    suggestedInstallArgs: null,
+    setupSteps: null,
+    pricingModel: 'free',
+  };
+
+  it('queues a rewrite when the owner moves the endpoint', () => {
+    expect(
+      editChangesWriteupInputs(
+        { remoteEndpointUrl: 'https://naifgravity.com/mcp' },
+        live,
+      ),
+    ).toBe(true);
+  });
+
+  it('queues a rewrite on a rename or a new install command', () => {
+    expect(editChangesWriteupInputs({ name: 'NAIF Gravity' }, live)).toBe(true);
+    expect(
+      editChangesWriteupInputs(
+        {
+          suggestedInstallCommand: 'npx',
+          suggestedInstallArgs: ['-y', 'naif-mcp'],
+        },
+        live,
+      ),
+    ).toBe(true);
+  });
+
+  it('leaves the writeup alone for pricing-only edits or restated values', () => {
+    expect(
+      editChangesWriteupInputs(
+        { pricingModel: 'freemium', pricingNotes: 'Paid repairs.' },
+        live,
+      ),
+    ).toBe(false);
+    expect(
+      editChangesWriteupInputs(
+        { remoteEndpointUrl: ' https://old.sslip.io/mcp ' },
+        live,
+      ),
+    ).toBe(false);
+    expect(editChangesWriteupInputs({ suggestedInstallArgs: [] }, live)).toBe(
+      false,
+    );
   });
 });

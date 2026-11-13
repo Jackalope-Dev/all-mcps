@@ -137,6 +137,7 @@ const claimColumns = {
   description: servers.description,
   category: servers.category,
   tools: servers.tools,
+  remoteEndpointUrl: servers.remoteEndpointUrl,
   aiEnrichedAt: servers.aiEnrichedAt,
 };
 
@@ -423,6 +424,7 @@ export async function claimInstallIds(
     description: string;
     category: string;
     tools: string | null;
+    remoteEndpointUrl?: string | null;
   }[] = [];
   for (let i = 0; i < ids.length; i += INSTALL_CLAIM_CHUNK) {
     const rows = await db
@@ -441,6 +443,7 @@ export async function claimInstallIds(
         description: servers.description,
         category: servers.category,
         tools: servers.tools,
+        remoteEndpointUrl: servers.remoteEndpointUrl,
       });
     claimed.push(...rows);
   }

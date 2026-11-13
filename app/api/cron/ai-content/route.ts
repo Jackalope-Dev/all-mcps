@@ -153,6 +153,7 @@ type ClaimedRow = {
   description: string;
   category: string;
   tools: string | null;
+  remoteEndpointUrl?: string | null;
   previousEnrichedAt?: Date | null;
   /** Claimed because its source changed (pass 1): failures back off. */
   changed?: boolean;
@@ -196,6 +197,7 @@ function toReclaimed(c: {
   description: string;
   category: string;
   tools: string | null;
+  remoteEndpointUrl?: string | null;
   aiEnrichedAt: Date | null;
 }): ClaimedRow {
   return {
@@ -205,6 +207,7 @@ function toReclaimed(c: {
     description: c.description,
     category: c.category,
     tools: c.tools,
+    remoteEndpointUrl: c.remoteEndpointUrl,
     previousEnrichedAt: c.aiEnrichedAt,
     pass: 'writeup',
   };
@@ -275,6 +278,7 @@ export async function POST(req: Request) {
               description: servers.description,
               category: servers.category,
               tools: servers.tools,
+              remoteEndpointUrl: servers.remoteEndpointUrl,
             })) as Omit<ClaimedRow, 'pass'>[])
         : [];
 
@@ -327,6 +331,7 @@ export async function POST(req: Request) {
           description: servers.description,
           category: servers.category,
           tools: servers.tools,
+          remoteEndpointUrl: servers.remoteEndpointUrl,
         })
         .from(servers)
         .where(
@@ -425,6 +430,7 @@ export async function POST(req: Request) {
             url: server.url,
             readme,
             tools: parseServerTools(server.tools),
+            remoteEndpointUrl: server.remoteEndpointUrl,
             omitStructured: true,
           });
           return { server, outcome, fields, hint };

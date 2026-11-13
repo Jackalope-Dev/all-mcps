@@ -1,6 +1,7 @@
 import {
   clampDoc,
   clampFaq,
+  endpointContext,
   parseFaqArray,
   stripBannedOpener,
   stripDocFiller,
@@ -187,3 +188,14 @@ assert(clampDoc(null, null) === '', 'null input should return empty string');
 assert(clampDoc(42, null) === '', 'number input should return empty string');
 
 console.log('ALL TESTS PASSED SUCCESSFULLY!');
+
+// Current hosted endpoint is named to the writer so a retired one in the
+// README isn't repeated in the overview or FAQ.
+assert(endpointContext(null) === '', 'No endpoint, no prompt line');
+assert(endpointContext('  ') === '', 'Blank endpoint, no prompt line');
+assert(
+  endpointContext('https://naifgravity.com/mcp').includes(
+    'https://naifgravity.com/mcp',
+  ) && endpointContext('https://naifgravity.com/mcp').includes('retired'),
+  'Endpoint line names the current endpoint and retires others',
+);

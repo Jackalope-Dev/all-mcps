@@ -40,6 +40,7 @@ import { recordModeration } from '../../../../lib/moderationLog';
 import { MODERATION_REASONS } from '../../../../lib/moderationReasons';
 import { sendNotificationEmail } from '../../../../lib/notify';
 import {
+  editChangesWriteupInputs,
   parsePendingRevision,
   pendingRevisionToDbPatch,
 } from '../../../../lib/pendingRevision';
@@ -559,6 +560,7 @@ export async function POST(req: Request) {
         description: cleanListingDescription(server.description || ''),
         readme: readme || '',
         tools,
+        remoteEndpointUrl: server.remoteEndpointUrl,
       });
 
       if (outcome.status !== 'ok') {
@@ -682,11 +684,9 @@ export async function POST(req: Request) {
         }
         await db.update(servers).set(fieldUpdates).where(eq(servers.id, id));
         // The overview, use cases, features and FAQ were written from the old
-        // description; queue a rewrite the same way a README change does.
-        if (
-          pending.proposed.description !== undefined &&
-          pending.proposed.description !== server.description
-        ) {
+        // name, description and connection details; queue a rewrite the same
+        // way a README change does.
+        if (editChangesWriteupInputs(pending.proposed, server)) {
           await upsertSignals(db, id, { contentChangedAt: new Date() });
         }
         // The sandbox only retests on its own 7/30-day windows, so a verdict

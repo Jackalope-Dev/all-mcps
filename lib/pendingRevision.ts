@@ -193,3 +193,38 @@ export function pendingRevisionToDbPatch(
   }
   return patch;
 }
+
+/**
+ * Edited fields the generated writeup (overview, "How it works", FAQ) is
+ * written from or repeats: the name, the description, and how a client
+ * connects. Pricing, tags, links and the like are rendered from their own
+ * columns, so changing them leaves the writeup accurate.
+ */
+const WRITEUP_INPUT_KEYS: (keyof EditableServerFields)[] = [
+  'name',
+  'description',
+  'remoteEndpointUrl',
+  'suggestedInstallCommand',
+  'suggestedInstallArgs',
+  'setupSteps',
+];
+
+/**
+ * Whether approving this edit leaves the generated writeup describing the old
+ * listing. Compares the values the edit would store against the live row's
+ * stored values, so an edit that only restates what is already live does not
+ * queue a rewrite. Before this, only a description change did: an owner who
+ * moved their endpoint or renamed the server kept a writeup and FAQ naming the
+ * retired endpoint until the README happened to change.
+ */
+export function editChangesWriteupInputs(
+  proposed: Partial<EditableServerFields>,
+  live: Partial<Record<keyof EditableServerFields, string | null>>,
+): boolean {
+  const patch = pendingRevisionToDbPatch(proposed);
+  return WRITEUP_INPUT_KEYS.some(
+    (key) =>
+      key in patch &&
+      (patch[key] ?? null) !== ((live[key] ?? '').trim() || null),
+  );
+}

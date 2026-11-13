@@ -299,7 +299,21 @@ export type ListingContentInput = {
   tools?: { name: string; description?: string }[];
   /** Jev already filled category/auth/pricing/install — don't ask GPT again. */
   omitStructured?: boolean;
+  /** The listing's current hosted MCP endpoint, when it has one. */
+  remoteEndpointUrl?: string | null;
 };
+
+/**
+ * Prompt line naming the listing's current hosted endpoint. The writeup is
+ * otherwise grounded in the README, which can still name an endpoint the owner
+ * has since retired; without this line the overview and FAQ kept telling
+ * readers to connect to the old host after the listing moved.
+ */
+export function endpointContext(remoteEndpointUrl?: string | null): string {
+  const url = remoteEndpointUrl?.trim();
+  if (!url) return '';
+  return `Current hosted MCP endpoint: ${url} (this is the endpoint clients connect to today; if the README names a different endpoint URL, that one is retired: do not mention it)`;
+}
 
 const README_BUDGET = 9000;
 
@@ -581,6 +595,7 @@ export async function generateListingContent(
     `Current category (may be an unreviewed default, not necessarily correct): ${input.category}`,
     `Repository/Source: ${input.url}`,
     `Current description: ${cleanedDesc || '(none)'}`,
+    endpointContext(input.remoteEndpointUrl),
     toolLines ? `Tools it exposes over MCP:\n${toolLines}` : '',
     input.readme
       ? `README (excerpt):\n${input.readme.slice(0, README_BUDGET)}`
