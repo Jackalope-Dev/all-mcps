@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 import { drizzle } from 'drizzle-orm/d1';
-import { getTableConfig } from 'drizzle-orm/sqlite-core';
+import { getTableConfig, SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import { describe, expect, it } from 'vitest';
 import { servers } from '@/db/schema';
 import {
@@ -482,6 +482,11 @@ describe('indexableListingSql parity', () => {
         'web3-12',
       ].sort(),
     );
+  });
+
+  it('binds no parameters (D1 allows 100 per query, callers add their own)', () => {
+    const q = new SQLiteSyncDialect().sqlToQuery(indexableListingSql());
+    expect(q.params).toEqual([]);
   });
 
   it('isListingIndexable is the verdict flag', () => {

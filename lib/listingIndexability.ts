@@ -367,11 +367,20 @@ function withinWindow(
   return !Number.isNaN(ms) && Date.now() - ms <= windowMs;
 }
 
+/**
+ * Constants go into the SQL as literals, not bound parameters: D1 allows at
+ * most 100 bound parameters per query, and callers (the /best topic counts
+ * with their LIKE keywords) add their own on top of this rule.
+ */
 function idList(ids: Iterable<string>): SQL {
-  return sql.join(
-    [...ids].map((id) => sql`${id}`),
-    sql`, `,
+  return sql.raw(
+    [...ids].map((id) => `'${id.replace(/'/g, "''")}'`).join(', '),
   );
+}
+
+function num(n: number): SQL {
+  if (!Number.isFinite(n)) throw new Error(`not a finite number: ${n}`);
+  return sql.raw(String(Math.floor(n)));
 }
 
 /**
@@ -385,15 +394,15 @@ export function indexableListingSql(): SQL {
   const nowSec = Math.floor(Date.now() / 1000);
   const healthySince = nowSec - REMOTE_HEALTHY_WINDOW_MS / 1000;
   const aliveSince = nowSec - REPO_ALIVE_WINDOW_MS / 1000;
-  const verifiedRun = sql`(${servers.toolsSource} = 'introspected' OR ${servers.installNeedsConfig} IS NOT NULL OR coalesce(${servers.remoteEndpointHealthy}, 0) = 1 OR coalesce(${servers.remoteEndpointHealthyAt}, 0) >= ${healthySince})`;
-  const strong = sql`(${stars} >= ${STRONG_GITHUB_STARS} OR ${downloads} >= ${STRONG_NPM_DOWNLOADS})`;
+  const verifiedRun = sql`(${servers.toolsSource} = 'introspected' OR ${servers.installNeedsConfig} IS NOT NULL OR coalesce(${servers.remoteEndpointHealthy}, 0) = 1 OR coalesce(${servers.remoteEndpointHealthyAt}, 0) >= ${num(healthySince)})`;
+  const strong = sql`(${stars} >= ${num(STRONG_GITHUB_STARS)} OR ${downloads} >= ${num(STRONG_NPM_DOWNLOADS)})`;
   const name = sql`trim(coalesce(${servers.name}, ''))`;
   const numbered = sql`((${servers.id} GLOB 'mcp-[0-9]*' AND substr(${servers.id}, 5) NOT GLOB '*[^0-9]*') OR (${servers.id} GLOB 'mcp-server-[0-9]*' AND substr(${servers.id}, 12) NOT GLOB '*[^0-9]*') OR (${servers.id} GLOB 'server-[0-9]*' AND substr(${servers.id}, 8) NOT GLOB '*[^0-9]*'))`;
   const genericSlug = sql`((${numbered} AND lower(${name}) <> ${servers.id}) OR (${servers.id} GLOB '*-[0-9]' AND NOT ${name} GLOB ('*' || substr(${servers.id}, -1))) OR (${servers.id} GLOB '*-[0-9][0-9]' AND NOT ${name} GLOB ('*' || substr(${servers.id}, -2))))`;
-  const traction = sql`(${stars} >= ${TRACTION_GITHUB_STARS} OR (${stars} >= ${TRACTION_DOWNLOADS_MIN_STARS} AND ${downloads} >= ${TRACTION_NPM_DOWNLOADS}))`;
-  const alive = sql`(${servers.lastCommitAt} IS NULL OR ${servers.lastCommitAt} >= ${aliveSince})`;
+  const traction = sql`(${stars} >= ${num(TRACTION_GITHUB_STARS)} OR (${stars} >= ${num(TRACTION_DOWNLOADS_MIN_STARS)} AND ${downloads} >= ${num(TRACTION_NPM_DOWNLOADS)}))`;
+  const alive = sql`(${servers.lastCommitAt} IS NULL OR ${servers.lastCommitAt} >= ${num(aliveSince)})`;
   const githubUrl = sql`(lower(${servers.url}) GLOB 'http*://github.com/*' OR lower(${servers.url}) GLOB 'http*://www.github.com/*')`;
-  const submitted = sql`(${servers.submitterEmail} IS NOT NULL AND ${verifiedRun} AND coalesce(${servers.healthStatus}, '') <> 'offline' AND NOT (${githubUrl} AND ${stars} < ${SUBMITTED_GITHUB_MIN_STARS}))`;
+  const submitted = sql`(${servers.submitterEmail} IS NOT NULL AND ${verifiedRun} AND coalesce(${servers.healthStatus}, '') <> 'offline' AND NOT (${githubUrl} AND ${stars} < ${num(SUBMITTED_GITHUB_MIN_STARS)}))`;
   return sql`(CASE
     WHEN ${servers.id} IN (${idList(Object.keys(DUPLICATE_LISTINGS))}) THEN 0
     WHEN ${servers.staleFlaggedAt} IS NOT NULL THEN 0
