@@ -1,3 +1,5 @@
+import { isServerRowIndexable } from './listingIndexability';
+
 /**
  * The only /mcp/[a]/vs/[b] pages allowed into the index.
  *
@@ -6,8 +8,8 @@
  * servers is thin content. These pairs are the exceptions — two maintained,
  * directly competing servers for the same integration, where people really do
  * search "<a> vs <b>" — and they are still only indexed while both listings
- * are active and carry an AI writeup (see isIndexableCompare), so the page has
- * substance on both sides.
+ * are themselves indexable (lib/listingIndexability.ts; see isIndexableCompare),
+ * so the page has substance on both sides.
  *
  * Chosen from the highest-starred enriched listings per integration hub. Add a
  * pair only when both are real alternatives for the same job.
@@ -42,7 +44,9 @@ export const INDEXABLE_COMPARE_PAIRS: ComparePair[] = [
   },
   {
     a: 'alexanderzuev-supabase-mcp-server',
-    b: 'supabase-community-supabase-mcp',
+    // The official listing: supabase-community-supabase-mcp is the same repo
+    // under its old org and defers to it (DUPLICATE_LISTINGS).
+    b: 'supabase',
     label: 'Official Supabase MCP vs. community server',
     blurb: 'Project management vs. SQL-first access',
   },
@@ -82,9 +86,9 @@ export function curatedPairsFor(id: string): ComparePair[] {
   return INDEXABLE_COMPARE_PAIRS.filter((p) => p.a === id || p.b === id);
 }
 
-type CompareSide = { status?: string | null; aiDoc?: string | null };
+type CompareSide = Parameters<typeof isServerRowIndexable>[0];
 
-/** True when this pair is curated AND both sides currently have real content. */
+/** True when this pair is curated AND both listings are themselves indexable. */
 export function isIndexableCompare(
   idA: string,
   idB: string,
@@ -92,9 +96,7 @@ export function isIndexableCompare(
   b: CompareSide,
 ): boolean {
   if (!isCuratedPair(idA, idB)) return false;
-  return [a, b].every(
-    (s) => s.status === 'active' && !!s.aiDoc && s.aiDoc.trim().length > 0,
-  );
+  return [a, b].every((s) => s.status === 'active' && isServerRowIndexable(s));
 }
 
 /** Canonical (sorted) URL path for a pair — matches the vs page's canonicalPair. */

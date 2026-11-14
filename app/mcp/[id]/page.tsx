@@ -39,7 +39,10 @@ import { comparePath, curatedPairsFor } from '@/lib/comparePairs';
 import { formatReviewedAt, listingVerdict } from '@/lib/editorial';
 import { assessInstallRisk } from '@/lib/installRisk';
 import { serializeJsonLd } from '@/lib/jsonLd';
-import { isServerRowIndexable } from '@/lib/listingIndexability';
+import {
+  canonicalListingId,
+  listingRobotsMeta,
+} from '@/lib/listingIndexability';
 import { listingIdHash, pickRotatingLinks } from '@/lib/listingLinks';
 import { buildListingMetaDescription } from '@/lib/listingMeta';
 import { isRepositoryUrl } from '@/lib/repoUrl';
@@ -186,16 +189,9 @@ export async function generateMetadata({
   const title = buildDetailTitle(displayName);
 
   // Same rule the listings sitemap uses (lib/listingIndexability.ts), so we
-  // never submit a URL this page noindexes. follow stays on so link equity
-  // still flows through noindexed listings.
-  const isThinListing = !isServerRowIndexable(server);
-
-  const robotsOverride =
-    server.status === 'removed'
-      ? { robots: { index: false, follow: false } as const }
-      : isThinListing
-        ? { robots: { index: false, follow: true } as const }
-        : {};
+  // never submit a URL this page noindexes.
+  const { robots, canonicalUrl } = listingRobotsMeta(server);
+  const robotsOverride = robots ? { robots } : {};
 
   return {
     title,
@@ -208,11 +204,11 @@ export async function generateMetadata({
       server.category,
     ].join(', '),
     // Auto-unpublished (dead/archived source) → noindex,nofollow (removed);
-    // barren stub with no unique content → noindex,follow (thin, self-heals on
-    // enrichment); everything else indexes normally. See robotsOverride above.
+    // thin or duplicate listing → noindex,follow (self-heals once it earns the
+    // signals in lib/listingIndexability.ts); everything else indexes normally.
     ...robotsOverride,
     alternates: {
-      canonical: `https://allmcps.com/mcp/${server.id}`,
+      canonical: canonicalUrl,
       // Expose the agent-readable markdown representation so LLM crawlers and
       // MCP-aware clients can discover the plain-text version of this listing.
       types: {
@@ -223,7 +219,7 @@ export async function generateMetadata({
       type: 'article',
       title: `${title} | AllMCPs`,
       description: desc,
-      url: `https://allmcps.com/mcp/${server.id}`,
+      url: canonicalUrl,
     },
     twitter: {
       card: 'summary_large_image',
@@ -463,11 +459,12 @@ export default async function MCPDetail({
   const primaryWebsiteUrl =
     server.websiteUrl || (hasRepository ? null : server.url);
 
-  const canonicalUrl = `https://allmcps.com/mcp/${server.id}`;
+  // Same canonical as the metadata: a duplicate defers to the kept listing.
+  const canonicalUrl = `https://allmcps.com/mcp/${canonicalListingId(server.id)}`;
   // The route-generated OG card always exists for every listing, so it's a safe,
   // stable image for structured data (Google requires an image for the richest
   // SoftwareApplication results, and answer engines surface it in citations).
-  const ogImage = `${canonicalUrl}/opengraph-image`;
+  const ogImage = `https://allmcps.com/mcp/${server.id}/opengraph-image`;
   const sameAs = [server.url, server.websiteUrl].filter(Boolean) as string[];
   const publishedDate = server.createdAt ? new Date(server.createdAt) : null;
   const publishedIso =

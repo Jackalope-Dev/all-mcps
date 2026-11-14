@@ -91,8 +91,10 @@ beforeAll(() => {
   );
   sqlite.exec(`CREATE TABLE servers (${cols.join(', ')})`);
   const insert = sqlite.prepare(
-    `INSERT INTO servers (id, name, url, description, category, status, health_status, stale_flagged_at, views, copies, upvotes)
-     VALUES (?, ?, ?, 'A server.', '💻 Developer Tools', ?, ?, ?, ?, 0, 0)`,
+    // Every row has a writeup and strong traction, so llms.txt keeps the
+    // indexable ones (lib/listingIndexability.ts): all but the archived repo.
+    `INSERT INTO servers (id, name, url, description, category, status, health_status, stale_flagged_at, views, copies, upvotes, ai_doc, github_stars)
+     VALUES (?, ?, ?, 'A server.', '💻 Developer Tools', ?, ?, ?, ?, 0, 0, 'Our writeup.', 2000)`,
   );
   for (const [id, status, health, flagged, views] of ROWS) {
     insert.run(
@@ -114,15 +116,12 @@ beforeEach(() => {
 });
 
 describe('whole-catalog exports', () => {
-  it('llms.txt rows page through every servable listing, most-used first', async () => {
+  it('llms.txt rows page through every servable listing, keeping indexable ones most-used first', async () => {
     const rows = await getServersForLlmsTxt({ pageSize: 2 });
-    expect(rows.map((r) => r.id)).toEqual([
-      'b-two',
-      'g-three',
-      'a-one',
-      'c-archived',
-    ]);
+    // c-archived is servable but noindexed (archived repo), so llms.txt skips it.
+    expect(rows.map((r) => r.id)).toEqual(['b-two', 'g-three', 'a-one']);
     expect(rows[0]).not.toHaveProperty('views');
+    expect(rows[0]).not.toHaveProperty('indexable');
     // 4 servable rows at 2 a page: two full pages and an empty one.
     expect(state.serverQueries).toBe(3);
   });

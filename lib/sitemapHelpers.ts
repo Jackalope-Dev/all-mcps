@@ -167,6 +167,13 @@ export const STATIC_PAGE_LASTMOD: Record<string, string> = {
 
 export type SitemapServer = {
   id: string;
+  /** Read by isListingIndexable (generic-slug and submitted checks). */
+  name?: string | null;
+  url?: string | null;
+  healthStatus?: string | null;
+  isOfficial?: number | boolean | null;
+  ownerVerified?: number | boolean | null;
+  humanSubmitted?: number | boolean | null;
   category?: string | null;
   lastCheckedAt?: unknown;
   createdAt?: unknown;
@@ -196,6 +203,12 @@ export type SitemapServer = {
 // across every active row on every sitemap shard request.
 const SITEMAP_SERVER_COLUMNS = {
   id: serversTable.id,
+  name: serversTable.name,
+  url: serversTable.url,
+  healthStatus: serversTable.healthStatus,
+  isOfficial: serversTable.isOfficial,
+  ownerVerified: serversTable.ownerVerified,
+  humanSubmitted: sql<number>`${serversTable.submitterEmail} IS NOT NULL`,
   category: serversTable.category,
   lastCheckedAt: serversTable.lastCheckedAt,
   createdAt: serversTable.createdAt,
@@ -239,7 +252,7 @@ export type SitemapSummary = {
   categoryLastMs: Record<string, number>;
   /** Indexable listings in catalog order, for the listings shard. */
   listings: { id: string; lastmod: string }[];
-  /** lastmod of curated compare-pair listings that carry an AI writeup. */
+  /** lastmod of curated compare-pair listings that are themselves indexable. */
   comparePairLastMod: Record<string, string>;
 };
 
@@ -266,23 +279,30 @@ export function createSitemapSummarizer() {
         if (!Number.isNaN(ms) && ms > (summary.categoryLastMs[cat] ?? 0)) {
           summary.categoryLastMs[cat] = ms;
         }
-        if (s.hasAiDoc && COMPARE_PAIR_IDS.has(s.id)) {
-          summary.comparePairLastMod[s.id] = lastmod;
-        }
         // Only listings the page itself leaves indexable (see /mcp/[id] metadata).
-        if (
-          isListingIndexable({
-            hasAiDoc: Boolean(s.hasAiDoc),
-            toolsSource: s.toolsSource,
-            installNeedsConfig: s.installNeedsConfig,
-            remoteEndpointHealthy: s.remoteEndpointHealthy,
-            remoteEndpointHealthyAt: s.remoteEndpointHealthyAt,
-            githubStars: s.githubStars ?? s.stars,
-            npmDownloads: s.npmDownloads ?? s.downloads,
-            staleFlagged: Boolean(s.staleFlagged),
-          })
-        ) {
-          summary.listings.push({ id: s.id, lastmod });
+        const indexable = isListingIndexable({
+          id: s.id,
+          name: s.name,
+          url: s.url,
+          healthStatus: s.healthStatus,
+          isOfficial: s.isOfficial,
+          ownerVerified: s.ownerVerified,
+          humanSubmitted: s.humanSubmitted,
+          lastCommitAt: s.lastCommitAt as Date | string | number | null,
+          hasAiDoc: Boolean(s.hasAiDoc),
+          toolsSource: s.toolsSource,
+          installNeedsConfig: s.installNeedsConfig,
+          remoteEndpointHealthy: s.remoteEndpointHealthy,
+          remoteEndpointHealthyAt: s.remoteEndpointHealthyAt,
+          githubStars: s.githubStars ?? s.stars,
+          npmDownloads: s.npmDownloads ?? s.downloads,
+          staleFlagged: Boolean(s.staleFlagged),
+        });
+        if (!indexable) continue;
+        summary.listings.push({ id: s.id, lastmod });
+        // A curated compare page is indexable only while both sides are.
+        if (COMPARE_PAIR_IDS.has(s.id)) {
+          summary.comparePairLastMod[s.id] = lastmod;
         }
       }
     },
@@ -364,7 +384,7 @@ const getCachedSitemapSummaryFromD1 = unstable_cache(
     if (!summary) throw new SitemapSummaryUnavailable();
     return summary;
   },
-  ['sitemap-summary-v2'],
+  ['sitemap-summary-v3'],
   { revalidate: SITEMAP_CACHE_SECONDS },
 );
 
@@ -386,7 +406,7 @@ let lastGoodSummary: SitemapSummary | null = null;
  * isolate for the whole cooldown (seen 2026-11-10). Raw JSON, no date
  * reviving: lastmod values stay strings.
  */
-const SHARED_SUMMARY_KEY = 'app-cache/sitemap-summary/v2-last-good';
+const SHARED_SUMMARY_KEY = 'app-cache/sitemap-summary/v3-last-good';
 /** Each isolate refreshes the shared copy at most this often. */
 const SHARED_WRITE_INTERVAL_MS = 30 * 60 * 1000;
 let sharedWrittenAt = 0;

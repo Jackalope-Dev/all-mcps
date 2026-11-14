@@ -168,3 +168,57 @@ describe('getSitemapSummary when D1 fails', () => {
     }
   });
 });
+
+describe('listings sitemap quality rule', () => {
+  it('submits only listings the page leaves indexable', async () => {
+    const { buildListingsSitemap } = await import('./sitemapShards');
+    const s = createSitemapSummarizer();
+    const doc = { category: DEV, hasAiDoc: 1, aiDocAt: '2026-09-01T00:00:00Z' };
+    s.add([
+      // Kept: strong traction, an Official listing, a live human submission.
+      { ...doc, id: 'popular', name: 'Popular', githubStars: 5000 },
+      { ...doc, id: 'vendor', name: 'Vendor', isOfficial: 1 },
+      {
+        ...doc,
+        id: 'hosted',
+        name: 'Hosted',
+        url: 'https://hosted.example/mcp',
+        humanSubmitted: 1,
+        remoteEndpointHealthy: 1,
+      },
+      // Noindexed: npm downloads without stars, a generic slug, a duplicate,
+      // an archived repo, no writeup.
+      {
+        ...doc,
+        id: 'npm-only',
+        name: 'Npm Only',
+        githubStars: 2,
+        npmDownloads: 4000,
+        toolsSource: 'introspected',
+      },
+      {
+        ...doc,
+        id: 'mcp-server-62',
+        name: 'Clipform MCP',
+        githubStars: 300,
+        toolsSource: 'introspected',
+      },
+      { ...doc, id: 'posthog-posthog', name: 'PostHog', githubStars: 40000 },
+      {
+        ...doc,
+        id: 'old',
+        name: 'Old',
+        githubStars: 5000,
+        healthStatus: 'archived',
+      },
+      { id: 'bare', name: 'Bare', category: DEV, githubStars: 5000 },
+    ]);
+    const summary = s.result();
+    if (!summary) throw new Error('expected a summary');
+    expect(buildListingsSitemap(summary).map((e) => e.url)).toEqual([
+      'https://allmcps.com/mcp/popular',
+      'https://allmcps.com/mcp/vendor',
+      'https://allmcps.com/mcp/hosted',
+    ]);
+  });
+});

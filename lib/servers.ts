@@ -213,6 +213,9 @@ export const PUBLIC_SERVER_COLUMNS = {
   websiteVerified: serversTable.websiteVerified,
   isOfficial: serversTable.isOfficial,
   ownerVerified: serversTable.ownerVerified,
+  // Whether it came in through /submit, never the email itself. Read by
+  // lib/listingIndexability.ts.
+  humanSubmitted: sql<boolean>`${serversTable.submitterEmail} IS NOT NULL`,
   officialSource: serversTable.officialSource,
   featuredUntil: serversTable.featuredUntil,
   categorySponsorUntil: serversTable.categorySponsorUntil,
@@ -288,6 +291,8 @@ export type Server = {
   isOfficial: boolean;
   /** Approved ownership claim ("Verified owner"). */
   ownerVerified?: boolean;
+  /** Came in through /submit (a person), not catalog ingest. D1 returns 0/1. */
+  humanSubmitted?: boolean | number;
   /** Why isOfficial is set (OFFICIAL_SOURCES in lib/featuredStatus.ts). */
   officialSource?: string | null;
   redirectTo?: string | null;
@@ -2039,6 +2044,7 @@ export async function getServersForLlmsTxt({
             views: serversTable.views,
             copies: serversTable.copies,
             upvotes: serversTable.upvotes,
+            indexable: sql<number>`${indexableListingSql()}`,
           })
           .from(serversTable)
           .where(servableAfterIdFilter(after))
@@ -2054,7 +2060,12 @@ export async function getServersForLlmsTxt({
         (b.upvotes ?? 0) - (a.upvotes ?? 0) ||
         (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
     );
-    return rows.map(({ views: _v, copies: _c, upvotes: _u, ...r }) => r);
+    // Only listings we offer to search engines (lib/listingIndexability.ts):
+    // llms.txt is a site map, and the thin ones are noindexed. Filtered here,
+    // not in SQL, so the id cursor still pages through every servable row.
+    return rows
+      .filter((r) => Boolean(r.indexable))
+      .map(({ views: _v, copies: _c, upvotes: _u, indexable: _i, ...r }) => r);
   }
   // No D1 binding at all (local dev): the bundled snapshot.
   return snapshotCatalogServers().map((s) => ({

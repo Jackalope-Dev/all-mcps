@@ -207,7 +207,7 @@ export function buildSecondarySitemap(
   // on-site but noindexed to avoid Google's Scaled Content Abuse penalties for large
   // programmatic matrix doorways. The only exception is the small curated set in
   // lib/comparePairs.ts, submitted under the same condition the page uses to
-  // allow indexing (both listings active with a writeup).
+  // allow indexing (both listings themselves indexable).
   const entries: MetadataRoute.Sitemap = [];
   for (const pair of INDEXABLE_COMPARE_PAIRS) {
     const lastA = summary.comparePairLastMod[pair.a];
