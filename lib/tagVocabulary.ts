@@ -509,6 +509,16 @@ export const TAG_VOCABULARY: TagDefinition[] = [
       'Works with laws, regulations, court records, contracts or compliance.',
   },
   {
+    slug: 'energy',
+    label: 'Energy',
+    group: 'domain',
+    // Bare "power" and "grid" are left out: PowerShell, power users and CSS
+    // or data grids would make nearly every listing a candidate.
+    hint: /\benerg|\belectricity\b|\bpower (grids?|plants?|markets?|prices?)\b|\butilit(y|ies) (rates?|bills?|data)\b|\bsolar\b|\bwind (power|energy|farms?)\b|\boil (and|&) gas\b|\bnatural gas\b|\bev charg|\b[km]wh\b|\bercot\b|\bcaiso\b|\bpjm\b/i,
+    definition:
+      'Works with energy data: electricity prices and markets, power grids, generation, fuels or EV charging.',
+  },
+  {
     slug: 'education',
     label: 'Education',
     group: 'domain',
