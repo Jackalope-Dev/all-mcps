@@ -23,7 +23,8 @@ import './globals.css';
 // then one stylesheet per area of the site (see app/styles/).
 import './styles/foundation.css';
 import './styles/chrome.css';
-import './styles/home.css';
+// home.css is imported by app/page.tsx: every rule is scoped to the homepage
+// (.home-*, .jd-*), so it no longer ships render-blocking on other pages.
 import './styles/directory.css';
 import './styles/listing.css';
 import './styles/tools.css';

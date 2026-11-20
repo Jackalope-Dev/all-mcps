@@ -1,10 +1,17 @@
 'use client';
 
 import { Star } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { SignInGate } from './SignInGate';
 import { toast } from './Toast';
-import { TurnstileWidget } from './TurnstileWidget';
+
+// Only signed-in visitors ever see the composer's Turnstile check, so keep
+// the widget (~15 KB) out of every listing page's initial bundle.
+const TurnstileWidget = dynamic(
+  () => import('./TurnstileWidget').then((m) => m.TurnstileWidget),
+  { ssr: false },
+);
 
 type MineResponse = {
   signedIn: boolean;

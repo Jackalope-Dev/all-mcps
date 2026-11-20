@@ -18,6 +18,7 @@ import {
   getActiveServersLight,
   getShowcaseActiveServers,
 } from '../lib/servers';
+import './styles/home.css';
 import { getSiteStats } from '../lib/siteStats';
 
 export const metadata: Metadata = {
