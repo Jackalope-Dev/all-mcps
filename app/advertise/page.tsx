@@ -43,7 +43,7 @@ export const metadata: Metadata = {
       'Sponsor AllMCPs with logo and copy ads across the MCP server directory, search results, and our MCP server.',
     images: [
       {
-        url: 'https://allmcps.com/opengraph-image',
+        url: 'https://allmcps.com/og/default.png',
         width: 1200,
         height: 630,
         alt: 'AllMCPs',

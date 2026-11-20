@@ -19,6 +19,7 @@ function cleanText(input: string | null | undefined): string {
     .replace(/₿/g, 'BTC') // replace Bitcoin symbol (U+20BF) to avoid Satori font fetch
     .replace(/[\u20A0-\u20CF]/g, '') // strip rare currency symbols that trigger loadGoogleFont
     .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '') // strip unsupported pictographs
+    .replace(/[\u{1FA00}-\u{1FAFF}\u{1F000}-\u{1F2FF}]|\uFE0F|\u200D/gu, '') // more pictographs, plus the emoji variation selector and joiner they leave behind
     .replace(/\s+/g, ' ') // collapse whitespace
     .trim();
 }

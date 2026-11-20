@@ -3,6 +3,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { ImageResponse } from 'next/og';
 import serversData from '../../../data/mcp-servers.json';
 import { servers as serversTable } from '../../../db/schema';
+import { parseCategoryLabel } from '../../../lib/categories';
 import { cleanListingDescription } from '../../../lib/description';
 import { parseServerName } from '../../../lib/displayName';
 import { truncateDescription, truncateTitle } from '../../../lib/ogHelpers';
@@ -203,8 +204,11 @@ export default async function Image({
 
   const displayTitle = truncateTitle(displayTitleRaw, 75);
   const displayDesc = truncateDescription(rawDesc, 145);
+  // Label only: the stored category leads with an emoji ("🗄️ Databases"),
+  // and Satori fetches every emoji from a CDN on each render.
   const categoryBadge = server?.category
-    ? String(server.category).toUpperCase()
+    ? parseCategoryLabel(String(server.category)).label.toUpperCase() ||
+      'MCP SERVER'
     : 'MCP SERVER';
   const candidateLogo = resolveListingLogoSrc(server ?? null);
   const listingLogoSrc = candidateLogo

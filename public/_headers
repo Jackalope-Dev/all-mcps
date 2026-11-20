@@ -17,3 +17,8 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
   X-DNS-Prefetch-Control: on
+
+# Static social card most pages use as og:image (served straight from assets,
+# no Worker render). A day in browsers, a week at the edge.
+/og/*
+  Cache-Control: public, max-age=86400, s-maxage=604800

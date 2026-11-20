@@ -228,7 +228,7 @@ export async function generateMetadata({
       type: 'article',
       images: [
         {
-          url: 'https://allmcps.com/opengraph-image',
+          url: 'https://allmcps.com/og/default.png',
           width: 1200,
           height: 630,
           alt: 'AllMCPs',

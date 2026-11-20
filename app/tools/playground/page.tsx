@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   openGraph: {
     images: [
       {
-        url: 'https://allmcps.com/opengraph-image',
+        url: 'https://allmcps.com/og/default.png',
         width: 1200,
         height: 630,
         alt: 'AllMCPs',

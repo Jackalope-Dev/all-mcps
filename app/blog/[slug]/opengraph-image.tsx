@@ -248,11 +248,27 @@ export default async function Image({
             borderTop: '1px solid rgba(255, 255, 255, 0.1)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* Inline book icon instead of the 📖 emoji (Satori fetches emoji
+                from a CDN on every render). */}
+            <svg
+              aria-hidden="true"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#94A3B8"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+            </svg>
             <span
               style={{ fontSize: '18px', color: '#94A3B8', fontWeight: 600 }}
             >
-              📖 AllMCPs Official Blog & Engineering Guide
+              AllMCPs Official Blog & Engineering Guide
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center' }}>
