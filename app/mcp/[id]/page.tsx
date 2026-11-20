@@ -1719,6 +1719,18 @@ export default async function MCPDetail({
                       )}
                     </div>
                   </ExpandableDoc>
+                  {server.aiDoc?.trim() && (
+                    // Say where the writeup comes from (see the editorial
+                    // standards on /about): readers and search engines both
+                    // weigh provenance.
+                    <p className="lst-doc-source">
+                      Written by AllMCPs with AI assistance from the
+                      project&rsquo;s README and listing data.{' '}
+                      <Link href="/about#editorial-standards">
+                        How we build listings
+                      </Link>
+                    </p>
+                  )}
                   <p className="lst-doc-links">
                     <Link
                       href={`/mcp/${server.id}/readme`}
@@ -1994,6 +2006,15 @@ export default async function MCPDetail({
                             {server.pricingNotes}
                           </span>
                         ) : null}
+                      </dd>
+                    </div>
+                  )}
+                  {org && (
+                    <div>
+                      <dt>Maintainer</dt>
+                      <dd>
+                        {org}
+                        {trust ? ` (${trust.label.toLowerCase()})` : ''}
                       </dd>
                     </div>
                   )}

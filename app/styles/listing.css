@@ -1574,6 +1574,17 @@ details[open] > summary .lst-chevron {
   transform: rotate(180deg);
 }
 
+.lst-doc-source {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+}
+
+.lst-doc-source a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 .lst-doc-links {
   display: flex;
   flex-wrap: wrap;

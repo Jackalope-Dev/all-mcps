@@ -131,6 +131,8 @@ export default function AboutPage() {
           { id: 'what-we-do', text: 'What we do' },
           { id: 'built-by', text: 'Built by Jackalope Digital' },
           { id: 'verification', text: 'How listings are verified and ranked' },
+          { id: 'editorial-standards', text: 'Editorial standards' },
+          { id: 'contact', text: 'Corrections and contact' },
         ]}
         progress={false}
         footer={
@@ -233,6 +235,53 @@ export default function AboutPage() {
           are explicitly editorial. Found something wrong on a listing?{' '}
           <a href="/contact">Contact us</a> or use the claim flow to fix it
           directly.
+        </p>
+
+        <h2 id="editorial-standards">Editorial standards</h2>
+        <p>Each listing page is built from what we can check, in this order:</p>
+        <ul>
+          <li>
+            <strong>Source facts.</strong> Name, description, license, tools,
+            install command and environment variables come from the
+            project&rsquo;s own repository, package manifest or live server, and
+            every listing links back to its source.
+          </li>
+          <li>
+            <strong>Live checks.</strong> Where we can, we connect to the server
+            and read its real tool list, re-check remote endpoints on a
+            schedule, and record when the repository was last updated. The page
+            says when a check last ran and never shows a tool list we
+            didn&rsquo;t see.
+          </li>
+          <li>
+            <strong>Our writeup.</strong> The &ldquo;How it works&rdquo;
+            overview and FAQ on a listing are written by AllMCPs with AI
+            assistance, grounded in the project&rsquo;s README and the data
+            above, and are marked as ours on the page. They are refreshed when
+            the source changes. When we have not confirmed an install command,
+            the page says so instead of guessing one.
+          </li>
+        </ul>
+        <p>
+          Not every listing is offered to search engines. A listing is only
+          indexed once it has our writeup and a real signal behind it: an
+          official or owner-verified publisher, meaningful adoption, or a
+          maintained project we have seen run. Thin, duplicate, archived and
+          stale listings stay on the site for people who look them up, but are
+          marked <code>noindex</code>. Duplicate listings point to the one we
+          keep, and listings removed at a maintainer&rsquo;s request are
+          redirected or taken down.
+        </p>
+
+        <h2 id="contact">Corrections and contact</h2>
+        <p>
+          Spotted an error, an outdated install command, or a listing that
+          should not be here? Email{' '}
+          <a href="mailto:contact@allmcps.com">contact@allmcps.com</a>, use the{' '}
+          <a href="/contact">contact form</a>, or flag it with &ldquo;Report a
+          problem&rdquo; on the listing page. Maintainers can claim their
+          listing to edit it directly. We read every report and correct
+          confirmed errors.
         </p>
       </ArticleLayout>
     </>
