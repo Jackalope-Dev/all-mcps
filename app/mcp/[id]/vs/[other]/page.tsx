@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { type CSSProperties, Fragment, type ReactNode } from 'react';
 import { serializeJsonLd } from '@/lib/jsonLd';
+import { CompareLink } from '../../../../../components/listing/CompareLink';
 import { CopyBlock } from '../../../../../components/ui/CopyBlock';
 import { FaqSection } from '../../../../../components/ui/FaqSection';
 import { SafeMarkdown } from '../../../../../components/ui/SafeMarkdown';
@@ -25,7 +26,10 @@ import {
   isUnverifiedInstall,
   resolveInstallConfig,
 } from '../../../../../lib/installConfig';
-import { compareRedirectPath } from '../../../../../lib/listingRedirect';
+import {
+  compareRedirectPath,
+  removedCompareFallback,
+} from '../../../../../lib/listingRedirect';
 import {
   computeQualityScore,
   tierColor,
@@ -46,6 +50,24 @@ export const revalidate = 3600;
 
 export async function generateStaticParams() {
   return [];
+}
+
+/**
+ * A pair that can no longer render (a side was removed or unpublished) used
+ * to 404, and Search Console filled up with those 404s while some of the URLs
+ * still drew impressions. Send it to the closest page that still exists;
+ * with neither listing left, the 404 becomes a 410 in custom-worker.ts
+ * (lib/pageErrorStatus.ts goneForRemovedCompare).
+ */
+function goToRemovedCompareFallback(
+  id: string,
+  other: string,
+  left: Server | undefined,
+  right: Server | undefined,
+): never {
+  const target = removedCompareFallback(id, other, left, right);
+  if (target) permanentRedirect(target);
+  notFound();
 }
 
 /** Stable canonical for a pair so A/vs/B and B/vs/A consolidate in search. */
@@ -172,13 +194,16 @@ export async function generateMetadata({
   params: Promise<{ id: string; other: string }>;
 }): Promise<Metadata> {
   const { id, other } = await params;
-  if (id === other) return { title: 'Not Found', robots: { index: false } };
+  if (id === other) {
+    const self = await getServerById(id);
+    goToRemovedCompareFallback(id, other, self, undefined);
+  }
 
   const [a, b] = await Promise.all([getServerById(id), getServerById(other)]);
   const compareHop = compareRedirectPath(id, other, a, b);
   if (compareHop) permanentRedirect(compareHop);
   if (!a || !b || a.status !== 'active' || b.status !== 'active') {
-    return { title: 'Not Found', robots: { index: false } };
+    goToRemovedCompareFallback(id, other, a, b);
   }
 
   const nameA = parseServerName(a.name).displayName;
@@ -227,7 +252,11 @@ export default async function ComparePage({
   params: Promise<{ id: string; other: string }>;
 }) {
   const { id, other } = await params;
-  if (!id || !other || id === other) notFound();
+  if (!id || !other) notFound();
+  if (id === other) {
+    const self = await getServerById(id);
+    goToRemovedCompareFallback(id, other, self, undefined);
+  }
 
   const [left, right] = await Promise.all([
     getServerById(id),
@@ -235,8 +264,14 @@ export default async function ComparePage({
   ]);
   const compareHop = compareRedirectPath(id, other, left, right);
   if (compareHop) permanentRedirect(compareHop);
-  if (!left || !right) notFound();
-  if (left.status !== 'active' || right.status !== 'active') notFound();
+  if (
+    !left ||
+    !right ||
+    left.status !== 'active' ||
+    right.status !== 'active'
+  ) {
+    goToRemovedCompareFallback(id, other, left, right);
+  }
 
   const nameL = parseServerName(left.name).displayName;
   const nameR = parseServerName(right.name).displayName;
@@ -911,11 +946,6 @@ export default async function ComparePage({
           >
             {catL} category hub
           </Link>
-          {id !== c0 && (
-            <Link href={`/mcp/${c0}/vs/${c1}`} className="btn btn-ghost btn-sm">
-              Canonical compare URL
-            </Link>
-          )}
         </nav>
 
         {(moreAltsLeft.length > 0 || moreAltsRight.length > 0) && (
@@ -943,7 +973,10 @@ export default async function ComparePage({
                         const [a0, a1] = canonicalPair(g.base.id, alt.id);
                         return (
                           <li key={alt.id}>
-                            <Link href={`/mcp/${a0}/vs/${a1}`}>
+                            {/* A crawlable href only for curated pairs: the
+                                rest are noindexed, and linking them sent
+                                crawlers into the unbounded pair matrix. */}
+                            <CompareLink a={a0} b={a1}>
                               <ServerAvatar
                                 name={alt.name}
                                 logoUrl={alt.logoUrl}
@@ -953,7 +986,7 @@ export default async function ComparePage({
                                 {g.baseName} vs {n}
                               </span>
                               <ArrowRight size={14} aria-hidden="true" />
-                            </Link>
+                            </CompareLink>
                           </li>
                         );
                       })}

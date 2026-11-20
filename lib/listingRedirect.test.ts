@@ -4,6 +4,7 @@ import {
   listingRedirectPath,
   listingRedirectTarget,
   type MergeTargetRow,
+  removedCompareFallback,
   resolveCanonicalMergeTarget,
 } from './listingRedirect';
 
@@ -93,5 +94,27 @@ describe('resolveCanonicalMergeTarget', () => {
     expect(await resolveCanonicalMergeTarget('canon', 'canon', lookup)).toEqual(
       { error: 'Cannot merge a listing into itself.' },
     );
+  });
+});
+
+describe('removedCompareFallback', () => {
+  const active = { status: 'active' };
+  const removed = { status: 'removed' };
+
+  it("prefers the first active side's alternatives page", () => {
+    expect(removedCompareFallback('a', 'b', active, undefined)).toBe(
+      '/mcp/a/alternatives',
+    );
+    expect(removedCompareFallback('a', 'b', removed, active)).toBe(
+      '/mcp/b/alternatives',
+    );
+  });
+
+  it('falls back to a listing page that still renders', () => {
+    expect(removedCompareFallback('a', 'b', undefined, removed)).toBe('/mcp/b');
+  });
+
+  it('returns null when neither listing exists (410)', () => {
+    expect(removedCompareFallback('a', 'b', undefined, undefined)).toBeNull();
   });
 });

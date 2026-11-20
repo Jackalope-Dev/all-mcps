@@ -3080,6 +3080,7 @@ details[open] > summary .lst-chevron {
 
 .cmp-popular-card {
   display: flex;
+  width: 100%;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
@@ -3682,8 +3683,9 @@ details[open] > summary .lst-chevron {
   list-style: none;
 }
 
-.vs-related-list a {
+.vs-related-list :is(a, button) {
   display: flex;
+  width: 100%;
   align-items: center;
   gap: 0.7rem;
   padding: 0.6rem 0.8rem;
@@ -3699,22 +3701,22 @@ details[open] > summary .lst-chevron {
     background-color var(--duration-fast) var(--ease-out);
 }
 
-.vs-related-list a span {
+.vs-related-list :is(a, button) span {
   flex: 1;
   min-width: 0;
 }
 
-.vs-related-list a svg {
+.vs-related-list :is(a, button) svg {
   color: var(--text-tertiary);
   transition: transform var(--duration-base) var(--ease-out);
 }
 
-.vs-related-list a:hover {
+.vs-related-list :is(a, button):hover {
   border-color: var(--border-strong);
   background: var(--surface-2);
 }
 
-.vs-related-list a:hover svg {
+.vs-related-list :is(a, button):hover svg {
   transform: translateX(3px);
   color: var(--accent-color);
 }

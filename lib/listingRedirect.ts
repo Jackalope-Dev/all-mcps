@@ -106,3 +106,29 @@ export function compareRedirectPath(
   if (a === b) return null;
   return `/mcp/${a}/vs/${b}`;
 }
+
+/**
+ * Where a compare URL goes once it can no longer render (a side was removed,
+ * withdrawn, rejected or unpublished): the closest page that still exists.
+ * An active side's alternatives page is the nearest match for "X vs Y"
+ * intent; failing that, any side whose listing page still renders. Null means
+ * neither listing exists, and the URL should answer 410 Gone.
+ */
+export function removedCompareFallback(
+  id: string,
+  other: string,
+  left: { status?: string | null } | null | undefined,
+  right: { status?: string | null } | null | undefined,
+): string | null {
+  const sides: [string, { status?: string | null } | null | undefined][] = [
+    [id, left],
+    [other, right],
+  ];
+  for (const [sid, s] of sides) {
+    if (s?.status === 'active') return `/mcp/${sid}/alternatives`;
+  }
+  for (const [sid, s] of sides) {
+    if (s) return `/mcp/${sid}`;
+  }
+  return null;
+}

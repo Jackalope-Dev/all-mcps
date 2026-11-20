@@ -33,3 +33,27 @@ export function softenPageError(
     headers,
   });
 }
+
+const COMPARE_PATH = /^\/mcp\/[^/]+\/vs\/[^/]+$/;
+
+/**
+ * A compare page whose listings are both gone answers 410, not 404.
+ *
+ * The vs page redirects whenever either listing still exists (see
+ * removedCompareFallback in lib/listingRedirect.ts), so a 404 that reaches
+ * here means neither does. Next pages can only 404; 410 tells crawlers the
+ * pair is gone for good, so they drop it sooner than a 404 they keep retrying.
+ */
+export function goneForRemovedCompare(
+  request: Request,
+  response: Response,
+): Response {
+  if (response.status !== 404) return response;
+  if (request.method !== 'GET' && request.method !== 'HEAD') return response;
+  if (!COMPARE_PATH.test(new URL(request.url).pathname)) return response;
+  return new Response(response.body, {
+    status: 410,
+    statusText: 'Gone',
+    headers: response.headers,
+  });
+}
