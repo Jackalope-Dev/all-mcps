@@ -215,6 +215,7 @@ export function buildSecondarySitemap(
     if (!lastA || !lastB) continue;
     entries.push({
       url: `${BASE}${comparePath(pair)}`,
+      // biome-ignore lint/complexity/useMathMinMax: ISO date strings, not numbers; Math.max would return NaN.
       lastModified: lastA > lastB ? lastA : lastB,
       changeFrequency: 'weekly',
       priority: 0.6,

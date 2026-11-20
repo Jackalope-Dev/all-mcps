@@ -114,65 +114,6 @@ export function ShareModalDialog({
     }
   };
 
-  const CopyButton = ({
-    snippetKey,
-  }: {
-    snippetKey: keyof typeof snippets;
-  }) => (
-    <button
-      type="button"
-      onClick={() => handleCopy(snippetKey)}
-      style={{
-        position: 'absolute',
-        top: '0.5rem',
-        right: '0.5rem',
-        background: 'var(--bg-muted)',
-        border: '1px solid var(--border-color)',
-        color: 'var(--text-primary)',
-        padding: '0.4rem',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        display: 'flex',
-        transition: 'background 0.2s',
-      }}
-      onMouseOver={(e) =>
-        (e.currentTarget.style.background = 'var(--border-strong)')
-      }
-      onMouseOut={(e) => (e.currentTarget.style.background = 'var(--bg-muted)')}
-      onFocus={(e) =>
-        (e.currentTarget.style.background = 'var(--border-strong)')
-      }
-      onBlur={(e) => (e.currentTarget.style.background = 'var(--bg-muted)')}
-    >
-      {copiedStates[snippetKey] ? (
-        <Check size={14} color="#10b981" />
-      ) : (
-        <Copy size={14} />
-      )}
-    </button>
-  );
-
-  const CodeBlock = ({ snippetKey }: { snippetKey: keyof typeof snippets }) => (
-    <div style={{ position: 'relative' }}>
-      <div className="share-modal-label">Code</div>
-      <pre
-        style={{
-          background: 'var(--bg-muted)',
-          padding: '1rem',
-          borderRadius: '8px',
-          border: '1px solid var(--border-color)',
-          fontSize: '0.75rem',
-          overflowX: 'auto',
-          color: 'var(--text-primary)',
-          margin: 0,
-        }}
-      >
-        {snippets[snippetKey]}
-      </pre>
-      <CopyButton snippetKey={snippetKey} />
-    </div>
-  );
-
   const shareBtnStyle: React.CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
@@ -370,7 +311,11 @@ export function ShareModalDialog({
               />
             </div>
 
-            <CodeBlock snippetKey="widget" />
+            <CodeBlock
+              code={snippets.widget}
+              copied={!!copiedStates.widget}
+              onCopy={() => handleCopy('widget')}
+            />
           </div>
 
           {/* Install Link Section */}
@@ -420,7 +365,11 @@ export function ShareModalDialog({
               </a>
             </div>
 
-            <CodeBlock snippetKey="install" />
+            <CodeBlock
+              code={snippets.install}
+              copied={!!copiedStates.install}
+              onCopy={() => handleCopy('install')}
+            />
           </div>
         </div>
       </div>
@@ -428,4 +377,73 @@ export function ShareModalDialog({
   );
 
   return mounted ? createPortal(modalContent, document.body) : null;
+}
+
+function CopyButton({
+  copied,
+  onCopy,
+}: {
+  copied: boolean;
+  onCopy: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onCopy}
+      style={{
+        position: 'absolute',
+        top: '0.5rem',
+        right: '0.5rem',
+        background: 'var(--bg-muted)',
+        border: '1px solid var(--border-color)',
+        color: 'var(--text-primary)',
+        padding: '0.4rem',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        display: 'flex',
+        transition: 'background 0.2s',
+      }}
+      onMouseOver={(e) =>
+        (e.currentTarget.style.background = 'var(--border-strong)')
+      }
+      onMouseOut={(e) => (e.currentTarget.style.background = 'var(--bg-muted)')}
+      onFocus={(e) =>
+        (e.currentTarget.style.background = 'var(--border-strong)')
+      }
+      onBlur={(e) => (e.currentTarget.style.background = 'var(--bg-muted)')}
+    >
+      {copied ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
+    </button>
+  );
+}
+
+function CodeBlock({
+  code,
+  copied,
+  onCopy,
+}: {
+  code: string;
+  copied: boolean;
+  onCopy: () => void;
+}) {
+  return (
+    <div style={{ position: 'relative' }}>
+      <div className="share-modal-label">Code</div>
+      <pre
+        style={{
+          background: 'var(--bg-muted)',
+          padding: '1rem',
+          borderRadius: '8px',
+          border: '1px solid var(--border-color)',
+          fontSize: '0.75rem',
+          overflowX: 'auto',
+          color: 'var(--text-primary)',
+          margin: 0,
+        }}
+      >
+        {code}
+      </pre>
+      <CopyButton copied={copied} onCopy={onCopy} />
+    </div>
+  );
 }
