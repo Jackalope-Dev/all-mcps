@@ -4,7 +4,11 @@ import rehypeRaw from 'rehype-raw';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
 import { MARKDOWN_LINK_REL } from '../../lib/linkRel';
-import { isOutboundHttpUrl, withAllMcpsUtm } from '../../lib/outboundLinks';
+import {
+  isOutboundHttpUrl,
+  ownSitePath,
+  withAllMcpsUtm,
+} from '../../lib/outboundLinks';
 import { CopyBlock } from './CopyBlock';
 import { MarkdownImage } from './MarkdownImage';
 import { resolveUrl } from './resolveMarkdownUrl';
@@ -58,6 +62,21 @@ function MarkdownLink({
   ) {
     return (
       <a href={href} {...rest}>
+        {children}
+      </a>
+    );
+  }
+
+  // Our own pages (blog posts link them as absolute allmcps.com URLs, or as
+  // root-relative paths when there is no repo to resolve against): a plain,
+  // followed, same-tab internal link.
+  const ownPath =
+    ownSitePath(href) ??
+    (!repoUrl && href.startsWith('/') && !href.startsWith('//') ? href : null);
+  if (ownPath) {
+    const { target: _target, rel: _rel, ...safe } = rest;
+    return (
+      <a {...safe} href={ownPath}>
         {children}
       </a>
     );

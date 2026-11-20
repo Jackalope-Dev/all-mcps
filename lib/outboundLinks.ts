@@ -5,6 +5,28 @@ const ALLMCPS_UTM = {
   campaign: 'listing-readme',
 } as const;
 
+const OWN_HOSTS = new Set(['allmcps.com', 'www.allmcps.com']);
+
+/**
+ * The site path for a link to AllMCPs itself (absolute allmcps.com URL), or
+ * null for anything else. Blog posts link our own pages with absolute URLs;
+ * treated as outbound they got UTM params, target=_blank and nofollow, so
+ * crawlers saw every internal blog link as a nofollowed, parameterised URL.
+ */
+export function ownSitePath(href: string | undefined | null): string | null {
+  const trimmed = href?.trim();
+  if (!trimmed || !/^(https?:)?\/\//i.test(trimmed)) return null;
+  try {
+    const url = new URL(
+      trimmed.startsWith('//') ? `https:${trimmed}` : trimmed,
+    );
+    if (!OWN_HOSTS.has(url.hostname.toLowerCase())) return null;
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Whether a href should be treated as an external navigable URL
  * (vs in-page anchor, mailto, etc.).
@@ -36,7 +58,9 @@ export function withAllMcpsUtm(
   options?: { content?: string; campaign?: string },
 ): string {
   const trimmed = href.trim();
-  if (!isOutboundHttpUrl(trimmed)) return href;
+  if (!isOutboundHttpUrl(trimmed) || ownSitePath(trimmed) !== null) {
+    return href;
+  }
 
   try {
     const absolute = trimmed.startsWith('//') ? `https:${trimmed}` : trimmed;

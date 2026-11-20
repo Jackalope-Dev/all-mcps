@@ -19,3 +19,20 @@ describe('SafeMarkdown links', () => {
     expect(out).not.toContain('rel="noopener"');
   });
 });
+
+describe('SafeMarkdown links to our own pages', () => {
+  const blog = (content: string) =>
+    renderToStaticMarkup(<SafeMarkdown content={content} />);
+
+  it('renders absolute allmcps.com links as plain internal links', () => {
+    const out = blog('Read [the guide](https://allmcps.com/mcp-security).');
+    expect(out).toContain('<a href="/mcp-security">the guide</a>');
+  });
+
+  it('keeps root-relative links internal when there is no repo', () => {
+    const out = blog('See [Postgres](/mcp/crystaldba-postgres-mcp).');
+    expect(out).toContain('<a href="/mcp/crystaldba-postgres-mcp">');
+    expect(out).not.toContain('utm_');
+    expect(out).not.toContain('nofollow');
+  });
+});
