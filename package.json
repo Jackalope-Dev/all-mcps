@@ -85,7 +85,7 @@
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0",
-    "wrangler": "4.158.0"
+    "wrangler": "4.164.0"
   },
   "optionalDependencies": {
     "@biomejs/cli-win32-x64": "^2.6.6",
