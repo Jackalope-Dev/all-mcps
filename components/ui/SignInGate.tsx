@@ -1,4 +1,5 @@
 import { Lock } from 'lucide-react';
+import { SignInLink } from './SignInLink';
 
 /**
  * "Please sign in" placeholder shown in place of a login-gated form. Extracted
@@ -8,10 +9,11 @@ import { Lock } from 'lucide-react';
  * re-inventing it.
  */
 export function SignInGate({
-  href,
+  callbackUrl,
   message = 'Sign in to generate your account-linked verification token.',
 }: {
-  href: string;
+  /** Page to return to after signing in. */
+  callbackUrl: string;
   message?: string;
 }) {
   return (
@@ -20,9 +22,9 @@ export function SignInGate({
         <Lock size={18} />
       </span>
       <p>{message}</p>
-      <a href={href} className="btn btn-primary btn-md">
+      <SignInLink callbackUrl={callbackUrl} className="btn btn-primary btn-md">
         Sign in to continue
-      </a>
+      </SignInLink>
     </div>
   );
 }

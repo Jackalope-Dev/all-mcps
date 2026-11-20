@@ -20,6 +20,7 @@ import type { Hue } from '../lib/palette';
 import type { SiteStats } from '../lib/siteStats';
 import { CopyCommand, HomeStats } from './HomeStats';
 import { JackalopeCallout } from './JackalopeCallout';
+import { DeferredLink } from './ui/DeferredLink';
 import { FaqSection } from './ui/FaqSection';
 import { OutboundLink } from './ui/OutboundLink';
 import { ServerAvatar } from './ui/ServerAvatar';
@@ -29,63 +30,72 @@ const INTENTS = [
     label: 'Query databases',
     hue: 'violet' as Hue,
     icon: Database,
-    href: '/browse?category=databases&q=postgres+mysql+sqlite+database',
+    href: '/categories/databases',
+    to: '/browse?category=databases&q=postgres+mysql+sqlite+database',
     hint: 'Postgres, SQLite, MySQL, Supabase, Neon',
   },
   {
     label: 'Scrape & search the web',
     hue: 'teal' as Hue,
     icon: Globe,
-    href: '/browse?category=search-and-data-extraction&q=browser+scrape+search+playwright',
+    href: '/categories/search-and-data-extraction',
+    to: '/browse?category=search-and-data-extraction&q=browser+scrape+search+playwright',
     hint: 'Playwright, Brave, Puppeteer, Firecrawl',
   },
   {
     label: 'Git, GitHub & PR review',
     hue: 'blue' as Hue,
     icon: Code2,
-    href: '/browse?category=version-control&q=github+git+gitlab+repository',
+    href: '/categories/version-control',
+    to: '/browse?category=version-control&q=github+git+gitlab+repository',
     hint: 'GitHub, GitLab, Linear, code review',
   },
   {
     label: 'Memory, vectors & RAG',
     hue: 'amber' as Hue,
     icon: Brain,
-    href: '/browse?category=knowledge-and-memory&q=memory+vector+embeddings+knowledge',
+    href: '/categories/knowledge-and-memory',
+    to: '/browse?category=knowledge-and-memory&q=memory+vector+embeddings+knowledge',
     hint: 'Vector DBs, long-term memory, Obsidian',
   },
   {
     label: 'Cloud & infrastructure',
     hue: 'indigo' as Hue,
     icon: Cloud,
-    href: '/browse?category=cloud-platforms&q=aws+kubernetes+docker+cloudflare',
+    href: '/categories/cloud-platforms',
+    to: '/browse?category=cloud-platforms&q=aws+kubernetes+docker+cloudflare',
     hint: 'AWS, Kubernetes, Cloudflare, Docker',
   },
   {
     label: 'Run code & terminals',
     hue: 'orange' as Hue,
     icon: Terminal,
-    href: '/browse?category=code-execution',
+    href: '/categories/code-execution',
+    to: '/browse?category=code-execution',
     hint: 'Python sandboxes, shell runners, Docker exec',
   },
   {
     label: 'Docs, PDFs & office files',
     hue: 'pink' as Hue,
     icon: FileText,
-    href: '/browse?category=developer-tools&q=pdf+markdown+document+excel+word',
+    href: '/categories/developer-tools',
+    to: '/browse?category=developer-tools&q=pdf+markdown+document+excel+word',
     hint: 'PDF parsing, Notion, Excel, Google Docs',
   },
   {
     label: 'Security & secrets',
     hue: 'red' as Hue,
     icon: ShieldCheck,
-    href: '/browse?category=security',
+    href: '/categories/security',
+    to: '/browse?category=security',
     hint: 'Vulnerability scans, secret audits, CVEs',
   },
   {
     label: 'Chat, email & alerts',
     hue: 'green' as Hue,
     icon: MessageSquare,
-    href: '/browse?category=communication&q=slack+discord+telegram+email+gmail',
+    href: '/categories/communication',
+    to: '/browse?category=communication&q=slack+discord+telegram+email+gmail',
     hint: 'Slack, Discord, Telegram, Gmail, Resend',
   },
 ] as const;
@@ -134,8 +144,11 @@ export function LandingIntents() {
                 key={intent.label}
                 style={{ '--i': i } as React.CSSProperties}
               >
-                <Link
+                {/* Crawlers follow the clean category hub; a click opens
+                    the filtered /browse view (robots-blocked as an href). */}
+                <DeferredLink
                   href={intent.href}
+                  to={intent.to}
                   className={`home-intent spotlight tint-card hue-${intent.hue}`}
                 >
                   <span className="home-intent-icon tint-tile">
@@ -150,7 +163,7 @@ export function LandingIntents() {
                     className="home-intent-arrow"
                     aria-hidden="true"
                   />
-                </Link>
+                </DeferredLink>
               </li>
             );
           })}

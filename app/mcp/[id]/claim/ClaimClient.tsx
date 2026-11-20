@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { CopyBlock } from '../../../../components/ui/CopyBlock';
 import { SignInGate } from '../../../../components/ui/SignInGate';
+import { loginPath, SignInLink } from '../../../../components/ui/SignInLink';
 import { toast } from '../../../../components/ui/Toast';
 import { badgeTargetUrl } from '../../../../lib/badgeLink';
 import {
@@ -126,7 +127,8 @@ export default function ClaimClient({
   const githubVerifyMarkdown = userId
     ? `[![AllMCPs Verified](${badgeSrc})](${badgeTarget})`
     : null;
-  const signInHref = `/login?callbackUrl=${encodeURIComponent(`/mcp/${serverId}/claim`)}`;
+  const claimPath = `/mcp/${serverId}/claim`;
+  const signInHref = loginPath(claimPath);
 
   const selectMethod = (next: ClaimMethod) => {
     setMethod(next);
@@ -1231,8 +1233,8 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                       📋 Copy AI Agent Prompt
                     </button>
                   ) : (
-                    <a
-                      href={signInHref}
+                    <SignInLink
+                      callbackUrl={claimPath}
                       style={{
                         color: 'var(--accent-color)',
                         border: '1px solid rgba(var(--accent-rgb), 0.4)',
@@ -1247,7 +1249,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                       }}
                     >
                       🔒 Sign in to get your prompt
-                    </a>
+                    </SignInLink>
                   )}
                 </div>
                 <p
@@ -1477,7 +1479,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
 
               {/* Code Snippet Block */}
               {!isSignedIn ? (
-                <SignInGate href={signInHref} />
+                <SignInGate callbackUrl={claimPath} />
               ) : (
                 <div style={{ marginBottom: '1.25rem' }}>
                   <h3
@@ -1516,7 +1518,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           {method === 'website_badge' && (
             <div>
               {!isSignedIn ? (
-                <SignInGate href={signInHref} />
+                <SignInGate callbackUrl={claimPath} />
               ) : (
                 <>
                   <div style={{ marginBottom: '1.5rem' }}>
@@ -1784,7 +1786,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           {method === 'dns' && (
             <div>
               {!isSignedIn ? (
-                <SignInGate href={signInHref} />
+                <SignInGate callbackUrl={claimPath} />
               ) : (
                 <div
                   style={{
@@ -2156,8 +2158,8 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
 
           {/* Main Action Button */}
           {!isSignedIn ? (
-            <a
-              href={signInHref}
+            <SignInLink
+              callbackUrl={claimPath}
               className="btn btn-primary"
               style={{
                 width: '100%',
@@ -2176,7 +2178,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               }}
             >
               <Lock size={18} /> Sign In to Submit Ownership Proof
-            </a>
+            </SignInLink>
           ) : (
             <button
               type="button"

@@ -24,6 +24,7 @@ import {
   type NavGroup,
   PRIMARY_NAV,
 } from './navigation';
+import { SignInLink } from './ui/SignInLink';
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -187,10 +188,6 @@ export function SiteHeader() {
 
   const ctaHref = isSignedIn ? '/dashboard' : '/submit';
   const ctaLabel = isSignedIn ? 'Dashboard' : 'Submit server';
-  const loginHref =
-    pathname === '/login' || pathname === '/verify-request'
-      ? '/login'
-      : `/login?callbackUrl=${encodeURIComponent(pathname)}`;
   const logoutHref =
     pathname.startsWith('/dashboard') || pathname.startsWith('/admin')
       ? '/api/auth/signout?callbackUrl=%2F'
@@ -352,10 +349,13 @@ export function SiteHeader() {
               <span className="header-auth-label">Log out</span>
             </a>
           ) : (
-            <Link href={loginHref} className="btn btn-ghost btn-sm header-auth">
+            <SignInLink
+              callbackUrl={pathname}
+              className="btn btn-ghost btn-sm header-auth"
+            >
               <LogIn size={14} aria-hidden="true" />
               <span className="header-auth-label">Log in</span>
-            </Link>
+            </SignInLink>
           )}
           <Link href={ctaHref} className="btn btn-primary btn-sm header-cta">
             {!isSignedIn && <Plus size={14} aria-hidden="true" />}
@@ -503,13 +503,13 @@ export function SiteHeader() {
                     <LogOut size={16} aria-hidden="true" /> Log out
                   </a>
                 ) : (
-                  <Link
-                    href={loginHref}
+                  <SignInLink
+                    callbackUrl={pathname}
                     className="btn btn-secondary btn-md"
                     onClick={closeMobileMenu}
                   >
                     <LogIn size={16} aria-hidden="true" /> Log in
-                  </Link>
+                  </SignInLink>
                 )}
                 <Link
                   href={ctaHref}

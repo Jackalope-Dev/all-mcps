@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { openSearch } from '../lib/openSearch';
 import { ClientLogo } from './ClientLogo';
 import { AmbientCodeBackground } from './ui/AmbientCodeBackground';
+import { DeferredLink } from './ui/DeferredLink';
 
 interface HeroSectionProps {
   totalCount?: number;
@@ -220,14 +221,14 @@ export function HeroSection({ totalCount, featuredSlot }: HeroSectionProps) {
                 view ran six catalog searches on D1 and competed with the
                 page's own load, for a click most visitors never make. */}
             {POPULAR_QUERIES.map((q) => (
-              <Link
+              <DeferredLink
                 key={q}
-                href={`/browse?q=${encodeURIComponent(q)}`}
+                href="/browse"
+                to={`/browse?q=${encodeURIComponent(q)}`}
                 className="chip"
-                prefetch={false}
               >
                 {q}
-              </Link>
+              </DeferredLink>
             ))}
           </div>
         </div>

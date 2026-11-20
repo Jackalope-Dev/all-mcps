@@ -8,6 +8,7 @@ import { SponsorAdUnit } from '../../../components/ads/SponsorAdUnit';
 import { HubPagination } from '../../../components/directory/HubPagination';
 import { ServerCard, ServerRow } from '../../../components/directory/ServerRow';
 import { ImpressionBeacon } from '../../../components/ImpressionTracker';
+import { DeferredLink } from '../../../components/ui/DeferredLink';
 import { FaqSection } from '../../../components/ui/FaqSection';
 import { bestTopicForCategory } from '../../../lib/bestTopics';
 import {
@@ -214,7 +215,9 @@ export default async function CategoryLandingPage({
   const picks = cards.slice(0, TOP_PICKS);
   const rest = cards.slice(TOP_PICKS);
   const best = bestTopicForCategory(category);
-  const browseHref = `/browse?category=${encodeURIComponent(category)}`;
+  // Crawlers get plain /browse; the click carries the filter (DeferredLink).
+  // The raw stored name put emoji query strings in robots-blocked hrefs.
+  const browseHref = `/browse?category=${categorySlug(category)}`;
 
   return (
     <>
@@ -243,14 +246,14 @@ export default async function CategoryLandingPage({
             <h1 className="text-page-title">{label} MCP servers</h1>
             <p className="dir-hero-lead">{intro}</p>
             <div className="dir-hero-actions">
-              <Link
-                href={browseHref}
+              <DeferredLink
+                href="/browse"
+                to={browseHref}
                 className="btn btn-primary btn-md"
-                rel="nofollow"
               >
                 Search &amp; filter all {total.toLocaleString()}
                 <ArrowRight size={15} aria-hidden="true" />
-              </Link>
+              </DeferredLink>
               {best && (
                 <Link
                   href={`/best/${best.slug}`}
@@ -305,10 +308,14 @@ export default async function CategoryLandingPage({
                   <h2 id="all-servers" className="dir-section-title">
                     More {label} servers
                   </h2>
-                  <Link href={browseHref} className="link-arrow" rel="nofollow">
+                  <DeferredLink
+                    href="/browse"
+                    to={browseHref}
+                    className="link-arrow"
+                  >
                     Filter by client, language &amp; more
                     <ArrowRight size={14} aria-hidden="true" />
-                  </Link>
+                  </DeferredLink>
                 </div>
                 <ol className="dir-list dir-list--plain">
                   {rest.map((server, index) => (
@@ -345,13 +352,13 @@ export default async function CategoryLandingPage({
                     ) : (
                       // No crawlable later pages (nothing indexable past page
                       // 1, or D1 unavailable): people still get the filter view.
-                      <Link
-                        href={browseHref}
+                      <DeferredLink
+                        href="/browse"
+                        to={browseHref}
                         className="btn btn-secondary btn-md"
-                        rel="nofollow"
                       >
                         Browse all {total.toLocaleString()} {label} servers
-                      </Link>
+                      </DeferredLink>
                     )}
                   </div>
                 )}

@@ -61,7 +61,7 @@ export function ReviewComposer({ serverId }: { serverId: string }) {
   // No `#reviews` fragment here: it never reaches the server, and an encoded
   // "%23" in the magic-link callback query is mis-parsed by the Cloudflare
   // adapter (truncates every param after it, dropping the verification token).
-  const signInHref = `/login?callbackUrl=${encodeURIComponent(`/mcp/${serverId}`)}`;
+  const signInCallback = `/mcp/${serverId}`;
 
   const handleSubmit = async () => {
     if (rating < 1) {
@@ -102,7 +102,10 @@ export function ReviewComposer({ serverId }: { serverId: string }) {
 
   if (!signedIn) {
     return (
-      <SignInGate href={signInHref} message="Sign in to write a review." />
+      <SignInGate
+        callbackUrl={signInCallback}
+        message="Sign in to write a review."
+      />
     );
   }
 

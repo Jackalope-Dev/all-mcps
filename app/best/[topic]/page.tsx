@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { getHubCounts, isBestTopicIndexable } from '@/lib/hubIndexability';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { ServerStats } from '../../../components/directory/ServerRow';
+import { DeferredLink } from '../../../components/ui/DeferredLink';
 import { InlineMarkdown } from '../../../components/ui/InlineMarkdown';
 import { ServerAvatar } from '../../../components/ui/ServerAvatar';
 import {
@@ -186,11 +187,13 @@ export default async function BestTopicPage({
     ),
   ].slice(0, 8);
 
+  // A search-only topic links plain /browse for crawlers; the click carries
+  // the query (robots.txt disallows /browse?...).
   const browseAll = t.categorySlug
-    ? { href: `/categories/${t.categorySlug}`, rel: undefined }
+    ? { href: `/categories/${t.categorySlug}` }
     : {
-        href: `/browse?q=${encodeURIComponent(t.match?.[0] || t.title)}`,
-        rel: 'nofollow',
+        href: '/browse',
+        to: `/browse?q=${encodeURIComponent(t.match?.[0] || t.title)}`,
       };
 
   return (
@@ -381,14 +384,14 @@ export default async function BestTopicPage({
                   ))}
                 </ol>
               )}
-              <Link
+              <DeferredLink
                 href={browseAll.href}
-                rel={browseAll.rel}
+                to={browseAll.to ?? browseAll.href}
                 className="btn btn-secondary btn-sm dir-best-all"
               >
                 Browse all {t.title} servers
                 <ArrowRight size={14} aria-hidden="true" />
-              </Link>
+              </DeferredLink>
             </div>
           </aside>
         </div>

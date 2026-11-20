@@ -6,6 +6,7 @@ import { HubPagination } from '@/components/directory/HubPagination';
 import { ServerRow } from '@/components/directory/ServerRow';
 import { ImpressionBeacon } from '@/components/ImpressionTracker';
 import { PageShell } from '@/components/PageShell';
+import { DeferredLink } from '@/components/ui/DeferredLink';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { getServersForTag } from '@/lib/tags';
 import { tagBySlug } from '@/lib/tagVocabulary';
@@ -166,14 +167,14 @@ export default async function TagDetailPage({
             </p>
           )}
           <div className="dir-hero-actions">
-            <Link
-              href={`/browse?q=${encodeURIComponent(rawTag)}`}
+            <DeferredLink
+              href="/browse"
+              to={`/browse?q=${encodeURIComponent(rawTag)}`}
               className="btn btn-secondary btn-md"
-              rel="nofollow"
             >
               <Search size={15} aria-hidden="true" />
               Search &ldquo;{rawTag}&rdquo; with filters
-            </Link>
+            </DeferredLink>
           </div>
         </div>
       </header>
