@@ -24,20 +24,29 @@ export async function GET() {
     code_challenge_methods_supported: ['S256'],
     subject_types_supported: ['public'],
     id_token_signing_alg_values_supported: ['RS256'],
+    // auth.md agent registration (https://github.com/workos/auth.md).
+    // The one registration path is email-verified: the agent sends the
+    // user's email (`login_hint`), we mail a 6-digit code, and the confirm
+    // call returns an opaque `amcp_` bearer token. That is the spec's
+    // `service_auth` shape; anonymous and ID-JAG registration are not offered.
     agent_auth: {
       skill: 'https://allmcps.com/auth.md',
-      manifest: 'https://allmcps.com/auth.md',
-      url: 'https://allmcps.com/auth.md',
-      status: 'programmatic_agent_auth_active',
+      identity_endpoint: 'https://allmcps.com/api/v1/agent/register',
+      claim_endpoint: 'https://allmcps.com/api/v1/agent/register/confirm',
+      identity_types_supported: ['service_auth'],
+      service_auth: {
+        login_hint_types_supported: ['email'],
+        claim_methods_supported: ['email_code'],
+      },
+      credential_types_supported: ['bearer_token'],
+      revocation_endpoint: 'https://allmcps.com/api/v1/agent/revoke',
+      // Names from the earlier draft of this block, kept for agents that
+      // already read them.
       register_uri: 'https://allmcps.com/api/v1/agent/register',
       register_confirm_uri: 'https://allmcps.com/api/v1/agent/register/confirm',
-      registration_endpoint: 'https://allmcps.com/api/v1/agent/register',
-      identity_types_supported: ['ephemeral_session', 'did', 'oauth_client'],
-      supported_identity_types: ['ephemeral_session', 'did', 'oauth_client'],
-      credential_types_supported: ['bearer_token', 'jwt'],
-      credential_types: ['bearer_token', 'jwt'],
-      claim_url: 'https://allmcps.com/api/v1/agent/claim',
       revocation_url: 'https://allmcps.com/api/v1/agent/revoke',
+      // Not part of auth.md: claims an MCP listing with an agent token.
+      listing_claim_endpoint: 'https://allmcps.com/api/v1/agent/claim',
     },
   };
 
