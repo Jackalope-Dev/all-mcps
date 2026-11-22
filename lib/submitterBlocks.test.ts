@@ -8,11 +8,17 @@ import {
   blockSubmitter,
   hashSubmitterIp,
   isSubmitterBlocked,
+  MAX_LISTINGS_PER_HOUR,
+  overHourlyListingCap,
   requestIp,
+  SUBMIT_RATE_ERROR,
+  screenStatus,
+  screenSubmitter,
 } from './submitterBlocks';
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
 });
 
 describe('requestIp', () => {
@@ -191,5 +197,51 @@ describe('blockSubmitter + isSubmitterBlocked', () => {
     expect(await isSubmitterBlocked(db, { email: 'friend@gmail.com' })).toBe(
       false,
     );
+  });
+});
+
+describe('rate limits', () => {
+  it('refuses with 429 when the Cloudflare limiter says no, and fails open without one', async () => {
+    const { db } = setup();
+    const denied = {
+      SUBMIT_LIMITER: { limit: async () => ({ success: false }) },
+    };
+    const broken = {
+      SUBMIT_LIMITER: {
+        limit: async () => {
+          throw new Error('down');
+        },
+      },
+    };
+    // DNS unreachable: the email check fails open, so only the limiter can refuse.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('offline');
+      }),
+    );
+    const who = { email: 'bot@spam-farm.dev', ipHash: 'iphash-z' };
+    const err = await screenSubmitter(db, who, denied);
+    expect(err).toBe(SUBMIT_RATE_ERROR);
+    expect(screenStatus(err as string)).toBe(429);
+    // A limiter error or a missing binding lets the request through.
+    expect(await screenSubmitter(db, who, broken)).toBeNull();
+    expect(await screenSubmitter(db, who)).toBeNull();
+  });
+
+  it('caps listings per IP hash per hour across isolates', async () => {
+    const { sqlite, db } = setup();
+    const now = Date.now();
+    const ins = sqlite.prepare(
+      'INSERT INTO submission_ips (server_id, ip_hash, created_at) VALUES (?, ?, ?)',
+    );
+    for (let i = 0; i < MAX_LISTINGS_PER_HOUR - 1; i++) {
+      ins.run(`recent-${i}`, 'iphash-burst', Math.floor(now / 1000) - 60);
+    }
+    ins.run('old', 'iphash-burst', Math.floor(now / 1000) - 7200);
+    expect(await overHourlyListingCap(db, 'iphash-burst', now)).toBe(false);
+    ins.run('one-more', 'iphash-burst', Math.floor(now / 1000) - 10);
+    expect(await overHourlyListingCap(db, 'iphash-burst', now)).toBe(true);
+    expect(await overHourlyListingCap(db, null, now)).toBe(false);
   });
 });

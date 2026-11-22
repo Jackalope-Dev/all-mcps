@@ -9,6 +9,7 @@ import {
 import {
   hashSubmitterIp,
   requestIp,
+  screenStatus,
   screenSubmitter,
 } from '../../../../lib/submitterBlocks';
 
@@ -70,12 +71,19 @@ export async function POST(req: Request) {
     // throwaway inbox, a domain with no mail server), only adds a bounce to
     // the sender's reputation.
     if (env?.DB) {
-      const problem = await screenSubmitter(drizzle(env.DB), {
-        email,
-        ipHash: await hashSubmitterIp(requestIp(req)),
-      });
+      const problem = await screenSubmitter(
+        drizzle(env.DB),
+        {
+          email,
+          ipHash: await hashSubmitterIp(requestIp(req)),
+        },
+        env,
+      );
       if (problem) {
-        return NextResponse.json({ error: problem }, { status: 400 });
+        return NextResponse.json(
+          { error: problem },
+          { status: screenStatus(problem) },
+        );
       }
     }
 

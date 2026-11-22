@@ -15,9 +15,9 @@ import { auth } from '@/lib/auth';
 import { isStripeConfigured } from '@/lib/pricing';
 import { getAppUrl, getStripe } from '@/lib/stripe';
 import {
-  BLOCKED_SUBMITTER_ERROR,
   hashSubmitterIp,
   requestIp,
+  screenStatus,
   screenSubmitter,
 } from '@/lib/submitterBlocks';
 
@@ -77,14 +77,18 @@ export async function POST(request: Request) {
 
     const db = drizzle(ctx.env.DB);
     const advertiserIpHash = await hashSubmitterIp(requestIp(request));
-    const screened = await screenSubmitter(db, {
-      email: String(advertiserEmail),
-      ipHash: advertiserIpHash,
-    });
+    const screened = await screenSubmitter(
+      db,
+      {
+        email: String(advertiserEmail),
+        ipHash: advertiserIpHash,
+      },
+      ctx.env,
+    );
     if (screened) {
       return NextResponse.json(
         { error: screened },
-        { status: screened === BLOCKED_SUBMITTER_ERROR ? 403 : 400 },
+        { status: screenStatus(screened) },
       );
     }
     const stripeConfigured = isStripeConfigured(ctx.env);

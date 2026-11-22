@@ -1,4 +1,4 @@
-import { and, eq, inArray, or, type SQL } from 'drizzle-orm';
+import { and, eq, gte, inArray, or, type SQL } from 'drizzle-orm';
 import type { drizzle } from 'drizzle-orm/d1';
 import { servers, submissionIps, submitterBlocks } from '../db/schema';
 import {
@@ -12,7 +12,7 @@ import { hashVisitorForServer } from './upvoteHash';
 type Db = ReturnType<typeof drizzle>;
 
 /** Shown to a blocked submitter. Says no more than it has to. */
-export const BLOCKED_SUBMITTER_ERROR =
+const BLOCKED_SUBMITTER_ERROR =
   "Submissions from this address aren't accepted. If you think this is a mistake, email support@allmcps.com.";
 
 /**
@@ -81,17 +81,79 @@ export async function isSubmitterBlocked(
   return rows.length > 0;
 }
 
+/** Shown when one connection submits faster than SUBMIT_LIMITER allows. */
+export const SUBMIT_RATE_ERROR =
+  'Too many requests from this connection. Wait a minute and try again.';
+
+type Limiter = { limit(opts: { key: string }): Promise<{ success: boolean }> };
+
 /**
- * The one gate every public intake runs: a blocked email, domain or IP is
- * refused, then the address has to look deliverable (lib/emailDomain.ts).
- * Returns the error to show, or null to carry on.
+ * Cloudflare's rate-limit binding (wrangler.jsonc SUBMIT_LIMITER, 5 a minute
+ * per key, shared by every isolate in a Cloudflare location), keyed on the
+ * IP hash. The in-memory checkRateLimit only ever saw one isolate. Fails
+ * open: no binding (local dev, the build) or a limiter error lets it through.
+ */
+async function withinSubmitRate(
+  env: unknown,
+  ipHash: string | null | undefined,
+): Promise<boolean> {
+  const limiter = (env as { SUBMIT_LIMITER?: Limiter } | null | undefined)
+    ?.SUBMIT_LIMITER;
+  if (!limiter || !ipHash) return true;
+  try {
+    return (await limiter.limit({ key: ipHash })).success;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * The one gate every public intake runs: too many requests from this
+ * connection, then a blocked email, domain or IP, then an address that has to
+ * look deliverable (lib/emailDomain.ts). Returns the error to show, or null to
+ * carry on; screenStatus gives its HTTP status.
  */
 export async function screenSubmitter(
   db: Db,
   who: { email: string; ipHash?: string | null },
+  env?: unknown,
 ): Promise<string | null> {
+  if (!(await withinSubmitRate(env, who.ipHash))) return SUBMIT_RATE_ERROR;
   if (await isSubmitterBlocked(db, who)) return BLOCKED_SUBMITTER_ERROR;
   return emailProblem(who.email);
+}
+
+/** HTTP status for a screenSubmitter error. */
+export function screenStatus(error: string): number {
+  if (error === SUBMIT_RATE_ERROR) return 429;
+  if (error === BLOCKED_SUBMITTER_ERROR) return 403;
+  return 400;
+}
+
+/** Listings one connection may submit per hour, across every isolate. */
+export const MAX_LISTINGS_PER_HOUR = 5;
+
+/**
+ * True when this IP hash already submitted MAX_LISTINGS_PER_HOUR listings in
+ * the last hour (submission_ips, so it holds across isolates and locations).
+ */
+export async function overHourlyListingCap(
+  db: Db,
+  ipHash: string | null | undefined,
+  now = Date.now(),
+): Promise<boolean> {
+  if (!ipHash) return false;
+  const rows = await db
+    .select({ id: submissionIps.serverId })
+    .from(submissionIps)
+    .where(
+      and(
+        eq(submissionIps.ipHash, ipHash),
+        gte(submissionIps.createdAt, new Date(now - 60 * 60 * 1000)),
+      ),
+    )
+    .limit(MAX_LISTINGS_PER_HOUR);
+  return rows.length >= MAX_LISTINGS_PER_HOUR;
 }
 
 /**

@@ -101,12 +101,16 @@ export default async function LoginPage({
             // lib/auth.ts's signIn callback repeats it for direct API calls.
             const { env } = await getCloudflareContext();
             const actionHeaders = await headers();
-            const problem = await screenSubmitter(drizzle(env.DB), {
-              email,
-              ipHash: await hashSubmitterIp(
-                actionHeaders.get('cf-connecting-ip'),
-              ),
-            });
+            const problem = await screenSubmitter(
+              drizzle(env.DB),
+              {
+                email,
+                ipHash: await hashSubmitterIp(
+                  actionHeaders.get('cf-connecting-ip'),
+                ),
+              },
+              env,
+            );
             if (problem) redirect('/login?error=email');
             // Call with redirect: false and redirect to our own /verify-request
             // page ourselves, rather than letting next-auth issue its internal
