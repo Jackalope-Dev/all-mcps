@@ -38,7 +38,14 @@ import {
   workerRole,
 } from './lib/cronSchedule';
 import { withReadReplicaDb } from './lib/d1Replicas';
-import { blockedResponse, isBlockedClient } from './lib/edgeBlock';
+import {
+  badPathResponse,
+  blockedResponse,
+  hasUndecodablePath,
+  isBlockedClient,
+  isTorWrite,
+  torWriteResponse,
+} from './lib/edgeBlock';
 import { goneForRemovedCompare, softenPageError } from './lib/pageErrorStatus';
 
 /**
@@ -153,8 +160,11 @@ export default {
   async fetch(request, env, ctx) {
     // Known abusive clients get nothing: no page render, no D1 read.
     if (isBlockedClient(request)) return blockedResponse();
+    if (isTorWrite(request)) return torWriteResponse();
     const role = workerRole(env);
     const { hostname, pathname } = new URL(request.url);
+    // A path Next can't decode would throw inside its router (500).
+    if (hasUndecodablePath(pathname)) return badPathResponse();
     // The jobs Worker has no public routes, so this only turns away stray
     // requests. It never 404s allmcps.com itself: if the jobs config ever lands
     // on the site Worker (as a Workers Builds name override once nearly did),

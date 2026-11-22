@@ -31,3 +31,46 @@ export function blockedResponse(): Response {
     headers: { 'content-type': 'text/plain; charset=utf-8' },
   });
 }
+
+/**
+ * Cloudflare reports Tor exit traffic as the pseudo-country "T1". After the
+ * Nov 22 2026 prober's server was blocked it came back through Tor within
+ * minutes ("Toregress probe"), where every request can use a new IP. Tor
+ * visitors can still read everything; they just can't submit, register,
+ * claim, buy, subscribe or sign in. Read-only methods are always allowed.
+ */
+export function isTorWrite(request: Request): boolean {
+  const cf = (request as { cf?: { country?: string } }).cf;
+  const country = cf?.country ?? request.headers.get('cf-ipcountry');
+  if (country !== 'T1') return false;
+  const method = request.method.toUpperCase();
+  return method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS';
+}
+
+export function torWriteResponse(): Response {
+  return new Response(
+    'Submissions and sign-ins over Tor are not accepted. Browsing works as normal.',
+    { status: 403, headers: { 'content-type': 'text/plain; charset=utf-8' } },
+  );
+}
+
+/**
+ * True when the path holds a percent-escape that isn't valid UTF-8
+ * (`/mcp/%FF`). Next's router decodes the path and throws a URIError on
+ * these, which surfaced as a 500 a scanner could trigger at will (Nov 2026).
+ */
+export function hasUndecodablePath(pathname: string): boolean {
+  try {
+    decodeURIComponent(pathname);
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+export function badPathResponse(): Response {
+  return new Response('Bad Request', {
+    status: 400,
+    headers: { 'content-type': 'text/plain; charset=utf-8' },
+  });
+}
