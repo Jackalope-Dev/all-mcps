@@ -11,9 +11,53 @@ function isPrivateOrReservedIpv4(a: number, b: number): boolean {
 }
 
 /**
- * Loopback, private-network, link-local and `.local` hosts. Nothing public can
- * reach these, so they are never safe to fetch server-side and never a
- * connectable endpoint for anyone but the person running the server.
+ * Public domains whose every name resolves to 127.0.0.1, published so
+ * developers get a "real" hostname for localhost. A hostname check alone lets
+ * them straight through to loopback.
+ */
+const LOOPBACK_DOMAINS = [
+  'localtest.me',
+  'lvh.me',
+  'vcap.me',
+  'localhost.direct',
+  'local.gd',
+  'lacolhost.com',
+  'fuf.me',
+];
+
+/**
+ * Wildcard DNS services that answer with the IP written into the name:
+ * `10.0.0.1.nip.io`, `app.127-0-0-1.sslip.io`, `7f000001.nip.io`. Plenty of
+ * real servers live on public-IP names there (sslip.io is a common quick
+ * HTTPS host), so only an embedded private IP is blocked. Nov 2026 probes
+ * submitted `169.254.169.254.nip.io/latest/meta-data/` and `10.255.255.1.nip.io`.
+ */
+const WILDCARD_IP_DNS = '(?:nip\\.io|sslip\\.io|xip\\.io|traefik\\.me)';
+const WILDCARD_DOTTED = new RegExp(
+  `(?:^|[.-])(\\d{1,3})[.-](\\d{1,3})[.-](\\d{1,3})[.-](\\d{1,3})\\.${WILDCARD_IP_DNS}$`,
+);
+const WILDCARD_HEX = new RegExp(
+  `(?:^|[.-])([0-9a-f]{8})\\.${WILDCARD_IP_DNS}$`,
+);
+
+function embedsPrivateIp(host: string): boolean {
+  const dotted = WILDCARD_DOTTED.exec(host);
+  if (dotted)
+    return isPrivateOrReservedIpv4(Number(dotted[1]), Number(dotted[2]));
+  const hex = WILDCARD_HEX.exec(host);
+  if (hex) {
+    const n = Number.parseInt(hex[1], 16);
+    return isPrivateOrReservedIpv4(n >>> 24, (n >>> 16) & 0xff);
+  }
+  return false;
+}
+
+/**
+ * Loopback, private-network, link-local and `.local` hosts, plus public names
+ * that resolve to them (loopback-alias domains, wildcard DNS with a private IP
+ * in the name). Nothing public can reach these, so they are never safe to
+ * fetch server-side and never a connectable endpoint for anyone but the person
+ * running the server.
  */
 export function isPrivateOrReservedHost(hostname: string): boolean {
   // A trailing dot is a valid fully-qualified spelling ("localhost.") that
@@ -23,7 +67,10 @@ export function isPrivateOrReservedHost(hostname: string): boolean {
   if (
     host === 'localhost' ||
     host.endsWith('.localhost') ||
-    host.endsWith('.local')
+    host.endsWith('.local') ||
+    host.endsWith('.internal') ||
+    LOOPBACK_DOMAINS.some((d) => host === d || host.endsWith(`.${d}`)) ||
+    embedsPrivateIp(host)
   ) {
     return true;
   }

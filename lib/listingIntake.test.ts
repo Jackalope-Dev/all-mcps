@@ -2,8 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   buildListingSlug,
   enrichFromGitHub,
+  prepareListingIntake,
   SUGGESTED_INSTALL_COMMAND_MAX,
 } from './listingIntake';
+import {
+  PLACEHOLDER_EMAIL_ERROR,
+  PLACEHOLDER_URL_ERROR,
+} from './placeholderUrl';
 
 describe('buildListingSlug', () => {
   it('slugifies a name', () => {
@@ -96,6 +101,57 @@ describe('enrichFromGitHub', () => {
     const result = await enrichFromGitHub(base, {});
     expect(result.websiteUrl).toBe('');
     vi.unstubAllGlobals();
+  });
+});
+
+describe('probe submissions are refused before any lookup or fetch', () => {
+  // Every case returns before touching the database or the network.
+  const db = {} as Parameters<typeof prepareListingIntake>[1];
+  const submit = (over: Partial<Parameters<typeof prepareListingIntake>[0]>) =>
+    prepareListingIntake(
+      {
+        email: 'dev@brainscanner.dev',
+        url: 'https://brainscanner.dev/mcp',
+        name: 'Brainscanner',
+        ...over,
+      },
+      db,
+    );
+
+  it.each(['probe@example.com', 'a@mail.example.org', 'x@acme.test'])(
+    'refuses submitter email %s',
+    async (email) => {
+      const r = await submit({ email });
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.body.error).toBe(PLACEHOLDER_EMAIL_ERROR);
+    },
+  );
+
+  it.each([
+    { url: 'https://example.com/probe-e' },
+    { url: '', websiteUrl: 'https://example.com/' },
+    { websiteUrl: 'https://api.example.com/graphql' },
+  ])('refuses placeholder URLs %o', async (over) => {
+    const r = await submit(over);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.body.error).toBe(PLACEHOLDER_URL_ERROR);
+  });
+
+  it.each([
+    'http://169.254.169.254.nip.io/latest/meta-data/',
+    'http://10.255.255.1.nip.io/',
+    'http://localtest.me/',
+  ])('refuses %s as a non-public address', async (url) => {
+    const r = await submit({ url });
+    expect(r).toMatchObject({ ok: false, status: 400 });
+  });
+
+  it('refuses a name with markup', async () => {
+    const r = await submit({ name: 'xss"><script>alert(1)</script>' });
+    expect(r).toMatchObject({
+      ok: false,
+      body: { error: 'Name cannot contain HTML.' },
+    });
   });
 });
 

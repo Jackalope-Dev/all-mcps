@@ -2,6 +2,10 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import {
+  isPlaceholderEmail,
+  PLACEHOLDER_EMAIL_ERROR,
+} from '../../../../lib/placeholderUrl';
+import {
   NEWSLETTER_SUBSCRIBERS_LIST_ID,
   syncSequenzySubscriber,
 } from '../../../../lib/sequenzy';
@@ -60,6 +64,14 @@ export async function POST(req: Request) {
     }
 
     const { email, source } = parsed.data;
+    // Nobody reads mail at a reserved domain; subscribing one only adds a
+    // bounce to the sender's reputation.
+    if (isPlaceholderEmail(email)) {
+      return NextResponse.json(
+        { error: PLACEHOLDER_EMAIL_ERROR },
+        { status: 400 },
+      );
+    }
 
     await syncSequenzySubscriber({
       email,

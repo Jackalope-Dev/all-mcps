@@ -52,9 +52,11 @@ export const POLICY_FLAG_LABEL: Record<PolicyFlag, string> = {
  * repository.id ... fallback test"), a PoC. In Nov 2026 a handful sat in the
  * live catalog after the registry import. Testing *tools* ("E2E test runner",
  * "test coverage") don't match: the wording has to describe the listing itself.
+ * Also the Nov 2026 security probes' names: `probe128316d`, `zz3-1795270700…`,
+ * "Probe SSRF Egress Test 1".
  */
 const TEST_LISTING_RE =
-  /\b(for\s+test(ing)?\s+purposes|just\s+a\s+test|this\s+is\s+a\s+test|(test|demo|dummy|placeholder)\s+(listing|submission|entry)|proof[-\s]of[-\s]concept|poc\s+(alpha|beta|server|test)|registry\s+(\w+\s+){0,2}test|canary\s+with\s+spoofed)\b/i;
+  /\b(for\s+test(ing)?\s+purposes|just\s+a\s+test|this\s+is\s+a\s+test|(test|demo|dummy|placeholder)\s+(listing|submission|entry)|proof[-\s]of[-\s]concept|poc\s+(alpha|beta|server|test)|registry\s+(\w+\s+){0,2}test|canary\s+with\s+spoofed|probe(owner|host\w?)?[-_]?\d{4,}\w?|zz\d?-\d{6,}|(ssrf|xss)\s+(egress\s+)?(probe|test))\b/i;
 
 /** Odds and sports-data APIs are fine; casinos and tipster services are held. */
 const GAMBLING_RE =

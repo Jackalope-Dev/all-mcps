@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { isPlaceholderHost, isPlaceholderUrl } from './placeholderUrl';
+import {
+  isPlaceholderEmail,
+  isPlaceholderHost,
+  isPlaceholderUrl,
+} from './placeholderUrl';
 
 describe('isPlaceholderHost', () => {
   it('matches documentation hosts copied from sample configs', () => {
@@ -30,6 +34,21 @@ describe('isPlaceholderHost', () => {
     ]) {
       expect(isPlaceholderHost(host), host).toBe(false);
     }
+  });
+});
+
+describe('isPlaceholderEmail', () => {
+  it('matches reserved-domain addresses', () => {
+    expect(isPlaceholderEmail('probe@example.com')).toBe(true);
+    expect(isPlaceholderEmail('a@mail.example.org')).toBe(true);
+    expect(isPlaceholderEmail('x@acme.test')).toBe(true);
+  });
+
+  it('leaves real addresses and junk alone', () => {
+    expect(isPlaceholderEmail('dev@brainscanner.dev')).toBe(false);
+    expect(isPlaceholderEmail('team@example-health.org')).toBe(false);
+    expect(isPlaceholderEmail('no-at-sign')).toBe(false);
+    expect(isPlaceholderEmail(null)).toBe(false);
   });
 });
 

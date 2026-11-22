@@ -37,6 +37,15 @@ describe('isSafeSubmissionUrl', () => {
     'http://[::127.0.0.1]/',
     'http://[64:ff9b::10.0.0.1]/',
     'file:///etc/passwd',
+    // Public names that resolve to private addresses (Nov 2026 probes).
+    'http://169.254.169.254.nip.io/latest/meta-data/',
+    'http://10.255.255.1.nip.io/',
+    'http://app.127-0-0-1.sslip.io/',
+    'http://7f000001.nip.io/',
+    'http://localtest.me/',
+    'http://api.lvh.me/',
+    'http://metadata.google.internal/',
+    'http://host.docker.internal:13378/',
   ])('blocks %s', (url) => {
     expect(isSafeSubmissionUrl(url)).toBe(false);
   });
@@ -45,6 +54,9 @@ describe('isSafeSubmissionUrl', () => {
     'https://example.com/mcp',
     'http://8.8.8.8/',
     'http://[::ffff:808:808]/',
+    // Real servers hosted on a public-IP wildcard name stay allowed.
+    'https://agent-exec.45.67.221.128.sslip.io/',
+    'https://37-27-249-33.sslip.io/',
   ])('allows %s', (url) => {
     expect(isSafeSubmissionUrl(url)).toBe(true);
   });

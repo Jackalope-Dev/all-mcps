@@ -7,7 +7,7 @@ import {
   isModerationReason,
   MODERATION_REASON_LABEL,
 } from './moderationReasons';
-import { isPlaceholderUrl } from './placeholderUrl';
+import { isPlaceholderUrl, PLACEHOLDER_URL_ERROR } from './placeholderUrl';
 import { isRepositoryUrl } from './repoUrl';
 import { REJECTED_STATUS } from './servability';
 import { findExistingListingByUrl } from './urlDedup';
@@ -179,7 +179,8 @@ export async function resubmitSubmission(
 
   let url = normalizeUrl(fields.url || '');
   let websiteUrl = normalizeUrl(fields.websiteUrl || '');
-  if (isPlaceholderUrl(websiteUrl)) websiteUrl = '';
+  if (isPlaceholderUrl(url) || isPlaceholderUrl(websiteUrl))
+    return { ok: false, status: 400, error: PLACEHOLDER_URL_ERROR };
   if (!url && websiteUrl) url = websiteUrl;
   if (!websiteUrl && url && !isRepositoryUrl(url)) websiteUrl = url;
   if (!url || !isSafeSubmissionUrl(url))

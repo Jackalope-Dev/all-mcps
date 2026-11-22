@@ -5,6 +5,13 @@
  * Supports credit-based 1,000-impression blocks with weighted CPM bidding.
  */
 
+import {
+  isPlaceholderEmail,
+  isPlaceholderUrl,
+  PLACEHOLDER_EMAIL_ERROR,
+  PLACEHOLDER_URL_ERROR,
+} from './placeholderUrl';
+
 export type AdPlacement =
   | 'all'
   | 'directory_inline'
@@ -260,6 +267,14 @@ export function validateAdPayload(data: {
   if (!data.targetUrl || !/^https?:\/\//i.test(data.targetUrl.trim())) {
     return { valid: false, error: 'Target URL must be a valid http(s) URL.' };
   }
+  // A Nov 2026 probe opened a checkout for "Test ad campaign" pointing at
+  // example.com: a placeholder landing page or logo is never a real campaign.
+  if (
+    isPlaceholderUrl(data.targetUrl) ||
+    isPlaceholderUrl(data.logoUrl ?? '')
+  ) {
+    return { valid: false, error: PLACEHOLDER_URL_ERROR };
+  }
   const logoTrimmed = data.logoUrl ? data.logoUrl.trim() : '';
   const isValidLogo =
     /^https?:\/\//i.test(logoTrimmed) ||
@@ -278,6 +293,9 @@ export function validateAdPayload(data: {
       error:
         'Please provide a valid advertiser email for campaign tracking and notifications.',
     };
+  }
+  if (isPlaceholderEmail(advertiserEmail)) {
+    return { valid: false, error: PLACEHOLDER_EMAIL_ERROR };
   }
   if (!data.impressions || data.impressions < 1000) {
     return {
