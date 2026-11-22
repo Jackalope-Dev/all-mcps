@@ -193,6 +193,10 @@ describe('test_listing flag', () => {
       'empty-public-canary',
       'Public-repo MCP canary with spoofed private repository.id for owned-account registry fallback test.',
     ],
+    ['probe128316d', ''],
+    ['probeowner128316', ''],
+    ['zz3-1795270700939928723', ''],
+    ['Probe SSRF Egress Test 1', ''],
   ])('holds %s', (name, description) => {
     expect(flagsFor(name, description)).toContain('test_listing');
   });
@@ -201,6 +205,8 @@ describe('test_listing flag', () => {
     ['test-coverage-mcp', 'Analyze test coverage from LCOV files'],
     ['e2e-runner', 'JSON-driven E2E test runner with parallel execution'],
     ['Canary MCP', 'Canary MCP server for Interactive Brokers market data'],
+    ['probe402', 'Check x402 payment endpoints'],
+    ['ProbeOps MCP Server', 'Uptime probes from global locations'],
   ])('leaves testing tools like %s alone', (name, description) => {
     expect(flagsFor(name, description)).not.toContain('test_listing');
   });

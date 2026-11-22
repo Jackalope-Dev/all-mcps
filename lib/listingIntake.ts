@@ -7,7 +7,12 @@ import { getGithubToken, githubApiHeaders } from './githubAuth';
 import { policyFlags } from './listingPolicy';
 import { alignListings, reviewColumns, reviewListing } from './listingReview';
 import { introspectToolsJson } from './mcpIntrospect';
-import { isPlaceholderUrl } from './placeholderUrl';
+import {
+  isPlaceholderEmail,
+  isPlaceholderUrl,
+  PLACEHOLDER_EMAIL_ERROR,
+  PLACEHOLDER_URL_ERROR,
+} from './placeholderUrl';
 import { isRepositoryUrl } from './repoUrl';
 import { isWithdrawn, REJECTED_STATUS } from './servability';
 import {
@@ -233,20 +238,34 @@ export function publicSimilarListing(
     : null;
 }
 
+/**
+ * `<script`, `</b>`, `<img`, `<!--`: a browser only opens a tag when `<` is
+ * followed directly by a letter, `!` or `/`, so one character of lookahead is
+ * enough ("C<>Bridge", "a < b" pass). Kept to a fixed-width match: scanning on
+ * to the closing `>` was polynomial on a run of `<!` (CodeQL js/polynomial-redos).
+ */
+const HTML_TAG_RE = /<[a-z!/]/i;
+
 export async function prepareListingIntake(
   input: ListingIntakeInput,
   db: ReturnType<typeof drizzle>,
   env?: unknown,
 ): Promise<ListingIntakeReady | ListingIntakeFailure> {
   const email = input.email.trim().toLowerCase();
+  if (isPlaceholderEmail(email)) {
+    return { ok: false, status: 400, body: { error: PLACEHOLDER_EMAIL_ERROR } };
+  }
   let name = (input.name || '').trim();
   let description = (input.description || '').trim();
   const category = normalizeCategory(input.category || undefined);
 
   let url = normalizeUrl(input.url || '');
   let websiteUrl = normalizeUrl(input.websiteUrl || '');
-  // A sample-config host (`https://example.com`) is no website; drop it.
-  if (isPlaceholderUrl(websiteUrl)) websiteUrl = '';
+  // A sample-config host (`https://example.com`) is nobody's server or site.
+  // Ingest drops one quietly; a person or agent submitting it is told.
+  if (isPlaceholderUrl(url) || isPlaceholderUrl(websiteUrl)) {
+    return { ok: false, status: 400, body: { error: PLACEHOLDER_URL_ERROR } };
+  }
 
   // Website-only submissions promote the website to the primary url; a primary
   // url that is not a repo doubles as the website so the listing still renders
@@ -290,11 +309,24 @@ export async function prepareListingIntake(
       },
     };
   }
+  // React escapes it on every page, but no server name needs a tag in it, and
+  // the name also reaches emails, OG images and the API.
+  if (HTML_TAG_RE.test(name)) {
+    return {
+      ok: false,
+      status: 400,
+      body: { error: 'Name cannot contain HTML.' },
+    };
+  }
 
   // Supplementary links: drop silently if unsafe rather than failing the whole
   // submission over a secondary field.
   let supportUrl = normalizeUrl(input.supportUrl || '');
-  if (supportUrl && !isSafeSubmissionUrl(supportUrl)) supportUrl = '';
+  if (
+    supportUrl &&
+    (!isSafeSubmissionUrl(supportUrl) || isPlaceholderUrl(supportUrl))
+  )
+    supportUrl = '';
   let remoteEndpointUrl = normalizeUrl(input.remoteEndpointUrl || '');
   if (
     remoteEndpointUrl &&

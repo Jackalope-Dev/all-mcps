@@ -4,6 +4,7 @@ import {
   IMPRESSION_HOURLY_CAP_PER_VISITOR,
   isBillableImpression,
   pickAdForSlot,
+  validateAdPayload,
 } from './ads';
 
 const ad = (id: string, served = 0, purchased = 1000) => ({
@@ -63,5 +64,29 @@ describe('isBillableImpression', () => {
         now,
       ),
     ).toBe(false);
+  });
+});
+
+describe('validateAdPayload', () => {
+  const payload = {
+    title: 'Brainscanner',
+    description: 'Scan brains over MCP',
+    targetUrl: 'https://brainscanner.dev/',
+    logoUrl: '/api/ads/logo/ad_1',
+    advertiserEmail: 'ads@brainscanner.dev',
+    impressions: 1000,
+    bidCpm: 500,
+  };
+
+  it('accepts a real campaign', () => {
+    expect(validateAdPayload(payload)).toEqual({ valid: true });
+  });
+
+  it.each([
+    { advertiserEmail: 'a@example.com' },
+    { targetUrl: 'https://example.com/landing' },
+    { logoUrl: 'https://example.com/l.png' },
+  ])('refuses the Nov 2026 probe campaign field %o', (over) => {
+    expect(validateAdPayload({ ...payload, ...over }).valid).toBe(false);
   });
 });

@@ -174,9 +174,10 @@ describe('/api/mcp protocol handling', () => {
         arguments: {
           title: 'Acme MCP',
           description: 'Ship MCP servers faster with Acme.',
-          targetUrl: 'https://acme.example',
-          logoUrl: 'https://acme.example/logo.png',
-          advertiserEmail: 'ads@acme.example',
+          // A real-looking domain: `.example` hosts are refused as placeholders.
+          targetUrl: 'https://brainscanner.dev',
+          logoUrl: 'https://brainscanner.dev/logo.png',
+          advertiserEmail: 'ads@brainscanner.dev',
           impressions: 2000,
           bidCpm: 500,
         },

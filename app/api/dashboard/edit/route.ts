@@ -12,6 +12,7 @@ import {
   type EditableServerFields,
   serializePendingRevision,
 } from '@/lib/pendingRevision';
+import { isPlaceholderUrl, PLACEHOLDER_URL_ERROR } from '@/lib/placeholderUrl';
 import {
   AUTH_TYPES,
   MAINTENANCE_STATUSES,
@@ -80,6 +81,18 @@ export async function POST(req: Request) {
 
     const data = parsed.data;
     const id = data.id;
+    const placeholder = [
+      data.websiteUrl,
+      data.supportUrl,
+      data.remoteEndpointUrl,
+      data.setupSourceUrl,
+    ].some((u) => isPlaceholderUrl((u || '').trim()));
+    if (placeholder) {
+      return NextResponse.json(
+        { error: PLACEHOLDER_URL_ERROR },
+        { status: 400 },
+      );
+    }
     const websiteUrl = (data.websiteUrl || '').trim();
     if (websiteUrl && !isSafeSubmissionUrl(websiteUrl)) {
       return NextResponse.json(
