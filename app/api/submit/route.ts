@@ -25,6 +25,11 @@ import {
 } from '../../../lib/sequenzy';
 import { upsertSignals } from '../../../lib/signalStore';
 import { getAppUrl } from '../../../lib/stripe';
+import {
+  hashSubmitterIp,
+  recordSubmissionIp,
+  requestIp,
+} from '../../../lib/submitterBlocks';
 import { verifyTurnstileToken } from '../../../lib/turnstile';
 import { formatZodError } from '../../../lib/zodError';
 
@@ -130,7 +135,8 @@ export async function POST(req: Request) {
     }
     const db = drizzle(env.DB as any);
 
-    const prepared = await prepareListingIntake(result.data, db, env);
+    const ipHash = await hashSubmitterIp(requestIp(req));
+    const prepared = await prepareListingIntake(result.data, db, env, ipHash);
     if (!prepared.ok) {
       return NextResponse.json(prepared.body, { status: prepared.status });
     }
@@ -156,6 +162,7 @@ export async function POST(req: Request) {
 
     // Best-effort: the listing is in; a lost review just means the stale sweep
     // asks Jev again later.
+    await recordSubmissionIp(db, id, ipHash);
     if (Object.keys(prepared.signals).length > 0) {
       await upsertSignals(db, id, prepared.signals).catch((e) =>
         console.error('Failed to store intake review:', e),

@@ -6,6 +6,7 @@ import Resend from 'next-auth/providers/resend';
 import { Resend as ResendClient } from 'resend';
 import { MagicLinkEmail } from '@/components/emails/MagicLinkEmail';
 import { accounts, sessions, users, verificationTokens } from '@/db/schema';
+import { screenSubmitter } from '@/lib/submitterBlocks';
 
 // D1 bindings are only available per-request in the Workers runtime, so the
 // adapter is resolved via NextAuth's function-config form rather than at
@@ -85,6 +86,14 @@ export const { handlers, signIn, auth } = NextAuth(async () => {
       strategy: 'jwt',
     },
     callbacks: {
+      // Runs before the magic link is emailed and again when it's used: a
+      // blocked email/domain (lib/submitterBlocks.ts) or an address that
+      // can't receive mail gets no link and no session.
+      async signIn({ user }) {
+        const email = user?.email;
+        if (!email) return true;
+        return (await screenSubmitter(db, { email })) === null;
+      },
       jwt({ token, user }) {
         // Only present on the initial sign-in call (`user` comes straight from
         // the adapter); every later call just re-decodes the existing JWT, so

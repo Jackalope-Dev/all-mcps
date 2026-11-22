@@ -22,6 +22,7 @@ import {
   normalizeCompatibleClients,
   normalizeTags,
 } from './serverEnums';
+import { BLOCKED_SUBMITTER_ERROR, screenSubmitter } from './submitterBlocks';
 import {
   checkEndpoint,
   discoverRemoteEndpoint,
@@ -250,6 +251,8 @@ export async function prepareListingIntake(
   input: ListingIntakeInput,
   db: ReturnType<typeof drizzle>,
   env?: unknown,
+  /** Salted submitter IP hash (lib/submitterBlocks.ts), checked against blocks. */
+  ipHash: string | null = null,
 ): Promise<ListingIntakeReady | ListingIntakeFailure> {
   const email = input.email.trim().toLowerCase();
   if (isPlaceholderEmail(email)) {
@@ -316,6 +319,17 @@ export async function prepareListingIntake(
       ok: false,
       status: 400,
       body: { error: 'Name cannot contain HTML.' },
+    };
+  }
+
+  // Blocked email/domain/IP, then a deliverable address. Runs after the cheap
+  // field checks above and before the duplicate lookups and endpoint probes.
+  const screened = await screenSubmitter(db, { email, ipHash });
+  if (screened) {
+    return {
+      ok: false,
+      status: screened === BLOCKED_SUBMITTER_ERROR ? 403 : 400,
+      body: { error: screened },
     };
   }
 

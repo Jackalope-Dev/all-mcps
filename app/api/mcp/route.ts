@@ -63,6 +63,7 @@ import {
 } from '@/lib/servers';
 import { createStripeCheckoutSession } from '@/lib/stripeCheckout';
 import { submitListing } from '@/lib/submitListing';
+import { requestIp } from '@/lib/submitterBlocks';
 import { computeTrustTier } from '@/lib/trustTier';
 import { x402Status } from '@/lib/x402';
 
@@ -752,6 +753,7 @@ ${JSON.stringify({ ...ad, placement })}
       const outcome = await submitListing(
         args,
         `mcp_tool:${clientKey(request)}`,
+        requestIp(request),
       );
 
       if (outcome.ok) {

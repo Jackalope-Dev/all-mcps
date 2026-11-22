@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { clientKey } from '../../../../lib/rateLimit';
 import { submitListing } from '../../../../lib/submitListing';
+import { requestIp } from '../../../../lib/submitterBlocks';
 
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as any;
-    const outcome = await submitListing(body, clientKey(req));
+    const outcome = await submitListing(body, clientKey(req), requestIp(req));
     return NextResponse.json(outcome.body, {
       status: outcome.status,
       headers: outcome.ok ? undefined : outcome.headers,
