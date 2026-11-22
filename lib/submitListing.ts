@@ -14,6 +14,7 @@ import {
   syncSequenzySubscriber,
 } from './sequenzy';
 import { upsertSignals } from './signalStore';
+import { hashSubmitterIp } from './submitterBlocks';
 import { getAppUrl } from './stripe';
 import { formatZodError } from './zodError';
 
@@ -77,6 +78,8 @@ export type SubmitListingOutcome =
 export async function submitListing(
   rawBody: unknown,
   rateLimitKey: string,
+  /** Caller IP, hashed and stored so /admin can block the connection. */
+  ip: string | null = null,
 ): Promise<SubmitListingOutcome> {
   // No CAPTCHA on this path (unlike the human /submit form) — the one guard
   // against automated spam submissions is a tight per-IP rate limit.
@@ -125,7 +128,12 @@ export async function submitListing(
   }
   const db = drizzle(env.DB as any);
 
-  const prepared = await prepareListingIntake(result.data, db, env);
+  const prepared = await prepareListingIntake(
+    result.data,
+    db,
+    env,
+    await hashSubmitterIp(ip),
+  );
   if (!prepared.ok) {
     return { ok: false, status: prepared.status, body: prepared.body };
   }

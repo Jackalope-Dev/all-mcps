@@ -24,6 +24,7 @@ import {
   syncSequenzySubscriber,
 } from '../../../lib/sequenzy';
 import { upsertSignals } from '../../../lib/signalStore';
+import { hashSubmitterIp, requestIp } from '../../../lib/submitterBlocks';
 import { getAppUrl } from '../../../lib/stripe';
 import { verifyTurnstileToken } from '../../../lib/turnstile';
 import { formatZodError } from '../../../lib/zodError';
@@ -130,7 +131,12 @@ export async function POST(req: Request) {
     }
     const db = drizzle(env.DB as any);
 
-    const prepared = await prepareListingIntake(result.data, db, env);
+    const prepared = await prepareListingIntake(
+      result.data,
+      db,
+      env,
+      await hashSubmitterIp(requestIp(req)),
+    );
     if (!prepared.ok) {
       return NextResponse.json(prepared.body, { status: prepared.status });
     }

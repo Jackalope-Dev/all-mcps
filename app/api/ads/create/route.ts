@@ -13,6 +13,12 @@ import {
 } from '@/lib/attribution';
 import { auth } from '@/lib/auth';
 import { isStripeConfigured } from '@/lib/pricing';
+import {
+  BLOCKED_SUBMITTER_ERROR,
+  hashSubmitterIp,
+  requestIp,
+  screenSubmitter,
+} from '@/lib/submitterBlocks';
 import { getAppUrl, getStripe } from '@/lib/stripe';
 
 export const dynamic = 'force-dynamic';
@@ -70,6 +76,17 @@ export async function POST(request: Request) {
     }
 
     const db = drizzle(ctx.env.DB);
+    const advertiserIpHash = await hashSubmitterIp(requestIp(request));
+    const screened = await screenSubmitter(db, {
+      email: String(advertiserEmail),
+      ipHash: advertiserIpHash,
+    });
+    if (screened) {
+      return NextResponse.json(
+        { error: screened },
+        { status: screened === BLOCKED_SUBMITTER_ERROR ? 403 : 400 },
+      );
+    }
     const stripeConfigured = isStripeConfigured(ctx.env);
 
     // If Stripe is configured and payment is required, we can generate a Stripe Checkout Session
@@ -119,6 +136,7 @@ export async function POST(request: Request) {
           id: adId,
           advertiserEmail: String(advertiserEmail).trim().toLowerCase(),
           advertiserUserId,
+          advertiserIpHash,
           title: String(title).trim(),
           description: String(description).trim(),
           ctaText: String(ctaText).trim() || 'Learn More',
@@ -165,6 +183,7 @@ export async function POST(request: Request) {
       id: adId,
       advertiserEmail: String(advertiserEmail).trim().toLowerCase(),
       advertiserUserId,
+      advertiserIpHash,
       title: String(title).trim(),
       description: String(description).trim(),
       ctaText: String(ctaText).trim() || 'Learn More',

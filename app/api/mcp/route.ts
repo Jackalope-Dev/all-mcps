@@ -52,6 +52,7 @@ import {
   rateLimitedResponse,
 } from '@/lib/rateLimit';
 import { recordSearchMiss } from '@/lib/searchMisses';
+import { requestIp } from '@/lib/submitterBlocks';
 import { isServable } from '@/lib/servability';
 import {
   formatServerAsMarkdown,
@@ -752,6 +753,7 @@ ${JSON.stringify({ ...ad, placement })}
       const outcome = await submitListing(
         args,
         `mcp_tool:${clientKey(request)}`,
+        requestIp(request),
       );
 
       if (outcome.ok) {

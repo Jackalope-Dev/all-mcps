@@ -1,3 +1,5 @@
+import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { drizzle } from 'drizzle-orm/d1';
 import { BadgeCheck, BarChart3, Link2, Mail, Sparkles } from 'lucide-react';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
@@ -12,6 +14,7 @@ import {
   NEWSLETTER_SUBSCRIBERS_LIST_ID,
   syncSequenzySubscriber,
 } from '@/lib/sequenzy';
+import { hashSubmitterIp, screenSubmitter } from '@/lib/submitterBlocks';
 
 export const metadata: Metadata = {
   title: 'Sign In to Manage Your MCP Server Listings',
@@ -26,10 +29,10 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ callbackUrl?: string }>;
+  searchParams: Promise<{ callbackUrl?: string; error?: string }>;
 }) {
   const session = await auth();
-  const { callbackUrl: rawCallbackUrl } = await searchParams;
+  const { callbackUrl: rawCallbackUrl, error } = await searchParams;
   // Drop any URL fragment: it's never sent to the server anyway, and an encoded
   // "%23" surviving into the magic-link callback query is mis-parsed by the
   // Cloudflare adapter — it truncates the query at that point, dropping the
@@ -73,6 +76,12 @@ export default async function LoginPage({
         <p className="acct-auth-sub">
           We&rsquo;ll email you a secure one-time link. No password needed.
         </p>
+        {error === 'email' && (
+          <p className="acct-auth-sub" role="alert">
+            We can&rsquo;t send a sign-in link to that address. Use an email you
+            can receive mail at, or contact support@allmcps.com.
+          </p>
+        )}
 
         <form
           action={async (formData) => {
@@ -87,6 +96,18 @@ export default async function LoginPage({
               !rawRedirect.startsWith('/verify-request');
             const redirectTo = isValidRedirect ? rawRedirect : '/dashboard';
             const newsletterOptIn = formData.get('newsletterOptIn') === 'on';
+            // Same gate as /submit: a blocked email/domain/IP or an address
+            // that can't receive mail gets no link (and no newsletter sync).
+            // lib/auth.ts's signIn callback repeats it for direct API calls.
+            const { env } = await getCloudflareContext();
+            const actionHeaders = await headers();
+            const problem = await screenSubmitter(drizzle(env.DB), {
+              email,
+              ipHash: await hashSubmitterIp(
+                actionHeaders.get('cf-connecting-ip'),
+              ),
+            });
+            if (problem) redirect('/login?error=email');
             // Call with redirect: false and redirect to our own /verify-request
             // page ourselves, rather than letting next-auth issue its internal
             // redirect — that one always points at the raw `/api/auth/verify-request`

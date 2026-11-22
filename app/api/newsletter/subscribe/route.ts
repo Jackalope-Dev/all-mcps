@@ -1,14 +1,16 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import {
-  isPlaceholderEmail,
-  PLACEHOLDER_EMAIL_ERROR,
-} from '../../../../lib/placeholderUrl';
+import { drizzle } from 'drizzle-orm/d1';
 import {
   NEWSLETTER_SUBSCRIBERS_LIST_ID,
   syncSequenzySubscriber,
 } from '../../../../lib/sequenzy';
+import {
+  hashSubmitterIp,
+  requestIp,
+  screenSubmitter,
+} from '../../../../lib/submitterBlocks';
 
 const subscribeSchema = z.object({
   email: z.string().email(),
@@ -64,13 +66,17 @@ export async function POST(req: Request) {
     }
 
     const { email, source } = parsed.data;
-    // Nobody reads mail at a reserved domain; subscribing one only adds a
-    // bounce to the sender's reputation.
-    if (isPlaceholderEmail(email)) {
-      return NextResponse.json(
-        { error: PLACEHOLDER_EMAIL_ERROR },
-        { status: 400 },
-      );
+    // A blocked submitter, or an address nobody reads (example.com, a
+    // throwaway inbox, a domain with no mail server), only adds a bounce to
+    // the sender's reputation.
+    if (env?.DB) {
+      const problem = await screenSubmitter(drizzle(env.DB), {
+        email,
+        ipHash: await hashSubmitterIp(requestIp(req)),
+      });
+      if (problem) {
+        return NextResponse.json({ error: problem }, { status: 400 });
+      }
     }
 
     await syncSequenzySubscriber({

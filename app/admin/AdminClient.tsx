@@ -5,6 +5,7 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
+  Ban,
   Clock,
   Compass,
   History,
@@ -261,6 +262,50 @@ export default function AdminClient({
     );
   };
 
+  const blockSubmitter = async (server: Server) => {
+    const email = server.submitterEmail ?? '';
+    if (
+      !window.confirm(
+        `Block ${email} from submitting?\n\nTheir email and connection are blocked from listings, ads, the newsletter and sign-in, and all their pending listings are rejected. Nobody is emailed.`,
+      )
+    )
+      return;
+    const domain = email.split('@')[1] ?? '';
+    const blockDomain =
+      domain !== '' &&
+      window.confirm(
+        `Also block everyone at @${domain}?\n\nOnly for a spam or throwaway domain. Webmail providers like gmail.com are never blocked by domain.`,
+      );
+    setLoadingId(server.id);
+    try {
+      const res = await fetch('/api/admin/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: server.id,
+          action: 'block_submitter',
+          blockDomain,
+          reason: `Blocked from /admin on ${server.id}`,
+        }),
+      });
+      const data = (await res.json()) as { error?: string; message?: string };
+      if (!res.ok) throw new Error(data.error || 'Block failed');
+      setPending((prev) =>
+        prev.filter(
+          (s) =>
+            s.id !== server.id &&
+            (s.submitterEmail ?? '').toLowerCase() !== email.toLowerCase(),
+        ),
+      );
+      toast.success(data.message || 'Submitter blocked');
+      notifyAdminStatsChanged();
+    } catch (err: any) {
+      toast.error(err?.message || 'Block failed');
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
   const handleAction = async (
     id: string,
     action:
@@ -514,6 +559,7 @@ export default function AdminClient({
                 servers={manualPending}
                 empty="No manual submissions waiting on you."
                 loadingId={loadingId}
+                onBlock={blockSubmitter}
                 onApprove={(id) => handleAction(id, 'approve')}
                 onReject={(server) =>
                   openRejectModal(
@@ -979,12 +1025,15 @@ function ServerTable({
   loadingId,
   onApprove,
   onReject,
+  onBlock,
 }: {
   servers: Server[];
   empty: string;
   loadingId: string | null;
   onApprove: (id: string) => void;
   onReject: (server: Server) => void;
+  /** Block the submitter's email + IP and reject all their pending listings. */
+  onBlock?: (server: Server) => void;
 }) {
   return (
     <div className="adm-table-wrap">
@@ -1173,6 +1222,17 @@ function ServerTable({
                         onApprove={() => onApprove(server.id)}
                         onReject={() => onReject(server)}
                       />
+                      {onBlock && server.submitterEmail && (
+                        <button
+                          type="button"
+                          onClick={() => onBlock(server)}
+                          disabled={loadingId === server.id}
+                          className="btn btn-sm adm-btn-tint hue-red"
+                          title="Block this email and connection from submitting again, and reject all their pending listings (no emails sent)"
+                        >
+                          <Ban size={14} aria-hidden="true" /> Block
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

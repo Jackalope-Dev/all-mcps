@@ -51,6 +51,7 @@ import { setupStepsEditPatch } from '../../../../lib/setupSteps';
 import { upsertSignals } from '../../../../lib/signalStore';
 import { getAppUrl } from '../../../../lib/stripe';
 import { classifyTags } from '../../../../lib/tagClassifier';
+import { blockSubmitter } from '../../../../lib/submitterBlocks';
 import { isSafeSubmissionUrl } from '../../../../lib/urlSafety';
 
 const actionSchema = z.object({
@@ -86,6 +87,7 @@ const actionSchema = z.object({
     'mark_report_reviewed',
     'dismiss_report',
     'merge_duplicate',
+    'block_submitter',
   ]),
   fields: z
     .object({
@@ -111,6 +113,8 @@ const actionSchema = z.object({
   /** Reject/unpublish reason codes, recorded for gate tuning (lib/moderationLog.ts). */
   reasons: z.array(z.enum(MODERATION_REASONS)).max(6).optional(),
   reasonNote: z.string().trim().max(500).optional(),
+  /** block_submitter: also block the email's domain (never a webmail provider). */
+  blockDomain: z.boolean().optional(),
   /** Which admin screen sent a reject/unpublish. */
   source: z.enum(['modal', 'triage', 'listings']).optional(),
 });
@@ -155,6 +159,7 @@ const MESSAGES: Record<string, string> = {
   delete_review: 'Review deleted.',
   mark_report_reviewed: 'Report marked as reviewed.',
   dismiss_report: 'Report dismissed.',
+  block_submitter: 'Submitter blocked.',
 };
 
 export async function POST(req: Request) {
@@ -186,6 +191,7 @@ export async function POST(req: Request) {
       reasonNote,
       source,
       official,
+      blockDomain,
     } = result.data;
 
     let env: CloudflareEnv | undefined;
@@ -417,6 +423,20 @@ export async function POST(req: Request) {
           { status: 400 },
         );
       }
+    } else if (action === 'block_submitter') {
+      const blocked = await blockSubmitter(db, {
+        serverId: id,
+        blockDomain: blockDomain === true,
+        reason: reason ?? '',
+        admin: adminEmail,
+      });
+      if ('error' in blocked) {
+        return NextResponse.json({ error: blocked.error }, { status: 400 });
+      }
+      return NextResponse.json({
+        success: true,
+        message: `Submitter blocked (${blocked.blocked.join(', ')}). ${blocked.rejected} pending listing(s) rejected.`,
+      });
     } else if (action === 'merge_duplicate') {
       const targetId = fields?.targetId?.trim() ?? '';
       const resolved = await resolveCanonicalMergeTarget(

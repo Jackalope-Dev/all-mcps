@@ -22,6 +22,12 @@ export const servers = sqliteTable(
     /** Email the submitter gave at submit time. Used for status notices and the submission upsell sequence. */
     submitterEmail: text('submitter_email'),
     /**
+     * Salted hash of the submitter's IP (lib/submitterBlocks.ts), so /admin can
+     * block that connection along with the email. Never the raw IP; null for
+     * ingested rows and anything submitted before Nov 2026.
+     */
+    submitterIpHash: text('submitter_ip_hash'),
+    /**
      * Paid Premium subscription (Stripe). A clearly labelled paid tier: it buys
      * Featured placement in labelled slots and dashboard extras, never the
      * Verified/Official badges, quality-score points, organic ranking, or a
@@ -1093,6 +1099,37 @@ export const reports = sqliteTable(
 );
 
 /**
+ * Who may not submit: an admin's "Block submitter" in /admin writes one row per
+ * email, email domain and IP hash. Every public intake (listing submit, agent
+ * API/MCP tool, ad checkout, newsletter, magic-link sign-in) refuses a match.
+ * Added after the Nov 2026 SSRF/XSS probe run, when the only lever was
+ * rejecting each listing by hand.
+ */
+export const submitterBlocks = sqliteTable(
+  'submitter_blocks',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    /** 'email' | 'domain' | 'ip' */
+    kind: text('kind').notNull(),
+    /** Lowercased email or domain, or the salted IP hash. */
+    value: text('value').notNull(),
+    reason: text('reason'),
+    /** The listing or ad the block was made from, for context in /admin. */
+    sourceId: text('source_id'),
+    createdBy: text('created_by'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    kindValueIdx: uniqueIndex('idx_submitter_blocks_kind_value').on(
+      table.kind,
+      table.value,
+    ),
+  }),
+);
+
+/**
  * Universal sponsor advertisements (logo + copy + CTA link across directory, sidebar, articles).
  * Sold in 1,000 impression credit blocks with weighted CPM bidding.
  */
@@ -1103,6 +1140,8 @@ export const sponsorAds = sqliteTable(
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     advertiserEmail: text('advertiser_email').notNull(),
+    /** Salted hash of the creator's IP, same as servers.submitterIpHash. */
+    advertiserIpHash: text('advertiser_ip_hash'),
     /** Set when the creator was signed in — links the campaign into their /dashboard alongside MCP listings. Nullable: ad creation never requires login. */
     advertiserUserId: text('advertiser_user_id'),
     title: text('title').notNull(),
