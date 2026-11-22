@@ -1,18 +1,19 @@
 ---
-register_uri: "https://allmcps.com/api/v1/agent/register"
-register_confirm_uri: "https://allmcps.com/api/v1/agent/register/confirm"
+skill: "https://allmcps.com/auth.md"
+resource_metadata: "https://allmcps.com/.well-known/oauth-protected-resource"
+authorization_server_metadata: "https://allmcps.com/.well-known/oauth-authorization-server"
+identity_endpoint: "https://allmcps.com/api/v1/agent/register"
+claim_endpoint: "https://allmcps.com/api/v1/agent/register/confirm"
 identity_types_supported:
-  - "ephemeral_session"
-  - "did"
-  - "oauth_client"
+  - "service_auth"
 credential_types_supported:
   - "bearer_token"
-  - "jwt"
-claim_url: "https://allmcps.com/api/v1/agent/claim"
-revocation_url: "https://allmcps.com/api/v1/agent/revoke"
+revocation_endpoint: "https://allmcps.com/api/v1/agent/revoke"
+register_uri: "https://allmcps.com/api/v1/agent/register"
+register_confirm_uri: "https://allmcps.com/api/v1/agent/register/confirm"
 scopes_supported:
   listings:claim: "Claim ownership of an existing MCP server listing via DNS TXT, site badge, or GitHub README proof. Required by POST /api/v1/agent/claim. No other write access."
-status: "programmatic_agent_auth_active"
+  checkout:write: "Create and complete Agentic Commerce Protocol checkout sessions to buy listing boosts. Payment still needs a Stripe shared payment token the buyer granted."
 ---
 
 # Agent Authentication Specification (auth.md)
@@ -35,6 +36,17 @@ Most AllMCPs APIs are open for read access without registration. Programmatic ag
 | Agent claim listing | **Bearer Token** | `POST /api/v1/agent/claim` |
 | Agent revoke token | **Bearer Token** | `POST /api/v1/agent/revoke` |
 | Human claim ownership | Signed-in user | `/mcp/{id}/claim` |
+
+---
+
+## Quick Start for Agents (auth.md)
+
+1. **Discover.** Read the Protected Resource Metadata at `/.well-known/oauth-protected-resource`, then the `agent_auth` block in `/.well-known/oauth-authorization-server`.
+2. **Pick a method.** AllMCPs supports one registration type: `service_auth`. You need the email address of the person you act for. Anonymous and ID-JAG (`identity_assertion`) registration are not offered.
+3. **Register.** `POST /api/v1/agent/register` with `{"type": "service_auth", "login_hint": "<user email>", "scopes": ["listings:claim"]}`. (`email` works in place of `login_hint`.) AllMCPs emails the user a 6-digit code.
+4. **Claim.** Ask the user for the code, then `POST /api/v1/agent/register/confirm` with `{"email": "<user email>", "code": "<code>"}`. The response carries your bearer token.
+5. **Use.** Send `Authorization: Bearer amcp_...` on scoped endpoints. Tokens last 90 days.
+6. **Revoke.** `POST /api/v1/agent/revoke` with the token when you are done.
 
 ---
 

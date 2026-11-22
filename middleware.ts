@@ -99,6 +99,10 @@ export function middleware(req: NextRequest) {
     response = NextResponse.rewrite(
       new URL('/api/well-known/oauth-protected-resource', req.url),
     );
+  } else if (pathname === '/.well-known/oauth-protected-resource/api/v1') {
+    response = NextResponse.rewrite(
+      new URL('/api/well-known/oauth-protected-resource/api-v1', req.url),
+    );
   } else if (
     pathname === '/.well-known/mcp/server-card.json' ||
     pathname === '/.well-known/mcp/server-card'
@@ -137,6 +141,17 @@ export function middleware(req: NextRequest) {
       req.method === 'GET'
         ? NextResponse.rewrite(new URL('/api/well-known/mcp-json', req.url))
         : NextResponse.rewrite(new URL('/api/mcp', req.url));
+  } else if (
+    pathname === '/.well-known/ai-catalog.json' ||
+    pathname === '/.well-known/ai-catalog'
+  ) {
+    response = NextResponse.rewrite(
+      new URL('/api/well-known/ai-catalog', req.url),
+    );
+  } else if (pathname === '/.well-known/http-message-signatures-directory') {
+    response = NextResponse.rewrite(
+      new URL('/api/well-known/http-message-signatures-directory', req.url),
+    );
   } else if (pathname === '/auth.md') {
     response = NextResponse.rewrite(
       new URL('/api/well-known/auth-md', req.url),
@@ -206,6 +221,7 @@ export function middleware(req: NextRequest) {
     '</.well-known/openid-configuration>; rel="oauth-authorization-server"',
     '</.well-known/oauth-protected-resource>; rel="oauth-protected-resource"',
     '</auth.md>; rel="authorizing-agent"',
+    '</.well-known/ai-catalog.json>; rel="ai-catalog"; type="application/ai-catalog+json"',
     // llms.txt / catalog dataset — discoverable without scraping HTML
     '</llms.txt>; rel="describedby"; type="text/plain"',
     '</llms-full.txt>; rel="alternate"; type="text/plain"',

@@ -16,7 +16,11 @@ import { screenStatus, screenSubmitter } from './submitterBlocks';
 import { formatZodError } from './zodError';
 
 const registerSchema = z.object({
-  email: z.string().email('Provide a valid email address'),
+  // `login_hint` + `type: "service_auth"` is the auth.md spelling of the
+  // same request; either field carries the user's email.
+  email: z.string().email('Provide a valid email address').optional(),
+  login_hint: z.string().email('Provide a valid email address').optional(),
+  type: z.literal('service_auth').optional(),
   agentName: z.string().optional().or(z.literal('')),
   agent_name: z.string().optional().or(z.literal('')),
   // OAuth-style scoped permissions — request only what you need (see
@@ -60,7 +64,18 @@ export async function registerAgent(
     };
   }
 
-  const email = result.data.email.trim().toLowerCase();
+  const rawEmail = result.data.email ?? result.data.login_hint;
+  if (!rawEmail) {
+    return {
+      ok: false,
+      status: 400,
+      body: {
+        error: 'Invalid registration payload',
+        details: 'email: Provide a valid email address (or login_hint)',
+      },
+    };
+  }
+  const email = rawEmail.trim().toLowerCase();
   const agentName = (
     result.data.agentName ||
     result.data.agent_name ||

@@ -1,3 +1,5 @@
+import { signRequestHeaders } from './webBotAuth';
+
 function isPrivateOrReservedIpv4(a: number, b: number): boolean {
   if (a === 127) return true; // loopback
   if (a === 10) return true; // private
@@ -167,7 +169,15 @@ export async function safeFetch(
     if (isPrivateOrReservedHost(parsed.hostname)) {
       throw new Error('Redirected to a URL that is not a permitted endpoint.');
     }
-    const res = await fetch(parsed.href, req);
+    // Web Bot Auth: the signature covers the host, so sign each hop.
+    const signed = await signRequestHeaders(parsed.host);
+    let hopReq = req;
+    if (Object.keys(signed).length > 0) {
+      const headers = new Headers(req.headers);
+      for (const [k, v] of Object.entries(signed)) headers.set(k, v);
+      hopReq = { ...req, headers };
+    }
+    const res = await fetch(parsed.href, hopReq);
     const location = res.headers.get('location');
     if (res.status < 300 || res.status > 399 || !location) return res;
     if (hop >= MAX_REDIRECTS) throw new Error('Too many redirects.');
