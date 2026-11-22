@@ -38,6 +38,7 @@ import {
   workerRole,
 } from './lib/cronSchedule';
 import { withReadReplicaDb } from './lib/d1Replicas';
+import { blockedResponse, isBlockedClient } from './lib/edgeBlock';
 import { goneForRemovedCompare, softenPageError } from './lib/pageErrorStatus';
 
 /**
@@ -150,6 +151,8 @@ async function runCronJob(
 
 export default {
   async fetch(request, env, ctx) {
+    // Known abusive clients get nothing: no page render, no D1 read.
+    if (isBlockedClient(request)) return blockedResponse();
     const role = workerRole(env);
     const { hostname, pathname } = new URL(request.url);
     // The jobs Worker has no public routes, so this only turns away stray
