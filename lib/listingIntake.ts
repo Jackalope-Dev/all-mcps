@@ -3,6 +3,7 @@ import { reports } from '../db/schema';
 import { DEFAULT_SUBMIT_CATEGORY, normalizeCategory } from './categories';
 import { classifyCategory } from './categoryClassifier';
 import { endpointClaimedElsewhere } from './endpointOwnership';
+import { isGenericWebsite } from './genericWebsite';
 import { getGithubToken, githubApiHeaders } from './githubAuth';
 import { policyFlags } from './listingPolicy';
 import { alignListings, reviewColumns, reviewListing } from './listingReview';
@@ -152,7 +153,8 @@ export async function enrichFromGitHub(
         !websiteUrl &&
         data.homepage &&
         isSafeSubmissionUrl(data.homepage) &&
-        !isPlaceholderUrl(data.homepage)
+        !isPlaceholderUrl(data.homepage) &&
+        !isGenericWebsite(data.homepage, fields.url)
       ) {
         websiteUrl = String(data.homepage);
       }

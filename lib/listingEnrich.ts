@@ -4,6 +4,7 @@
  */
 
 import { cleanListingDescription } from './description';
+import { isGenericWebsite } from './genericWebsite';
 import { githubApiHeaders } from './githubAuth';
 import {
   resolveInstallConfig,
@@ -86,17 +87,22 @@ export function isGithubUrl(urlString: string): boolean {
 export function pickWebsiteUrl(
   current: string | null | undefined,
   homepage: string | null | undefined,
+  /** The listing's repo URL, so its own org's site isn't treated as generic. */
+  listingUrl?: string | null,
 ): string | null {
   // A placeholder (`https://example.com`) is no website at all: replace it.
+  // Neither is a docs/runtime/license link (lib/genericWebsite.ts).
+  const junk = (u: string) =>
+    isPlaceholderUrl(u) || isGenericWebsite(u, listingUrl);
   const usable =
     current &&
     isSafeSubmissionUrl(current) &&
     !isGithubUrl(current) &&
-    !isPlaceholderUrl(current)
+    !junk(current)
       ? current
       : null;
   if (usable) return usable;
-  const fallback = current && !isPlaceholderUrl(current) ? current : null;
+  const fallback = current && !junk(current) ? current : null;
   const h = (homepage || '').trim();
   if (!h) return fallback;
   // Normalize protocol-relative / bare domains
@@ -104,7 +110,7 @@ export function pickWebsiteUrl(
   if (candidate.startsWith('//')) candidate = `https:${candidate}`;
   if (!/^https?:\/\//i.test(candidate)) candidate = `https://${candidate}`;
   if (!isSafeSubmissionUrl(candidate)) return fallback;
-  if (isGithubUrl(candidate) || isPlaceholderUrl(candidate)) return fallback;
+  if (isGithubUrl(candidate) || junk(candidate)) return fallback;
   return candidate;
 }
 
@@ -361,9 +367,10 @@ const EXCLUDED_DOMAINS_FOR_WEBSITE = [
 /** Extract candidate website URLs from a README. */
 export function extractCandidateWebsitesFromReadme(
   readme: string,
-  _ghOwner: string,
+  ghOwner: string,
   ghRepo: string,
 ): string[] {
+  const repoUrl = `https://github.com/${ghOwner}/${ghRepo}`;
   if (!readme) return [];
   const urls = new Set<string>();
 
@@ -412,6 +419,8 @@ export function extractCandidateWebsitesFromReadme(
     if (/\.(png|jpg|jpeg|gif|svg|webp|ico|pdf|zip|gz)$/i.test(url)) {
       continue;
     }
+
+    if (isGenericWebsite(url, repoUrl)) continue;
 
     valid.push(url);
   }

@@ -447,7 +447,11 @@ export async function POST(req: Request) {
             }
           }
 
-          const nextWebsite = pickWebsiteUrl(websiteUrl, data.homepage);
+          const nextWebsite = pickWebsiteUrl(
+            websiteUrl,
+            data.homepage,
+            server.url,
+          );
           if (nextWebsite && nextWebsite !== websiteUrl) {
             websiteUrl = nextWebsite;
             updates.websiteUrl = websiteUrl;

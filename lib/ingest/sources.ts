@@ -9,6 +9,7 @@
  */
 
 import { isAdultContent } from '../contentPolicy';
+import { isGenericWebsite } from '../genericWebsite';
 import { isGithubUrl } from '../listingEnrich';
 import { isPlaceholderUrl } from '../placeholderUrl';
 import { isSafeSubmissionUrl } from '../urlSafety';
@@ -197,9 +198,12 @@ export function registryEntryToCandidate(
 
   // Publishers paste their sample config into the registry: a websiteUrl of
   // `https://mcp.example.com:8443/mcp` is nobody's site.
-  const websiteUrl = isPlaceholderUrl(server.websiteUrl)
-    ? undefined
-    : server.websiteUrl;
+  // So do docs/runtime links (lib/genericWebsite.ts).
+  const websiteUrl =
+    isPlaceholderUrl(server.websiteUrl) ||
+    isGenericWebsite(server.websiteUrl, server.repository?.url)
+      ? undefined
+      : server.websiteUrl;
   const primaryUrl = server.repository?.url || websiteUrl;
   if (!primaryUrl) return null;
   const name = deriveRegistryName(server, primaryUrl);
@@ -290,7 +294,10 @@ export function npmObjectToCandidate(
     url,
     description: pkg.description || '',
     websiteUrl:
-      homepage && !isGithubUrl(homepage) && !isPlaceholderUrl(homepage)
+      homepage &&
+      !isGithubUrl(homepage) &&
+      !isPlaceholderUrl(homepage) &&
+      !isGenericWebsite(homepage, url)
         ? homepage
         : undefined,
     source: 'npm',
@@ -329,7 +336,8 @@ export function githubRepoToCandidate(
       homepage &&
       /^https?:\/\//i.test(homepage) &&
       !isGithubUrl(homepage) &&
-      !isPlaceholderUrl(homepage)
+      !isPlaceholderUrl(homepage) &&
+      !isGenericWebsite(homepage, repo.html_url)
         ? homepage
         : undefined,
     source: 'github-topic',
