@@ -1,5 +1,5 @@
 import { githubFolderPrefix, isRepositoryUrl, parseGithubUrl } from './repoUrl';
-import { isSafeSubmissionUrl } from './urlSafety';
+import { isSafeSubmissionUrl, safeFetch } from './urlSafety';
 import { getClaimVerificationToken } from './verificationTokens';
 
 /**
@@ -115,11 +115,46 @@ export function websiteHasReciprocalBadge(
   return false;
 }
 
+/** The name="..." the claim page tells owners to use (ClaimClient.tsx). */
+const VERIFICATION_META_NAMES = [
+  'allmcps-verification',
+  'allmcps-site-verification',
+];
+
+function attr(tag: string, name: string): string | null {
+  const m = tag.match(
+    new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i'),
+  );
+  return m ? (m[1] ?? m[2] ?? m[3] ?? '') : null;
+}
+
 /**
- * Fetch a public website and look for the *personalized* verification meta tag
- * (see getClaimVerificationToken) — proves this specific signed-in user controls
- * the site, for claim purposes. The generic visible badge/link is intentionally
- * not accepted here (see websiteHasReciprocalBadge).
+ * True only for a real `<meta name="allmcps-verification" content="TOKEN">`
+ * tag. The token merely appearing in the page is not enough: a 404 page,
+ * search results or an echo service (httpbin.org/base64/…) will happily print
+ * any text an attacker puts in the URL.
+ */
+function hasVerificationMeta(html: string, token: string): boolean {
+  const want = token.trim().toLowerCase();
+  for (const [tag] of html.matchAll(/<meta\b[^>]*>/gi)) {
+    const name = (attr(tag, 'name') ?? '').trim().toLowerCase();
+    if (!VERIFICATION_META_NAMES.includes(name)) continue;
+    if ((attr(tag, 'content') ?? '').trim().toLowerCase() === want) return true;
+  }
+  return false;
+}
+
+/**
+ * Fetch the site's homepage and look for the *personalized* verification meta
+ * tag (see getClaimVerificationToken) — proves this specific signed-in user
+ * controls the site, for claim purposes. The generic visible badge/link is
+ * intentionally not accepted here (see websiteHasReciprocalBadge).
+ *
+ * Only the homepage of the claimed website's origin is checked, never the
+ * path or query the claimant typed: on Nov 22 2026 a probe "verified" a
+ * listing by pointing its website at httpbin.org/base64/<token>, and the same
+ * trick works on any site whose 404 or search page echoes the URL. Redirects
+ * go through safeFetch, so they can't land on a private address.
  */
 export async function verifyWebsiteHtml(
   websiteUrl: string,
@@ -134,12 +169,12 @@ export async function verifyWebsiteHtml(
   }
   const repoReason = repoHostWebsiteReason(websiteUrl);
   if (repoReason) return { ok: false, reason: repoReason };
+  const homepage = `${new URL(websiteUrl).origin}/`;
 
   let res: Response;
   try {
-    res = await fetch(websiteUrl, {
+    res = await safeFetch(homepage, {
       method: 'GET',
-      redirect: 'follow',
       headers: {
         'User-Agent': 'AllMCPs-Verification/1.0 (+https://allmcps.com)',
         Accept: 'text/html,application/xhtml+xml',
@@ -178,22 +213,13 @@ export async function verifyWebsiteHtml(
         'The website took too long to load. Try again, or use DNS verification instead.',
     };
   }
-  const lower = html.toLowerCase();
-  const token = getClaimVerificationToken(serverId, userId).toLowerCase();
-
-  const hasMeta =
-    lower.includes(token) ||
-    lower.includes(`content="${token}"`) ||
-    lower.includes(`content='${token}'`);
-
-  if (hasMeta) {
+  if (hasVerificationMeta(html, getClaimVerificationToken(serverId, userId))) {
     return { ok: true };
   }
 
   return {
     ok: false,
-    reason:
-      'Personalized verification meta tag not found. Add the meta tag shown on the claim page (it includes your account id) and try again.',
+    reason: `Personalized verification meta tag not found on ${homepage}. Add the meta tag shown on the claim page (it includes your account id) to your homepage's <head> — other pages aren't checked — or use DNS verification.`,
   };
 }
 
