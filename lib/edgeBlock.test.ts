@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { blockedResponse, isBlockedClient } from './edgeBlock';
+import {
+  badPathResponse,
+  blockedResponse,
+  hasUndecodablePath,
+  isBlockedClient,
+  isTorWrite,
+  torWriteResponse,
+} from './edgeBlock';
 
 const req = (headers: Record<string, string>) =>
   new Request('https://allmcps.com/api/v1/servers/brainscanner', { headers });
@@ -33,5 +40,49 @@ describe('isBlockedClient', () => {
 
   it('answers 403', () => {
     expect(blockedResponse().status).toBe(403);
+  });
+});
+
+describe('hasUndecodablePath', () => {
+  it('flags invalid percent-escapes that would crash the router', () => {
+    for (const p of ['/mcp/%FF', '/mcp/%E0%A4%A', '/mcp/%']) {
+      expect(hasUndecodablePath(p), p).toBe(true);
+    }
+    expect(badPathResponse().status).toBe(400);
+  });
+
+  it('leaves normal and validly encoded paths alone', () => {
+    for (const p of [
+      '/',
+      '/mcp/brainscanner',
+      '/mcp/caf%C3%A9',
+      '/search%20term',
+    ]) {
+      expect(hasUndecodablePath(p), p).toBe(false);
+    }
+  });
+});
+
+describe('isTorWrite', () => {
+  const tor = (method: string) =>
+    new Request('https://allmcps.com/api/v1/submit', {
+      method,
+      headers: { 'cf-ipcountry': 'T1' },
+    });
+
+  it('refuses writes from Tor but lets Tor read', () => {
+    expect(isTorWrite(tor('POST'))).toBe(true);
+    expect(isTorWrite(tor('PUT'))).toBe(true);
+    expect(isTorWrite(tor('GET'))).toBe(false);
+    expect(isTorWrite(tor('HEAD'))).toBe(false);
+    expect(torWriteResponse().status).toBe(403);
+  });
+
+  it('never touches non-Tor traffic', () => {
+    const us = new Request('https://allmcps.com/api/v1/submit', {
+      method: 'POST',
+      headers: { 'cf-ipcountry': 'US' },
+    });
+    expect(isTorWrite(us)).toBe(false);
   });
 });
