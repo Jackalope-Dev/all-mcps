@@ -15,7 +15,7 @@ import {
 } from './sequenzy';
 import { upsertSignals } from './signalStore';
 import { getAppUrl } from './stripe';
-import { hashSubmitterIp } from './submitterBlocks';
+import { hashSubmitterIp, recordSubmissionIp } from './submitterBlocks';
 import { formatZodError } from './zodError';
 
 const agentSubmitSchema = z.object({
@@ -128,12 +128,8 @@ export async function submitListing(
   }
   const db = drizzle(env.DB as any);
 
-  const prepared = await prepareListingIntake(
-    result.data,
-    db,
-    env,
-    await hashSubmitterIp(ip),
-  );
+  const ipHash = await hashSubmitterIp(ip);
+  const prepared = await prepareListingIntake(result.data, db, env, ipHash);
   if (!prepared.ok) {
     return { ok: false, status: prepared.status, body: prepared.body };
   }
@@ -156,6 +152,7 @@ export async function submitListing(
 
   // Best-effort: the listing is in; a lost review just means the stale sweep
   // asks Jev again later.
+  await recordSubmissionIp(db, id, ipHash);
   if (Object.keys(prepared.signals).length > 0) {
     await upsertSignals(db, id, prepared.signals).catch((e) =>
       console.error('Failed to store intake review:', e),

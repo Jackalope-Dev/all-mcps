@@ -94,14 +94,17 @@ function setup() {
     .filter((s) => !/ALTER TABLE/.test(s));
   for (const stmt of migration) sqlite.exec(stmt);
   const insert = sqlite.prepare(
-    'INSERT INTO servers (id, name, url, description, category, status, submitter_email, submitter_ip_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)',
+    'INSERT INTO servers (id, name, url, description, category, status, submitter_email, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 0)',
+  );
+  const insertIp = sqlite.prepare(
+    'INSERT INTO submission_ips (server_id, ip_hash, created_at) VALUES (?, ?, 0)',
   );
   const add = (
     id: string,
     status: string,
     email: string | null,
     ip: string | null,
-  ) =>
+  ) => {
     insert.run(
       id,
       id,
@@ -110,8 +113,9 @@ function setup() {
       'Other',
       status,
       email,
-      ip,
     );
+    if (ip) insertIp.run(id, ip);
+  };
   add('spam-1', 'pending', 'bot@spam-farm.dev', 'iphash-a');
   add('spam-2', 'pending', 'bot@spam-farm.dev', null);
   add('spam-3', 'pending', 'other@elsewhere.dev', 'iphash-a');

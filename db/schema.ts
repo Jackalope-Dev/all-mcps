@@ -21,12 +21,9 @@ export const servers = sqliteTable(
     websiteUrl: text('website_url'),
     /** Email the submitter gave at submit time. Used for status notices and the submission upsell sequence. */
     submitterEmail: text('submitter_email'),
-    /**
-     * Salted hash of the submitter's IP (lib/submitterBlocks.ts), so /admin can
-     * block that connection along with the email. Never the raw IP; null for
-     * ingested rows and anything submitted before Nov 2026.
-     */
-    submitterIpHash: text('submitter_ip_hash'),
+    // No more columns fit here: D1 caps a table at 100 and servers is at 100
+    // (Nov 2026). Per-listing extras go in a side table (submission_ips,
+    // listing_signals) keyed on servers.id.
     /**
      * Paid Premium subscription (Stripe). A clearly labelled paid tier: it buys
      * Featured placement in labelled slots and dashboard extras, never the
@@ -1130,6 +1127,27 @@ export const submitterBlocks = sqliteTable(
 );
 
 /**
+ * Salted hash of the IP each human/agent submission came from
+ * (lib/submitterBlocks.ts), so /admin can block that connection along with
+ * the email. Never the raw IP. Its own table because servers is at D1's
+ * 100-column cap. No row for ingested listings or anything submitted before
+ * Nov 2026.
+ */
+export const submissionIps = sqliteTable(
+  'submission_ips',
+  {
+    serverId: text('server_id').primaryKey(),
+    ipHash: text('ip_hash').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    ipHashIdx: index('idx_submission_ips_ip_hash').on(table.ipHash),
+  }),
+);
+
+/**
  * Universal sponsor advertisements (logo + copy + CTA link across directory, sidebar, articles).
  * Sold in 1,000 impression credit blocks with weighted CPM bidding.
  */
@@ -1140,7 +1158,7 @@ export const sponsorAds = sqliteTable(
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     advertiserEmail: text('advertiser_email').notNull(),
-    /** Salted hash of the creator's IP, same as servers.submitterIpHash. */
+    /** Salted hash of the creator's IP, same as submission_ips.ip_hash. */
     advertiserIpHash: text('advertiser_ip_hash'),
     /** Set when the creator was signed in — links the campaign into their /dashboard alongside MCP listings. Nullable: ad creation never requires login. */
     advertiserUserId: text('advertiser_user_id'),

@@ -1,6 +1,6 @@
 import { and, eq, inArray, or, type SQL } from 'drizzle-orm';
 import type { drizzle } from 'drizzle-orm/d1';
-import { servers, submitterBlocks } from '../db/schema';
+import { servers, submissionIps, submitterBlocks } from '../db/schema';
 import {
   domainAndParents,
   emailDomain,
@@ -95,6 +95,24 @@ export async function screenSubmitter(
 }
 
 /**
+ * Remembers which connection a just-inserted listing came from. Best-effort:
+ * the listing is already in, and a lost row only means /admin can block the
+ * email but not the IP for this one.
+ */
+export async function recordSubmissionIp(
+  db: Db,
+  serverId: string,
+  ipHash: string | null,
+): Promise<void> {
+  if (!ipHash) return;
+  await db
+    .insert(submissionIps)
+    .values({ serverId, ipHash, createdAt: new Date() })
+    .onConflictDoNothing()
+    .catch((e) => console.error('Failed to record submission IP:', e));
+}
+
+/**
  * /admin "Block submitter": blocks the listing's submitter email and IP (and
  * the email's domain unless it is a shared webmail provider, or the admin
  * opts out), then rejects every other pending listing from that email or IP.
@@ -112,9 +130,10 @@ export async function blockSubmitter(
   const [row] = await db
     .select({
       email: servers.submitterEmail,
-      ipHash: servers.submitterIpHash,
+      ipHash: submissionIps.ipHash,
     })
     .from(servers)
+    .leftJoin(submissionIps, eq(submissionIps.serverId, servers.id))
     .where(eq(servers.id, opts.serverId))
     .limit(1);
   if (!row) return { error: 'Listing not found.' };
@@ -149,7 +168,17 @@ export async function blockSubmitter(
 
   const match: SQL[] = [];
   if (email) match.push(eq(servers.submitterEmail, email));
-  if (row.ipHash) match.push(eq(servers.submitterIpHash, row.ipHash));
+  if (row.ipHash) {
+    match.push(
+      inArray(
+        servers.id,
+        db
+          .select({ id: submissionIps.serverId })
+          .from(submissionIps)
+          .where(eq(submissionIps.ipHash, row.ipHash)),
+      ),
+    );
+  }
   const rejected = await db
     .update(servers)
     .set({ status: 'rejected' })

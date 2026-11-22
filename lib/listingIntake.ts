@@ -251,7 +251,7 @@ export async function prepareListingIntake(
   input: ListingIntakeInput,
   db: ReturnType<typeof drizzle>,
   env?: unknown,
-  /** Salted submitter IP hash (lib/submitterBlocks.ts), stored for /admin blocks. */
+  /** Salted submitter IP hash (lib/submitterBlocks.ts), checked against blocks. */
   ipHash: string | null = null,
 ): Promise<ListingIntakeReady | ListingIntakeFailure> {
   const email = input.email.trim().toLowerCase();
@@ -455,7 +455,6 @@ export async function prepareListingIntake(
       category: resolvedCategory,
       websiteUrl: websiteUrl || null,
       submitterEmail: email,
-      submitterIpHash: ipHash,
       isPremium: false,
       websiteVerified: false,
       isOfficial: false,

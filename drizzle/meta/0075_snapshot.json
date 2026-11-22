@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "5b2f7cf8-86c5-4661-9797-7e88e8b56e9d",
+  "id": "2b579d89-9e81-49d9-8970-3e1df44d30a0",
   "prevId": "c7c06b3b-6b2d-4d5a-a302-536c918c7212",
   "tables": {
     "accounts": {
@@ -2144,13 +2144,6 @@
           "notNull": false,
           "autoincrement": false
         },
-        "submitter_ip_hash": {
-          "name": "submitter_ip_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "is_premium": {
           "name": "is_premium",
           "type": "integer",
@@ -3506,6 +3499,45 @@
           "name": "idx_stdio_verify_checked",
           "columns": [
             "checked_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "submission_ips": {
+      "name": "submission_ips",
+      "columns": {
+        "server_id": {
+          "name": "server_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "ip_hash": {
+          "name": "ip_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "idx_submission_ips_ip_hash": {
+          "name": "idx_submission_ips_ip_hash",
+          "columns": [
+            "ip_hash"
           ],
           "isUnique": false
         }
