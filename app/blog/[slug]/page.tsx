@@ -257,7 +257,7 @@ export default async function BlogPostPage({
           </>
         }
       >
-        <SafeMarkdown content={contentWithAnchors} />
+        <SafeMarkdown content={contentWithAnchors} ownContent />
       </ArticleLayout>
     </>
   );

@@ -15,6 +15,7 @@ import Link from 'next/link';
 import type React from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { fetchListingOwnership } from '../../lib/listingOwnershipClient';
+import { unmaskPaths } from '../../lib/payloadPaths';
 import type { SetupStep } from '../../lib/setupSteps';
 import type { AdminTopBarProps } from './AdminListingEditors';
 
@@ -211,5 +212,6 @@ export function AdminSetupSteps(props: {
 }) {
   const { isAdmin } = useAdmin();
   if (!isAdmin) return null;
-  return <AdminSetupStepsEditor {...props} />;
+  // The listing page escapes the slashes in these props (lib/payloadPaths.ts).
+  return <AdminSetupStepsEditor {...unmaskPaths(props)} />;
 }

@@ -9,9 +9,10 @@ import {
   ownSitePath,
   withAllMcpsUtm,
 } from '../../lib/outboundLinks';
+import { rehypeSplitLeadingSlash } from '../../lib/rehypeSplitLeadingSlash';
+import { resolveRepoLink } from '../../lib/repoLinks';
 import { CopyBlock } from './CopyBlock';
 import { MarkdownImage } from './MarkdownImage';
-import { resolveUrl } from './resolveMarkdownUrl';
 
 const customSanitizeSchema = {
   ...defaultSchema,
@@ -42,6 +43,28 @@ interface SafeMarkdownProps {
   utmContent?: string;
   /** Repository URL to resolve relative images and links against. */
   repoUrl?: string;
+  /**
+   * Our own writing (blog posts): root-relative links like `/mcp/x` are our
+   * pages. Everything else is a listing's README or writeup, whose relative
+   * links point into its repository and never at allmcps.com.
+   */
+  ownContent?: boolean;
+}
+
+const REHYPE_PLUGINS = [
+  rehypeRaw,
+  [rehypeSanitize, customSanitizeSchema],
+  rehypeSplitLeadingSlash,
+] as NonNullable<React.ComponentProps<typeof ReactMarkdown>['rehypePlugins']>;
+
+/** An image's src, resolved on the server so no relative path ships to the client. */
+function imageSrc(
+  src: unknown,
+  repoUrl: string | undefined,
+  ownContent: boolean | undefined,
+): string | null {
+  if (ownContent) return typeof src === 'string' && src ? src : null;
+  return resolveRepoLink(src, repoUrl, true);
 }
 
 function MarkdownLink({
@@ -49,10 +72,12 @@ function MarkdownLink({
   children,
   utmContent,
   repoUrl,
+  ownContent,
   ...rest
 }: React.AnchorHTMLAttributes<HTMLAnchorElement> & {
   utmContent?: string;
   repoUrl?: string;
+  ownContent?: boolean;
 }) {
   if (
     !href ||
@@ -72,7 +97,9 @@ function MarkdownLink({
   // followed, same-tab internal link.
   const ownPath =
     ownSitePath(href) ??
-    (!repoUrl && href.startsWith('/') && !href.startsWith('//') ? href : null);
+    (ownContent && href.startsWith('/') && !href.startsWith('//')
+      ? href
+      : null);
   if (ownPath) {
     const { target: _target, rel: _rel, ...safe } = rest;
     return (
@@ -82,7 +109,11 @@ function MarkdownLink({
     );
   }
 
-  const resolvedHref = resolveUrl(href, repoUrl, false);
+  // A listing's relative link resolves into its repository; one that can't
+  // (no GitHub repo, or a path above the repo root) stays readable as plain
+  // text instead of becoming a link that 404s on allmcps.com.
+  const resolvedHref = ownContent ? href : resolveRepoLink(href, repoUrl);
+  if (!resolvedHref) return <span>{children}</span>;
   const trackedHref = isOutboundHttpUrl(resolvedHref)
     ? withAllMcpsUtm(resolvedHref, { content: utmContent })
     : resolvedHref;
@@ -102,6 +133,7 @@ export function SafeMarkdown({
   isInline,
   utmContent,
   repoUrl,
+  ownContent,
 }: SafeMarkdownProps) {
   let processedContent = content;
 
@@ -112,15 +144,16 @@ export function SafeMarkdown({
     return (
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw, [rehypeSanitize, customSanitizeSchema]]}
+        rehypePlugins={REHYPE_PLUGINS}
         components={{
           p: ({ children }) => (
             <span style={{ display: 'inline' }}>{children}</span>
           ),
           a: ({ children }) => <span>{children}</span>,
-          img: ({ src, alt }) => (
-            <MarkdownImage src={src} alt={alt} repoUrl={repoUrl} />
-          ),
+          img: ({ src, alt }) => {
+            const resolved = imageSrc(src, repoUrl, ownContent);
+            return resolved ? <MarkdownImage src={resolved} alt={alt} /> : null;
+          },
         }}
       >
         {processedContent}
@@ -131,7 +164,7 @@ export function SafeMarkdown({
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
-      rehypePlugins={[rehypeRaw, [rehypeSanitize, customSanitizeSchema]]}
+      rehypePlugins={REHYPE_PLUGINS}
       components={{
         // Embedded markdown always sits under the page's own <h1>, so a
         // README/doc "# Title" is demoted to keep one h1 per page.
@@ -141,20 +174,19 @@ export function SafeMarkdown({
             href={href}
             utmContent={utmContent}
             repoUrl={repoUrl}
+            ownContent={ownContent}
             {...props}
           >
             {children}
           </MarkdownLink>
         ),
-        img: ({ src, alt, node: _node, style, ...props }) => (
-          <MarkdownImage
-            src={src}
-            alt={alt}
-            repoUrl={repoUrl}
-            style={style}
-            {...props}
-          />
-        ),
+        img: ({ src, alt, node: _node, style, ...props }) => {
+          const resolved = imageSrc(src, repoUrl, ownContent);
+          if (!resolved) return null;
+          return (
+            <MarkdownImage {...props} src={resolved} alt={alt} style={style} />
+          );
+        },
         iframe: ({ src, title, node: _node, ...props }) => {
           const isAllowedVideo =
             typeof src === 'string' &&

@@ -45,6 +45,7 @@ import {
 } from '@/lib/listingIndexability';
 import { listingIdHash, pickRotatingLinks } from '@/lib/listingLinks';
 import { buildListingMetaDescription } from '@/lib/listingMeta';
+import { maskPaths } from '@/lib/payloadPaths';
 import { isRepositoryUrl } from '@/lib/repoUrl';
 import { parseSecurityProfile } from '@/lib/securityProfile';
 import {
@@ -1290,11 +1291,13 @@ export default async function MCPDetail({
                   }
                 />
                 <AdminSetupSteps
-                  serverId={server.id}
-                  initialSteps={server.setupSteps ?? []}
-                  initialNote={server.setupNote ?? ''}
-                  initialSourceUrl={server.setupSourceUrl ?? ''}
-                  source={server.setupSource ?? null}
+                  {...maskPaths({
+                    serverId: server.id,
+                    initialSteps: server.setupSteps ?? [],
+                    initialNote: server.setupNote ?? '',
+                    initialSourceUrl: server.setupSourceUrl ?? '',
+                    source: server.setupSource ?? null,
+                  })}
                 />
 
                 {server.remoteEndpointUrl && (

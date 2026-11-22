@@ -46,7 +46,8 @@ import {
   resolveInstallConfig,
 } from './installConfig';
 import { indexableListingSql } from './listingIndexability';
-import { githubFolderPrefix, parseGithubUrl } from './repoUrl';
+import { resolveRepoLink } from './repoLinks';
+import { parseGithubUrl } from './repoUrl';
 import {
   buildAiSearchText,
   buildSearchPrefilter,
@@ -3091,33 +3092,21 @@ export function relatedRankingScore(
 }
 
 /**
- * Rewrites relative links and image sources inside a fetched GitHub README to
- * absolute URLs, so the mirrored markdown doesn't carry links that resolve
- * against allmcps.com. A bare `docs/x.md` link in a README, served at
- * `/mcp/<id>.md`, otherwise resolves to `/mcp/docs/x.md` and 404s (crawlers
- * followed hundreds of these). Uses the `HEAD` ref so it works whether the
- * repo's default branch is `main` or `master`. Fenced code blocks are skipped
- * so install-example placeholders (e.g. `/path/to/your/config`) are untouched.
+ * Rewrites relative links and image sources inside README or writeup markdown
+ * to absolute URLs on the source repository (see `resolveRepoLink`), so the
+ * markdown served at `/mcp/<id>.md` carries no link that resolves against
+ * allmcps.com. A bare `docs/x.md` link there otherwise resolves to
+ * `/mcp/docs/x.md` and 404s (crawlers followed hundreds of these). A relative
+ * link that can't be resolved (no GitHub repository) keeps only its text.
+ * Fenced code blocks are skipped so install-example placeholders (e.g.
+ * `/path/to/your/config`) are untouched.
  */
 export function absolutizeReadmeMarkdown(md: string, repoUrl?: string): string {
-  if (!md || !repoUrl) return md;
-  const m = repoUrl.match(/github\.com\/([^/]+)\/([^/#?]+)/);
-  if (!m) return md;
-  const owner = m[1];
-  const repo = m[2].endsWith('.git') ? m[2].slice(0, -4) : m[2];
-
-  const SKIP = /^(https?:|\/\/|#|mailto:|tel:|data:|\?)/i;
-  // Relative links in a monorepo folder's README resolve against that folder.
-  const folder = githubFolderPrefix(repoUrl);
-  const toAbs = (target: string, isImage: boolean): string => {
+  if (!md) return md;
+  const resolve = (target: string, isImage: boolean): string | null => {
     const t = target.trim();
-    if (!t || SKIP.test(t)) return target;
-    const clean = t.startsWith('/')
-      ? t.replace(/^\//, '')
-      : `${folder}${t.replace(/^\.\//, '')}`;
-    return isImage
-      ? `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${clean}`
-      : `https://github.com/${owner}/${repo}/blob/HEAD/${clean}`;
+    if (!t || t.startsWith('?')) return target;
+    return resolveRepoLink(t, repoUrl, isImage);
   };
 
   const lines = md.split('\n');
@@ -3142,7 +3131,8 @@ export function absolutizeReadmeMarkdown(md: string, repoUrl?: string): string {
     lines[i] = lines[i].replace(
       /(!?)\[([^\]]*)\]\(\s*(<)?([^)\s>]+)(>)?(\s+"[^"]*"|\s+'[^']*')?\s*\)/g,
       (full, bang, text, _lt, target, _gt, title) => {
-        const abs = toAbs(target, bang === '!');
+        const abs = resolve(target, bang === '!');
+        if (abs === null) return bang ? '' : text;
         return abs === target ? full : `${bang}[${text}](${abs}${title || ''})`;
       },
     );
@@ -3150,7 +3140,8 @@ export function absolutizeReadmeMarkdown(md: string, repoUrl?: string): string {
     lines[i] = lines[i].replace(
       /^(\s*\[[^\]]+\]:\s*)(<)?([^\s>]+)(>)?(.*)$/,
       (full, pre, _lt, target, _gt, post) => {
-        const abs = toAbs(target, false);
+        const abs = resolve(target, false);
+        if (abs === null) return '';
         return abs === target ? full : `${pre}${abs}${post}`;
       },
     );
@@ -3158,7 +3149,8 @@ export function absolutizeReadmeMarkdown(md: string, repoUrl?: string): string {
     lines[i] = lines[i].replace(
       /\b(href|src)=("|')([^"']+)\2/gi,
       (full, attr, q, target) => {
-        const abs = toAbs(target, attr.toLowerCase() === 'src');
+        const abs = resolve(target, attr.toLowerCase() === 'src');
+        if (abs === null) return '';
         return abs === target ? full : `${attr}=${q}${abs}${q}`;
       },
     );
@@ -3308,7 +3300,7 @@ export function formatServerAsMarkdown(
     // raw README is a duplicate of content Google already indexed at the source
     // (that mirror is what got these pages reranked). The full README lives at
     // the noindex /mcp/[id]/readme route for anyone who wants it.
-    md += `## Documentation\n\n${server.aiDoc.trim()}\n\n`;
+    md += `## Documentation\n\n${absolutizeReadmeMarkdown(server.aiDoc.trim(), server.url)}\n\n`;
     md += `_Full upstream README: https://allmcps.com/mcp/${server.id}/readme_\n\n`;
   } else if (readme) {
     md += `## Documentation & README\n\n${absolutizeReadmeMarkdown(readme, server.url)}\n`;

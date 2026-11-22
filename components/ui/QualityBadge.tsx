@@ -8,6 +8,8 @@ import { IconTooltip } from './IconTooltip';
  * <details> breakdown so users can see exactly how the signal was earned. This
  * is guidance, not a report card — the lowest tier is "Emerging", never "F".
  */
+// "/{100}" rather than "/100": a "/100" text child reaches the RSC payload as a
+// string Googlebot crawls as allmcps.com/100.
 export function QualityBadge({
   server,
   compact = false,
@@ -49,7 +51,7 @@ export function QualityBadge({
         }
       >
         <span className="mcp-icon-tooltip-title" style={{ color }}>
-          Quality Signal: {q.tier} ({q.score}/100)
+          Quality Signal: {q.tier} ({q.score}/{100})
         </span>
         <span className="mcp-icon-tooltip-body">
           Automated guidance score built from docs, health checks, and adoption
@@ -97,7 +99,7 @@ export function QualityBadge({
               color: 'var(--text-primary)',
             }}
           >
-            Quality signal: {q.tier} · {q.score}/100
+            Quality signal: {q.tier} · {q.score}/{100}
           </span>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
             How this signal is calculated ▾

@@ -2,31 +2,28 @@
 
 import type React from 'react';
 import { useState } from 'react';
-import { resolveUrl } from './resolveMarkdownUrl';
 
 /**
  * The one interactive piece of rendered markdown: hides an image whose URL
  * 404s instead of leaving a broken-image icon. Kept as its own client leaf so
  * the markdown pipeline itself renders on the server and never ships to the
- * browser for server-rendered pages.
+ * browser for server-rendered pages. SafeMarkdown resolves `src` against the
+ * repository before it gets here, so no relative path reaches the payload.
  */
 export function MarkdownImage({
   src,
   alt,
-  repoUrl,
   style,
   ...rest
-}: React.ImgHTMLAttributes<HTMLImageElement> & { repoUrl?: string }) {
+}: React.ImgHTMLAttributes<HTMLImageElement>) {
   const [hasError, setHasError] = useState(false);
 
   if (hasError) return null;
 
-  const resolvedSrc = resolveUrl(src, repoUrl, true);
-
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={resolvedSrc}
+      src={src}
       alt={alt || ''}
       onError={() => setHasError(true)}
       style={{
