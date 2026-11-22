@@ -1,11 +1,11 @@
 'use client';
 
 import {
+  Ban,
   BarChart3,
   Check,
   CheckCircle2,
   ChevronRight,
-  Ban,
   Clock,
   Compass,
   History,

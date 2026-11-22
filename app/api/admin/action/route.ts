@@ -50,8 +50,8 @@ import { parseServerTools } from '../../../../lib/servers';
 import { setupStepsEditPatch } from '../../../../lib/setupSteps';
 import { upsertSignals } from '../../../../lib/signalStore';
 import { getAppUrl } from '../../../../lib/stripe';
-import { classifyTags } from '../../../../lib/tagClassifier';
 import { blockSubmitter } from '../../../../lib/submitterBlocks';
+import { classifyTags } from '../../../../lib/tagClassifier';
 import { isSafeSubmissionUrl } from '../../../../lib/urlSafety';
 
 const actionSchema = z.object({

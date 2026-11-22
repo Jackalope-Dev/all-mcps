@@ -13,13 +13,13 @@ import {
 } from '@/lib/attribution';
 import { auth } from '@/lib/auth';
 import { isStripeConfigured } from '@/lib/pricing';
+import { getAppUrl, getStripe } from '@/lib/stripe';
 import {
   BLOCKED_SUBMITTER_ERROR,
   hashSubmitterIp,
   requestIp,
   screenSubmitter,
 } from '@/lib/submitterBlocks';
-import { getAppUrl, getStripe } from '@/lib/stripe';
 
 export const dynamic = 'force-dynamic';
 

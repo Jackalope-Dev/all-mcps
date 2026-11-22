@@ -49,7 +49,10 @@ export async function isSubmitterBlocked(
   const email = (who.email ?? '').trim().toLowerCase();
   if (email) {
     conds.push(
-      and(eq(submitterBlocks.kind, 'email'), eq(submitterBlocks.value, email)) as SQL,
+      and(
+        eq(submitterBlocks.kind, 'email'),
+        eq(submitterBlocks.value, email),
+      ) as SQL,
     );
     const domains = domainAndParents(emailDomain(email));
     if (domains.length > 0) {
@@ -63,7 +66,10 @@ export async function isSubmitterBlocked(
   }
   if (who.ipHash) {
     conds.push(
-      and(eq(submitterBlocks.kind, 'ip'), eq(submitterBlocks.value, who.ipHash)) as SQL,
+      and(
+        eq(submitterBlocks.kind, 'ip'),
+        eq(submitterBlocks.value, who.ipHash),
+      ) as SQL,
     );
   }
   if (conds.length === 0) return false;
@@ -114,7 +120,9 @@ export async function blockSubmitter(
   if (!row) return { error: 'Listing not found.' };
   const email = (row.email ?? '').trim().toLowerCase();
   if (!email && !row.ipHash) {
-    return { error: 'This listing has no submitter email or IP to block (ingested).' };
+    return {
+      error: 'This listing has no submitter email or IP to block (ingested).',
+    };
   }
 
   const entries: { kind: 'email' | 'domain' | 'ip'; value: string }[] = [];
@@ -149,7 +157,9 @@ export async function blockSubmitter(
     .returning({ id: servers.id });
 
   return {
-    blocked: entries.map((e) => (e.kind === 'ip' ? 'ip' : `${e.kind}:${e.value}`)),
+    blocked: entries.map((e) =>
+      e.kind === 'ip' ? 'ip' : `${e.kind}:${e.value}`,
+    ),
     rejected: rejected.length,
   };
 }

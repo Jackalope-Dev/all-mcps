@@ -1,7 +1,7 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { drizzle } from 'drizzle-orm/d1';
 import {
   NEWSLETTER_SUBSCRIBERS_LIST_ID,
   syncSequenzySubscriber,

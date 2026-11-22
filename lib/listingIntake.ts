@@ -22,6 +22,7 @@ import {
   normalizeCompatibleClients,
   normalizeTags,
 } from './serverEnums';
+import { BLOCKED_SUBMITTER_ERROR, screenSubmitter } from './submitterBlocks';
 import {
   checkEndpoint,
   discoverRemoteEndpoint,
@@ -32,7 +33,6 @@ import {
   findNearDuplicateCandidates,
   normalizeNameSiteKey,
 } from './urlDedup';
-import { BLOCKED_SUBMITTER_ERROR, screenSubmitter } from './submitterBlocks';
 import { isSafeSubmissionUrl, normalizeUrl } from './urlSafety';
 
 /**

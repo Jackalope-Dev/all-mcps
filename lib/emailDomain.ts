@@ -92,7 +92,8 @@ export function emailDomain(email: string | null | undefined): string {
 export function domainAndParents(domain: string): string[] {
   const labels = domain.split('.').filter(Boolean);
   const out: string[] = [];
-  for (let i = 0; i + 2 <= labels.length; i++) out.push(labels.slice(i).join('.'));
+  for (let i = 0; i + 2 <= labels.length; i++)
+    out.push(labels.slice(i).join('.'));
   return out;
 }
 
@@ -138,8 +139,13 @@ export async function domainReceivesMail(domain: string): Promise<boolean> {
       if (records.length > 0) {
         ok = !records.every((r) => /^\d+\s+\.?$/.test(r.data.trim()));
       } else {
-        const [a, aaaa] = await Promise.all([dns(domain, 'A'), dns(domain, 'AAAA')]);
-        ok = [a, aaaa].some((r) => (r.Answer ?? []).some((x) => x.type === 1 || x.type === 28));
+        const [a, aaaa] = await Promise.all([
+          dns(domain, 'A'),
+          dns(domain, 'AAAA'),
+        ]);
+        ok = [a, aaaa].some((r) =>
+          (r.Answer ?? []).some((x) => x.type === 1 || x.type === 28),
+        );
       }
     }
   } catch {

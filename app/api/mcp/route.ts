@@ -52,7 +52,6 @@ import {
   rateLimitedResponse,
 } from '@/lib/rateLimit';
 import { recordSearchMiss } from '@/lib/searchMisses';
-import { requestIp } from '@/lib/submitterBlocks';
 import { isServable } from '@/lib/servability';
 import {
   formatServerAsMarkdown,
@@ -64,6 +63,7 @@ import {
 } from '@/lib/servers';
 import { createStripeCheckoutSession } from '@/lib/stripeCheckout';
 import { submitListing } from '@/lib/submitListing';
+import { requestIp } from '@/lib/submitterBlocks';
 import { computeTrustTier } from '@/lib/trustTier';
 import { x402Status } from '@/lib/x402';
 

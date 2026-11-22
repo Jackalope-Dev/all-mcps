@@ -9,7 +9,9 @@ import {
 } from './emailDomain';
 
 /** Fake Cloudflare DoH: answers per `${name}/${type}`. */
-function stubDns(answers: Record<string, { Status: number; Answer?: unknown[] }>) {
+function stubDns(
+  answers: Record<string, { Status: number; Answer?: unknown[] }>,
+) {
   const fetchMock = vi.fn(async (url: string) => {
     const u = new URL(url);
     const key = `${u.searchParams.get('name')}/${u.searchParams.get('type')}`;
@@ -100,8 +102,12 @@ describe('domainReceivesMail', () => {
 describe('emailProblem', () => {
   it('refuses placeholder and throwaway addresses without a lookup', async () => {
     const fetchMock = stubDns({});
-    expect(await emailProblem('probe@example.com')).toBe(UNREACHABLE_EMAIL_ERROR);
-    expect(await emailProblem('x@mailinator.com')).toBe(UNREACHABLE_EMAIL_ERROR);
+    expect(await emailProblem('probe@example.com')).toBe(
+      UNREACHABLE_EMAIL_ERROR,
+    );
+    expect(await emailProblem('x@mailinator.com')).toBe(
+      UNREACHABLE_EMAIL_ERROR,
+    );
     expect(await emailProblem('not-an-email')).toBe(UNREACHABLE_EMAIL_ERROR);
     expect(fetchMock).not.toHaveBeenCalled();
   });

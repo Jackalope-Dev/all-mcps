@@ -96,8 +96,22 @@ function setup() {
   const insert = sqlite.prepare(
     'INSERT INTO servers (id, name, url, description, category, status, submitter_email, submitter_ip_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)',
   );
-  const add = (id: string, status: string, email: string | null, ip: string | null) =>
-    insert.run(id, id, `https://brainscanner.dev/${id}`, 'd', 'Other', status, email, ip);
+  const add = (
+    id: string,
+    status: string,
+    email: string | null,
+    ip: string | null,
+  ) =>
+    insert.run(
+      id,
+      id,
+      `https://brainscanner.dev/${id}`,
+      'd',
+      'Other',
+      status,
+      email,
+      ip,
+    );
   add('spam-1', 'pending', 'bot@spam-farm.dev', 'iphash-a');
   add('spam-2', 'pending', 'bot@spam-farm.dev', null);
   add('spam-3', 'pending', 'other@elsewhere.dev', 'iphash-a');
@@ -121,25 +135,43 @@ describe('blockSubmitter + isSubmitterBlocked', () => {
       rejected: 3,
     });
     const status = (id: string) =>
-      (sqlite.prepare('SELECT status FROM servers WHERE id = ?').get(id) as { status: string })
-        .status;
+      (
+        sqlite.prepare('SELECT status FROM servers WHERE id = ?').get(id) as {
+          status: string;
+        }
+      ).status;
     expect(status('spam-2')).toBe('rejected'); // same email
     expect(status('spam-3')).toBe('rejected'); // same IP
     expect(status('innocent')).toBe('pending');
     expect(status('spam-live')).toBe('active'); // live listings are left for a human
 
-    expect(await isSubmitterBlocked(db, { email: 'BOT@spam-farm.dev' })).toBe(true);
-    expect(await isSubmitterBlocked(db, { email: 'new@mx.spam-farm.dev' })).toBe(true);
-    expect(await isSubmitterBlocked(db, { email: 'x@brainscanner.dev', ipHash: 'iphash-a' })).toBe(
+    expect(await isSubmitterBlocked(db, { email: 'BOT@spam-farm.dev' })).toBe(
       true,
     );
-    expect(await isSubmitterBlocked(db, { email: 'dev@brainscanner.dev', ipHash: 'iphash-b' })).toBe(
-      false,
-    );
+    expect(
+      await isSubmitterBlocked(db, { email: 'new@mx.spam-farm.dev' }),
+    ).toBe(true);
+    expect(
+      await isSubmitterBlocked(db, {
+        email: 'x@brainscanner.dev',
+        ipHash: 'iphash-a',
+      }),
+    ).toBe(true);
+    expect(
+      await isSubmitterBlocked(db, {
+        email: 'dev@brainscanner.dev',
+        ipHash: 'iphash-b',
+      }),
+    ).toBe(false);
 
     // A second block of the same submitter is a no-op, not a unique-index error.
     await expect(
-      blockSubmitter(db, { serverId: 'spam-1', blockDomain: true, reason: '', admin: 'a' }),
+      blockSubmitter(db, {
+        serverId: 'spam-1',
+        blockDomain: true,
+        reason: '',
+        admin: 'a',
+      }),
     ).resolves.toMatchObject({ rejected: 0 });
   });
 
@@ -152,6 +184,8 @@ describe('blockSubmitter + isSubmitterBlocked', () => {
       admin: 'a',
     });
     expect(out).toMatchObject({ blocked: ['email:spammer@gmail.com'] });
-    expect(await isSubmitterBlocked(db, { email: 'friend@gmail.com' })).toBe(false);
+    expect(await isSubmitterBlocked(db, { email: 'friend@gmail.com' })).toBe(
+      false,
+    );
   });
 });
