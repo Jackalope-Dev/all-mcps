@@ -153,7 +153,7 @@ describe('buildDigestBlocks', () => {
 
     expect(html).toContain('https://allmcps.com/email-header.png');
     expect(html).not.toContain('"type":"logo"');
-    expect(html).toContain('utm_content=pick');
+    expect(html).toContain('utm_content=pick-button');
     expect(html).toContain('utm_content=new-1');
     expect(html).toContain('utm_content=trending-1');
     expect(html).toContain('utm_content=blog');
@@ -166,6 +166,52 @@ describe('buildDigestBlocks', () => {
     // Names are escaped, never injected.
     expect(html).not.toContain('<b>');
     expect(html).toContain('&quot;Pick&quot;');
+  });
+
+  it('puts a full-width-safe cyan setup button directly under the pick card', () => {
+    const blocks = buildDigestBlocks({
+      pick: candidate({ id: 'acme-pick', name: 'acme/brainscanner' }),
+      newListings: [candidate({ id: 'n1' })],
+      trending: [],
+      blogPost: null,
+      editorial: { intro: 'Hello', pickWriteup: 'Great.', blurbs: {} },
+      campaign: 'digest-2026-w47',
+    });
+    const pickIndex = blocks.findIndex((b) =>
+      String(b.content ?? '').includes('Pick of the week'),
+    );
+    expect(pickIndex).toBeGreaterThan(-1);
+    const button = blocks
+      .slice(pickIndex + 1, pickIndex + 3)
+      .find((b) => b.type === 'button');
+    expect(button).toBeDefined();
+    expect(button?.text).toBe('Set up brainscanner →');
+    expect(button?.buttonColor).toBe('#00E5FF');
+    expect(button?.buttonTextColor).toBe('#020617');
+    expect(button?.styles).toEqual({ textAlign: 'center' });
+    // No fixed pixel width, so it can't overflow a 375px screen.
+    expect(button?.width).toBeUndefined();
+    const url = new URL(button?.url);
+    expect(url.origin + url.pathname).toBe('https://allmcps.com/mcp/acme-pick');
+    expect(url.searchParams.get('utm_campaign')).toBe('digest-2026-w47');
+    expect(url.searchParams.get('utm_content')).toBe('pick-button');
+    // The pick card itself is kept.
+    expect(blocks[pickIndex].content).toContain('Great.');
+  });
+
+  it('keeps markup out of the pick button label', () => {
+    const blocks = buildDigestBlocks({
+      pick: candidate({ id: 'p', name: 'Acme <b>Pick</b>' }),
+      newListings: [],
+      trending: [],
+      blogPost: null,
+      editorial: { intro: 'Hi', pickWriteup: '', blurbs: {} },
+      campaign: 'digest-2026-w47',
+    });
+    const button = blocks.find(
+      (b) => b.type === 'button' && String(b.text).startsWith('Set up'),
+    );
+    expect(button?.text).not.toMatch(/[<>]/);
   });
 
   it('omits empty sections', () => {

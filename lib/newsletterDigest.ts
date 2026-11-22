@@ -273,6 +273,9 @@ function initialLetter(name: string): string {
 const FONT =
   "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif";
 const BLUE = '#007bff';
+// Brand primary button: electric cyan with near-black text (BRAND_GUIDE.md).
+const BRAND_CYAN = '#00E5FF';
+const BRAND_INK = '#020617';
 
 function iconHtml(c: DigestCandidate, size: number): string {
   if (c.logoUrl) {
@@ -323,7 +326,7 @@ const PICK_STYLES = {
 function pickBlocks(
   c: DigestCandidate,
   writeup: string | undefined,
-  link: string,
+  buttonLink: string,
 ): SequenzyBlock[] {
   const copy =
     writeup && /[\p{L}\p{N}]/u.test(writeup)
@@ -343,9 +346,32 @@ function pickBlocks(
       .join('');
   }
 
-  content += `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;border-collapse:separate"><tr><td style="background-color:${BLUE};border-radius:8px"><a href="${escapeHtml(link)}" style="display:inline-block;padding:11px 20px;font-family:${FONT};font-size:14px;font-weight:700;color:#ffffff;text-decoration:none">See setup &amp; tools →</a></td></tr></table>`;
+  return [
+    { type: 'text', variant: 'html', content, styles: PICK_STYLES },
+    { type: 'spacer', height: 12 },
+    pickButton(c, buttonLink),
+  ];
+}
 
-  return [{ type: 'text', variant: 'html', content, styles: PICK_STYLES }];
+/**
+ * The digest's main call to action, directly under the pick card. A native Sequenzy
+ * button (not inline HTML) so it renders as a real, tappable button in every client:
+ * centered, no fixed width, so it never overflows a 375px phone screen. Clicks sat at
+ * ~1% while every listing was only a small text link.
+ */
+function pickButton(c: DigestCandidate, link: string): SequenzyBlock {
+  return {
+    type: 'button',
+    // Plain text, not HTML; drop angle brackets in case a renderer doesn't escape it.
+    text: `Set up ${truncate(displayName(c.name).title.replace(/[<>]/g, '').trim(), 32)} →`,
+    url: link,
+    variant: 'primary',
+    size: 'lg',
+    corners: 'soft',
+    buttonColor: BRAND_CYAN,
+    buttonTextColor: BRAND_INK,
+    styles: { textAlign: 'center' },
+  };
 }
 
 function cardBlocks(
@@ -429,7 +455,11 @@ export function buildDigestBlocks(input: {
 
   if (pick) {
     blocks.push(
-      ...pickBlocks(pick, editorial.pickWriteup, listingLink(pick, 'pick')),
+      ...pickBlocks(
+        pick,
+        editorial.pickWriteup,
+        listingLink(pick, 'pick-button'),
+      ),
     );
     blocks.push({ type: 'spacer', height: 24 });
   }

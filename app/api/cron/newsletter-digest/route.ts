@@ -52,6 +52,7 @@ const MIN_NEW_QUALITY = 1.5;
 /** Only feature a blog post this recent, so the slot never repeats an old post. */
 const BLOG_MAX_AGE_DAYS = 14;
 const NEWSLETTER_SUBSCRIBERS_LIST_ID = 'ta0zh9e3l9rcjlfpzpk80tcn';
+const DIGEST_REPLY_TO = 'contact@allmcps.com';
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -358,9 +359,11 @@ async function createSequenzyCampaign(input: {
     previewText: input.previewText,
     blocks: input.blocks,
     targetLists: { type: 'lists', listIds: [NEWSLETTER_SUBSCRIBERS_LIST_ID] },
-    // No senderProfileId/replyProfileId here on purpose: this inherits the
-    // company's default sender/reply identity so it can't go stale if that
-    // default ever changes (it hardcoded an old sender profile ID before).
+    // No senderProfileId: the From inherits the company's default sender so it
+    // can't go stale (it hardcoded an old sender profile ID before). Reply-To is
+    // explicit because omitting it still left campaigns pinned to an old personal
+    // reply profile; replies belong in the shared contact inbox.
+    replyTo: DIGEST_REPLY_TO,
   });
   if (!res.ok) {
     throw new Error(`Sequenzy campaign creation failed: ${res.status}`);
