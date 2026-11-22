@@ -238,8 +238,13 @@ export function publicSimilarListing(
     : null;
 }
 
-/** `<script`, `</b>`, `<img`, `<!--`: markup, not a name like "C<>Bridge". */
-const HTML_TAG_RE = /<\s*[a-z!/][^>]*>|<\s*(script|img|svg|iframe)\b/i;
+/**
+ * `<script`, `</b>`, `<img`, `<!--`: a browser only opens a tag when `<` is
+ * followed directly by a letter, `!` or `/`, so one character of lookahead is
+ * enough ("C<>Bridge", "a < b" pass). Kept to a fixed-width match: scanning on
+ * to the closing `>` was polynomial on a run of `<!` (CodeQL js/polynomial-redos).
+ */
+const HTML_TAG_RE = /<[a-z!/]/i;
 
 export async function prepareListingIntake(
   input: ListingIntakeInput,
