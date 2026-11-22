@@ -540,26 +540,81 @@ async function queryDiscoveryPool(limit: number) {
     const ctx = await getCloudflareContext();
     if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
-      const rows = await db
-        .select(DISCOVERY_COLUMNS)
-        .from(serversTable)
-        .where(servableFilter())
-        .orderBy(
-          desc(serversTable.isPremium),
-          // Active featured boosts must make the capped pool regardless of
-          // traffic, or a low-view paid listing never reaches the shelf.
-          desc(sql`coalesce(${serversTable.featuredUntil} > unixepoch(), 0)`),
-          desc(serversTable.views),
-          desc(serversTable.copies),
-          desc(serversTable.upvotes),
-        )
-        .limit(limit);
+      // Two indexed reads instead of one ORDER BY with a featured_until
+      // expression in the middle: that expression kept SQLite off
+      // idx_servers_status_premium_popularity, so every refresh sorted the
+      // whole catalog (~68k rows read, 2-4 s), the week's costliest D1 query
+      // and a driver of the "D1 DB is overloaded" bursts at cron ticks.
+      const now = new Date();
+      const [popular, featured] = await Promise.all([
+        db
+          .select(DISCOVERY_COLUMNS)
+          .from(serversTable)
+          .where(servableFilter())
+          .orderBy(
+            desc(serversTable.isPremium),
+            desc(serversTable.views),
+            desc(serversTable.copies),
+            desc(serversTable.upvotes),
+          )
+          .limit(limit),
+        // Active featured boosts must make the capped pool regardless of
+        // traffic, or a low-view paid listing never reaches the shelf.
+        db
+          .select(DISCOVERY_COLUMNS)
+          .from(serversTable)
+          .where(and(servableFilter(), gt(serversTable.featuredUntil, now)))
+          .limit(limit),
+      ]);
+      const rows = mergeDiscoveryPool(popular, featured, limit, now);
       if (rows.length > 0) return rows;
     }
   } catch (_e) {
     // Callers fall back to static JSON
   }
   return null;
+}
+
+type DiscoveryRankRow = {
+  id: string;
+  isPremium: boolean | null;
+  featuredUntil: Date | null;
+  views: number | null;
+  copies: number | null;
+  upvotes: number | null;
+};
+
+/**
+ * The discovery pool's ranking (premium, then active featured boost, then
+ * views, copies, upvotes, all descending) over the top-`limit` popularity
+ * rows plus every actively featured row. Every row in the true top `limit`
+ * is in one of those two sets, so this equals sorting the whole catalog.
+ */
+export function mergeDiscoveryPool<T extends DiscoveryRankRow>(
+  popular: T[],
+  featured: T[],
+  limit: number,
+  now: Date,
+): T[] {
+  const byId = new Map<string, T>();
+  for (const r of [...popular, ...featured]) byId.set(r.id, r);
+  const key = (r: T) => [
+    r.isPremium ? 1 : 0,
+    r.featuredUntil && r.featuredUntil.getTime() > now.getTime() ? 1 : 0,
+    r.views ?? 0,
+    r.copies ?? 0,
+    r.upvotes ?? 0,
+  ];
+  return [...byId.values()]
+    .sort((a, b) => {
+      const ka = key(a);
+      const kb = key(b);
+      for (let i = 0; i < ka.length; i++) {
+        if (ka[i] !== kb[i]) return kb[i] - ka[i];
+      }
+      return 0;
+    })
+    .slice(0, limit);
 }
 
 /** Rows per iterateActiveServersLight page; slim rows keep a page a few MB. */
