@@ -12,6 +12,7 @@ import {
   sha256Hex,
 } from '@/lib/agentAuth';
 import { sendNotificationEmail } from '@/lib/notify';
+import { screenStatus, screenSubmitter } from './submitterBlocks';
 import { formatZodError } from './zodError';
 
 const registerSchema = z.object({
@@ -103,6 +104,18 @@ export async function registerAgent(
   }
 
   const db = drizzle(env.DB as any);
+
+  // Same gate as /submit: a blocked email/domain, or an address that can't
+  // receive the code, gets no code and no token. (The Nov 2026 probe account
+  // registered an agent token this way.)
+  const screened = await screenSubmitter(db, { email });
+  if (screened) {
+    return {
+      ok: false,
+      status: screenStatus(screened),
+      body: { error: screened },
+    };
+  }
 
   const rawCode = generateRegistrationCode();
   const codeHash = await sha256Hex(rawCode);

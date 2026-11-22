@@ -80,6 +80,18 @@
   "ai": {
     "binding": "AI"
   },
+  // Cloudflare Workers rate limiting (counted per Cloudflare location, shared
+  // by every isolate there). Caps how fast one connection can hit the public
+  // intakes: listing submit, agent API/MCP submit, ads, newsletter, sign-in
+  // (lib/submitterBlocks.ts screenSubmitter). Site Worker only: the jobs
+  // Worker never serves these routes. The hourly cap on listings is in D1.
+  "ratelimits": [
+    {
+      "name": "SUBMIT_LIMITER",
+      "namespace_id": "4201",
+      "simple": { "limit": 5, "period": 60 }
+    }
+  ],
   "env": {
     // Dedicated background-jobs Worker: deploys as `all-mcps-jobs` from the
     // same build (scripts/deploy-jobs-worker.mjs, run by `deploy:cf` before

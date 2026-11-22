@@ -2,6 +2,7 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { agentTokens, users } from '@/db/schema';
+import { isSubmitterBlocked } from '@/lib/submitterBlocks';
 
 /**
  * OAuth-style scopes an agent token can hold. Each maps to one gated write
@@ -140,6 +141,11 @@ export async function resolveAgentAuth(
   const row = rows[0];
   if (!row || row.revokedAt) return null;
   if (new Date(row.expiresAt).getTime() < Date.now()) return null;
+  // A token outlives a block of its owner (tokens last 90 days), so the
+  // owner's email is checked on every use. One indexed lookup.
+  if (row.email && (await isSubmitterBlocked(db, { email: row.email }))) {
+    return null;
+  }
 
   return {
     userId: row.userId,

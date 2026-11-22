@@ -22,7 +22,12 @@ import {
   normalizeCompatibleClients,
   normalizeTags,
 } from './serverEnums';
-import { BLOCKED_SUBMITTER_ERROR, screenSubmitter } from './submitterBlocks';
+import {
+  MAX_LISTINGS_PER_HOUR,
+  overHourlyListingCap,
+  screenStatus,
+  screenSubmitter,
+} from './submitterBlocks';
 import {
   checkEndpoint,
   discoverRemoteEndpoint,
@@ -324,12 +329,21 @@ export async function prepareListingIntake(
 
   // Blocked email/domain/IP, then a deliverable address. Runs after the cheap
   // field checks above and before the duplicate lookups and endpoint probes.
-  const screened = await screenSubmitter(db, { email, ipHash });
+  const screened = await screenSubmitter(db, { email, ipHash }, env);
   if (screened) {
     return {
       ok: false,
-      status: screened === BLOCKED_SUBMITTER_ERROR ? 403 : 400,
+      status: screenStatus(screened),
       body: { error: screened },
+    };
+  }
+  if (await overHourlyListingCap(db, ipHash)) {
+    return {
+      ok: false,
+      status: 429,
+      body: {
+        error: `This connection has submitted ${MAX_LISTINGS_PER_HOUR} listings in the last hour. Try again later.`,
+      },
     };
   }
 

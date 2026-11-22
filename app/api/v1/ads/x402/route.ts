@@ -13,6 +13,12 @@ import { attributionFromRequest } from '@/lib/attribution';
 import { recordConversion } from '@/lib/conversions';
 import { sendReceiptEmail } from '@/lib/notify';
 import { getAppUrl } from '@/lib/stripe';
+import {
+  hashSubmitterIp,
+  requestIp,
+  screenStatus,
+  screenSubmitter,
+} from '@/lib/submitterBlocks';
 import { getX402Config, sellWithX402 } from '@/lib/x402';
 
 export const dynamic = 'force-dynamic';
@@ -65,6 +71,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: validation.error }, { status: 400 });
   }
 
+  // Before the 402 quote, so a blocked or unreachable buyer is never asked
+  // to pay for a campaign that would then be refused.
+  const advertiserIpHash = await hashSubmitterIp(requestIp(req));
+  const screened = await screenSubmitter(
+    drizzle(env.DB),
+    {
+      email: ad.advertiserEmail,
+      ipHash: advertiserIpHash,
+    },
+    env,
+  );
+  if (screened) {
+    return NextResponse.json(
+      { error: screened },
+      { status: screenStatus(screened) },
+    );
+  }
+
   const costCents = calculateAdCostCents(ad.impressions, ad.bidCpm);
   const adId = crypto.randomUUID();
 
@@ -78,6 +102,7 @@ export async function POST(req: Request) {
       await db.insert(sponsorAds).values({
         id: adId,
         advertiserEmail: ad.advertiserEmail,
+        advertiserIpHash,
         title: ad.title,
         description: ad.description,
         ctaText: ad.ctaText,
