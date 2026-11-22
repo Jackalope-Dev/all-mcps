@@ -169,15 +169,15 @@ export async function safeFetch(
     if (isPrivateOrReservedHost(parsed.hostname)) {
       throw new Error('Redirected to a URL that is not a permitted endpoint.');
     }
-    // Web Bot Auth: the signature covers the host, so sign each hop.
+    // Web Bot Auth: the signature covers the host, so sign each hop
+    // (set() replaces the previous hop's signature).
     const signed = await signRequestHeaders(parsed.host);
-    let hopReq = req;
     if (Object.keys(signed).length > 0) {
       const headers = new Headers(req.headers);
       for (const [k, v] of Object.entries(signed)) headers.set(k, v);
-      hopReq = { ...req, headers };
+      req = { ...req, headers };
     }
-    const res = await fetch(parsed.href, hopReq);
+    const res = await fetch(parsed.href, req);
     const location = res.headers.get('location');
     if (res.status < 300 || res.status > 399 || !location) return res;
     if (hop >= MAX_REDIRECTS) throw new Error('Too many redirects.');
