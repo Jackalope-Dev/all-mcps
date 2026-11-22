@@ -958,8 +958,8 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                   lineHeight: 1.45,
                 }}
               >
-                Add a personalized meta tag to your site to prove ownership —
-                grants the Verified owner badge.
+                Add a personalized meta tag to your homepage's {'<head>'} to
+                prove ownership — grants the Verified owner badge.
               </p>
             </button>
 
@@ -1768,7 +1768,8 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                         fontWeight: 700,
                       }}
                     >
-                      Or HTML Meta Tag (alternative to badge):
+                      Or HTML Meta Tag (alternative to badge), in your
+                      homepage's {'<head>'}:
                     </h3>
                     <CopyBlock
                       code={metaTag}

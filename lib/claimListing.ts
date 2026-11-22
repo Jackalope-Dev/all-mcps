@@ -9,7 +9,7 @@ import { refreshListingPageInBackground } from './listingPageRefresh';
 import { getEmailEnv, sendNotificationEmail } from './notify';
 import { isGitHubRepoUrl } from './repoUrl';
 import { getAppUrl } from './stripe';
-import { isSafeSubmissionUrl } from './urlSafety';
+import { isSafeSubmissionUrl, safeFetch } from './urlSafety';
 import {
   verifyDnsTxt,
   verifyGithubReadme,
@@ -265,7 +265,7 @@ export async function claimListing(
       (method === 'website_badge' || method === 'dns')
     ) {
       try {
-        const siteRes = await fetch(resolvedWebsiteUrl, {
+        const siteRes = await safeFetch(resolvedWebsiteUrl, {
           method: 'GET',
           headers: {
             'User-Agent': 'AllMCPs-Verification/1.0 (+https://allmcps.com)',

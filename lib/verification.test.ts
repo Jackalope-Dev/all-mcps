@@ -82,6 +82,71 @@ describe('website verification', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  const TOKEN = `allmcps-site-verification=${ID}:${USER}`;
+  const html = (head: string, body = '') =>
+    new Response(`<html><head>${head}</head><body>${body}</body></html>`, {
+      headers: { 'content-type': 'text/html' },
+    });
+
+  it('accepts the personalized meta tag on the homepage, whatever path was typed', async () => {
+    const fetchMock = vi.fn(async (_url: string) =>
+      html(`<meta content="${TOKEN}" name="allmcps-verification" />`),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const res = await verifyWebsiteHtml(
+      'https://brainscanner.dev/docs/mcp?utm_source=allmcps',
+      ID,
+      USER,
+    );
+    expect(res.ok).toBe(true);
+    // Only the origin's homepage is fetched, never the claimant's path/query.
+    expect(fetchMock.mock.calls[0][0]).toBe('https://brainscanner.dev/');
+  });
+
+  it('rejects the Nov 2026 echo-service trick (token on a page that prints the URL)', async () => {
+    // httpbin.org/base64/<token> returns the decoded token as the body; a 404
+    // or search page that echoes the URL looks the same.
+    const fetchMock = vi.fn(async (_url: string) => html('', TOKEN));
+    vi.stubGlobal('fetch', fetchMock);
+    const res = await verifyWebsiteHtml(
+      `https://httpbin.org/base64/${btoa(TOKEN)}`,
+      ID,
+      USER,
+    );
+    expect(res.ok).toBe(false);
+    expect(fetchMock.mock.calls[0][0]).toBe('https://httpbin.org/');
+  });
+
+  it("rejects another account's token and a token outside a meta tag", async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        html(
+          `<meta name="allmcps-verification" content="allmcps-site-verification=${ID}:someone-else">`,
+          `<p>${TOKEN}</p>`,
+        ),
+      ),
+    );
+    expect(
+      (await verifyWebsiteHtml('https://brainscanner.dev', ID, USER)).ok,
+    ).toBe(false);
+  });
+
+  it('refuses a homepage that redirects to a private address', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(null, {
+            status: 302,
+            headers: { location: 'http://169.254.169.254/' },
+          }),
+      ),
+    );
+    const res = await verifyWebsiteHtml('https://brainscanner.dev', ID, USER);
+    expect(res.ok).toBe(false);
+  });
+
   it('turns a body read that aborts mid-download into a failure, not a throw', async () => {
     const body = new ReadableStream({
       start(controller) {
