@@ -1,7 +1,14 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { NextResponse } from 'next/server';
+import { calculateAdCostCents } from '@/lib/ads';
 import { AGENT_SCOPE_DETAILS } from '@/lib/agentAuth';
 import { mppStatus } from '@/lib/mpp';
+import {
+  agentPriceCents,
+  ONE_TIME_BOOST_SKUS,
+  PAID_PRODUCTS,
+  tieredTotal,
+} from '@/lib/pricing';
 
 // Reads secrets at request time: MPP offers appear only once MPP is configured.
 export const dynamic = 'force-dynamic';
@@ -996,26 +1003,37 @@ export async function GET() {
     },
   };
 
-  // MPP discovery (draft-payment-discovery): each paid operation lists the
-  // ways to pay it. Prices depend on the request body (sku, weeks,
-  // impressions), so amount is null and the runtime 402 is authoritative.
+  // MPP discovery (https://mpp.dev/advanced/discovery): each paid operation
+  // lists how to pay it. The price depends on the request body (sku, weeks,
+  // impressions, bid), so each offer states the lowest price the endpoint
+  // accepts, in cents; the runtime 402 states the exact amount.
   const { env } = await getCloudflareContext({ async: true });
   if (mppStatus(env).enabled) {
-    const offer = {
+    const minBoostCents = Math.min(
+      ...ONE_TIME_BOOST_SKUS.map((sku) =>
+        agentPriceCents(tieredTotal(PAID_PRODUCTS[sku], 1)),
+      ),
+    );
+    // Smallest campaign validateAdPayload allows: 1,000 impressions at a $1 CPM.
+    const minAdCents = calculateAdCostCents(1000, 100);
+    const offer = (cents: number) => ({
       intent: 'charge',
       method: 'stripe',
       currency: 'usd',
-      amount: null,
-      description:
-        'Stripe shared payment token (card). Answer the 402 with Authorization: Payment.',
+      amount: String(cents),
+      description: `From $${(cents / 100).toFixed(2)}; the 402 challenge states the exact price. Pay with a Stripe shared payment token (card) via Authorization: Payment.`,
+    });
+    const offers: Record<string, number> = {
+      '/api/v1/boost/x402': minBoostCents,
+      '/api/v1/ads/x402': minAdCents,
     };
     const paths = openApiSpec.paths as Record<
       string,
       { post?: Record<string, unknown> }
     >;
-    for (const path of ['/api/v1/boost/x402', '/api/v1/ads/x402']) {
+    for (const [path, cents] of Object.entries(offers)) {
       const op = paths[path]?.post;
-      if (op) op['x-payment-info'] = { offers: [offer] };
+      if (op) op['x-payment-info'] = { offers: [offer(cents)] };
     }
     (openApiSpec as Record<string, unknown>)['x-service-info'] = {
       categories: ['developer-tools', 'advertising'],
