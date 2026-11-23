@@ -215,6 +215,9 @@ describe('buildDigestBlocks', () => {
     expect(html).toContain('Summarize my latest scan');
     expect(html).toContain('Scan brains from chat');
     expect(html).toContain('Hit reply');
+    // Cards draw their own rounded box (radius on the <td>), not Sequenzy's square-prone styles.
+    expect(html).toContain('border-radius:16px');
+    expect(html).not.toContain('"borderRadius"');
     // Logos are absolutized for email clients.
     expect(html).toContain('https://allmcps.com/logos/n1');
     // Names are escaped, never injected.

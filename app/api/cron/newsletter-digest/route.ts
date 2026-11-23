@@ -448,6 +448,10 @@ async function createSequenzyCampaign(input: {
     subject: input.subject,
     previewText: input.previewText,
     blocks: input.blocks,
+    // "branded" puts Sequenzy's square company logo above our own wordmark
+    // header, so the email showed two logos. "minimal" drops it and keeps our
+    // footer block's address and unsubscribe link.
+    emailPreset: 'minimal',
     ...(input.test
       ? {}
       : {

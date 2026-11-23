@@ -361,27 +361,54 @@ function headerHtml(c: DigestCandidate, size: number, titlePx: number): string {
 const kicker = (text: string, color = BLUE) =>
   `<div style="font-family:${FONT};font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:${color};margin-bottom:12px">${escapeHtml(text)}</div>`;
 
-const CARD_STYLES = {
-  backgroundColor: '#ffffff',
-  borderColor: '#e2e8f0',
-  borderWidth: 1,
-  borderRadius: 12,
-  paddingTop: 18,
-  paddingBottom: 18,
-  paddingLeft: 20,
-  paddingRight: 20,
+type BoxStyle = {
+  background: string;
+  border: string;
+  borderWidth: number;
+  padding: string;
 };
 
-const PICK_STYLES = {
-  ...CARD_STYLES,
-  backgroundColor: '#f0f7ff',
-  borderColor: '#bfdbfe',
-  borderWidth: 2,
-  paddingTop: 24,
-  paddingBottom: 24,
-  paddingLeft: 24,
-  paddingRight: 24,
+const CARD_BOX: BoxStyle = {
+  background: '#ffffff',
+  border: '#e2e8f0',
+  borderWidth: 1,
+  padding: '18px 20px',
 };
+const PICK_BOX: BoxStyle = {
+  background: '#f0f7ff',
+  border: '#bfdbfe',
+  borderWidth: 2,
+  padding: '22px',
+};
+const BLOG_BOX: BoxStyle = { ...CARD_BOX, background: '#f8fafc' };
+const REPLY_BOX: BoxStyle = {
+  ...CARD_BOX,
+  background: '#f0fdff',
+  border: '#a5f3fc',
+};
+
+/** Corner radius for every card: soft enough that the email reads friendly. */
+const BOX_RADIUS = 16;
+
+/**
+ * A rounded card as its own HTML block. Sequenzy's block `styles` put the radius
+ * and background on an outer <table>, which Outlook and several webmail clients
+ * draw square; a radius on the <td> that carries the background holds up in far
+ * more clients. Sequenzy's own padding is zeroed so the box isn't padded twice.
+ */
+function boxBlock(content: string, box: BoxStyle): SequenzyBlock {
+  return {
+    type: 'text',
+    variant: 'html',
+    content: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;border-spacing:0"><tr><td style="background-color:${box.background};border:${box.borderWidth}px solid ${box.border};border-radius:${BOX_RADIUS}px;padding:${box.padding}">${content}</td></tr></table>`,
+    styles: {
+      paddingTop: 0,
+      paddingBottom: 0,
+      paddingLeft: 0,
+      paddingRight: 0,
+    },
+  };
+}
 
 const hasText = (s: string | undefined): s is string =>
   !!s && /[\p{L}\p{N}]/u.test(s);
@@ -419,7 +446,7 @@ function pickBlocks(
   }
 
   return [
-    { type: 'text', variant: 'html', content, styles: PICK_STYLES },
+    boxBlock(content, PICK_BOX),
     { type: 'spacer', height: 12 },
     pickButton(c, buttonLink),
   ];
@@ -463,10 +490,7 @@ function cardBlocks(
   if (hasText(prompt)) content += promptChip(prompt, 10);
   // A text link, not a button: a full-width button per card read as a wall of chrome.
   content += `<a href="${escapeHtml(link)}" style="display:inline-block;margin-top:10px;font-family:${FONT};font-size:13px;font-weight:700;color:${BLUE};text-decoration:none">View setup →</a>`;
-  return [
-    { type: 'text', variant: 'html', content, styles: CARD_STYLES },
-    { type: 'spacer', height: 10 },
-  ];
+  return [boxBlock(content, CARD_BOX), { type: 'spacer', height: 10 }];
 }
 
 function sectionHeading(title: string, note: string): SequenzyBlock {
@@ -483,14 +507,7 @@ function blogBlocks(post: DigestBlogPost, link: string): SequenzyBlock[] {
     `<a href="${escapeHtml(link)}" style="font-family:${FONT};font-size:17px;font-weight:700;line-height:1.35;color:#020617;text-decoration:none">${escapeHtml(post.title)}</a>` +
     `<p style="margin:8px 0 0;font-family:${FONT};font-size:14px;line-height:1.6;color:#475569">${escapeHtml(truncate(post.excerpt, 200))}</p>` +
     `<a href="${escapeHtml(link)}" style="display:inline-block;margin-top:10px;font-family:${FONT};font-size:13px;font-weight:700;color:${BLUE};text-decoration:none">Read the guide →</a>`;
-  return [
-    {
-      type: 'text',
-      variant: 'html',
-      content,
-      styles: { ...CARD_STYLES, backgroundColor: '#f8fafc' },
-    },
-  ];
+  return [boxBlock(content, BLOG_BOX)];
 }
 
 export function buildDigestBlocks(input: {
@@ -581,22 +598,19 @@ export function buildDigestBlocks(input: {
 
   // Replies go to the shared contact inbox (Reply-To). Asking a direct question
   // gets replies, which tell us what readers want and help deliverability.
-  blocks.push({
-    type: 'text',
-    variant: 'html',
-    content: `<div style="font-family:${FONT};font-size:15px;font-weight:700;color:#020617">What should your agent be able to do?</div><p style="margin:6px 0 0;font-family:${FONT};font-size:14px;line-height:1.6;color:#475569">Hit reply and tell us the tool or workflow you wish had an MCP server. We read every reply, and the best asks shape next week's picks.</p>`,
-    styles: {
-      ...CARD_STYLES,
-      backgroundColor: '#f0fdff',
-      borderColor: '#a5f3fc',
-    },
-  });
+  blocks.push(
+    boxBlock(
+      `<div style="font-family:${FONT};font-size:15px;font-weight:700;color:#020617">What should your agent be able to do?</div><p style="margin:6px 0 0;font-family:${FONT};font-size:14px;line-height:1.6;color:#475569">Hit reply and tell us the tool or workflow you wish had an MCP server. We read every reply, and the best asks shape next week's picks.</p>`,
+      REPLY_BOX,
+    ),
+  );
   blocks.push({ type: 'spacer', height: 16 });
   blocks.push({
     type: 'button',
     text: 'Browse all MCP servers →',
     url: withUtm('/browse', campaign, 'browse'),
     variant: 'primary',
+    corners: 'soft',
   });
   blocks.push({
     type: 'footer',
