@@ -162,6 +162,53 @@ describe('text format', () => {
     expect(setupStepsFromText(setupStepsToText(steps))).toEqual(steps);
   });
 
+  it('keeps a sentence as a text step and round-trips it', () => {
+    const text =
+      '# Install\nbrainscanner install\n\nOpen Settings, then Connectors, and paste https://brainscanner.dev/mcp.';
+    const steps = setupStepsFromText(text);
+    expect(steps).toEqual([
+      { label: 'Install', command: 'brainscanner install' },
+      {
+        label: null,
+        command:
+          'Open Settings, then Connectors, and paste https://brainscanner.dev/mcp.',
+        kind: 'text',
+      },
+    ]);
+    expect(setupStepsFromText(setupStepsToText(steps))).toEqual(steps);
+  });
+
+  it('splits a numbered list typed as one block into steps', () => {
+    const steps = setupStepsFromText(
+      '1. Create your account at https://brainscanner.dev and install the agent.\n2. Pair the computer with your account.\n3. npx brainscanner login',
+    );
+    expect(steps).toEqual([
+      {
+        label: null,
+        command:
+          'Create your account at https://brainscanner.dev and install the agent.',
+        kind: 'text',
+      },
+      {
+        label: null,
+        command: 'Pair the computer with your account.',
+        kind: 'text',
+      },
+      { label: null, command: 'npx brainscanner login' },
+    ]);
+  });
+
+  it('never turns a command into text', () => {
+    for (const cmd of [
+      'curl -fsSL https://brainscanner.dev/install.sh | bash',
+      'brainscanner login --token "$TOKEN"',
+      'Invoke-RestMethod https://brainscanner.dev/install.ps1 | iex',
+      'irm https://brainscanner.dev/install.ps1 | iex',
+    ]) {
+      expect(setupStepsFromText(cmd)).toEqual([{ label: null, command: cmd }]);
+    }
+  });
+
   it('treats # inside a command as part of it', () => {
     expect(
       setupStepsFromText('# Run\nbrainscanner serve\n# not a label'),
@@ -176,6 +223,17 @@ describe('column parsing', () => {
     expect(
       parseSetupSteps(JSON.stringify([{ command: ' uvx brainscanner ' }, 7])),
     ).toEqual([{ label: null, command: 'uvx brainscanner' }]);
+    expect(
+      parseSetupSteps(
+        JSON.stringify([
+          { command: 'Pair it.', kind: 'text' },
+          { command: 'x', kind: 'shell' },
+        ]),
+      ),
+    ).toEqual([
+      { label: null, command: 'Pair it.', kind: 'text' },
+      { label: null, command: 'x' },
+    ]);
   });
 
   it('serializes empty as null', () => {
@@ -226,6 +284,17 @@ describe('setupStepsMarkdown', () => {
     });
     expect(md).toContain('(from https://brainscanner.dev/docs)');
     expect(md).toContain('1. Install:\n\n```sh\nuvx brainscanner\n```');
+  });
+
+  it('renders a text step as a plain numbered line', () => {
+    const md = setupStepsMarkdown({
+      setupSteps: [
+        { label: 'Install', command: 'uvx brainscanner' },
+        { label: null, command: 'Pair the computer.', kind: 'text' },
+      ],
+    });
+    expect(md).toContain('2. Pair the computer.\n');
+    expect(md).not.toContain('```sh\nPair');
   });
 
   it('is empty without steps', () => {

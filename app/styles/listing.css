@@ -1224,6 +1224,34 @@ details[open] > summary .lst-chevron {
   min-width: 0;
 }
 
+/* A step written as an instruction: numbered text, no copy box */
+.lst-setup-step-text {
+  display: grid;
+  grid-template-columns: 1.6rem 1fr;
+  gap: 0.5rem;
+  align-items: baseline;
+  padding: 0.55rem 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--text-primary);
+}
+
+.lst-setup-step-num {
+  font-weight: 650;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.lst-setup-step-text p {
+  margin: 0;
+  max-width: 44rem;
+  overflow-wrap: anywhere;
+}
+
+.lst-setup-step-text strong {
+  font-weight: 650;
+}
+
 /* Env var editor */
 .lst-env {
   border-top: 1px solid var(--border-color);

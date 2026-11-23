@@ -1184,7 +1184,8 @@ export function AdminSetupStepsEditor({
       }}
     >
       <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>
-        Setup steps — copy commands verbatim from the project&rsquo;s docs
+        Setup steps — copy commands verbatim from the project&rsquo;s docs (a
+        step written as a sentence shows as text, with no copy button)
       </span>
       <textarea
         value={text}

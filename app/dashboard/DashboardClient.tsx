@@ -1544,7 +1544,9 @@ export default function DashboardClient({
                       rather than one <code>npx</code>/<code>uvx</code> command.
                       Copy them from your docs: an optional <code># Label</code>{' '}
                       line, the command, then a blank line before the next step.
-                      Shown word for word on your listing.
+                      A step written as a sentence (&ldquo;Open Settings, then
+                      paste the server URL.&rdquo;) shows as plain text without
+                      a copy button. Shown word for word on your listing.
                     </p>
                     <textarea
                       id={`edit-${server.id}-setup-steps`}

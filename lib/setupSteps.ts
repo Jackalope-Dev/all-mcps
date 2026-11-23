@@ -18,8 +18,16 @@
 export type SetupStep = {
   /** Short human label ("Install", "Sign in"). Null when none applies. */
   label: string | null;
-  /** The command exactly as the source shows it (may span lines). */
+  /** The command exactly as the source shows it (may span lines). For a text
+   * step, the instruction itself. */
   command: string;
+  /**
+   * 'text': an instruction in words ("Pair the computer with your account"),
+   * shown as a plain numbered step, never as a command to copy. Only owners
+   * and admins write these (setupStepsFromText); extraction only ever
+   * produces commands. Absent for commands, so stored rows stay unchanged.
+   */
+  kind?: 'text';
 };
 
 /** Who wrote the steps. Extraction never overwrites an owner's or admin's. */
@@ -32,7 +40,11 @@ const SETUP_LIMITS = {
   maxNoteChars: 400,
 } as const;
 
-function clampStep(label: unknown, command: unknown): SetupStep | null {
+function clampStep(
+  label: unknown,
+  command: unknown,
+  kind?: unknown,
+): SetupStep | null {
   if (typeof command !== 'string') return null;
   const cmd = command.replace(/\r\n?/g, '\n').trim();
   if (!cmd || cmd.length > SETUP_LIMITS.maxCommandChars) return null;
@@ -40,7 +52,9 @@ function clampStep(label: unknown, command: unknown): SetupStep | null {
     typeof label === 'string'
       ? label.trim().slice(0, SETUP_LIMITS.maxLabelChars)
       : '';
-  return { label: lbl || null, command: cmd };
+  return kind === 'text'
+    ? { label: lbl || null, command: cmd, kind: 'text' }
+    : { label: lbl || null, command: cmd };
 }
 
 /** The `setup_steps` JSON column → steps, tolerating bad data (→ []). */
@@ -57,8 +71,8 @@ export function parseSetupSteps(raw: unknown): SetupStep[] {
   const steps: SetupStep[] = [];
   for (const item of value) {
     if (!item || typeof item !== 'object') continue;
-    const s = item as { label?: unknown; command?: unknown };
-    const step = clampStep(s.label, s.command);
+    const s = item as { label?: unknown; command?: unknown; kind?: unknown };
+    const step = clampStep(s.label, s.command, s.kind);
     if (step) steps.push(step);
     if (steps.length >= SETUP_LIMITS.maxSteps) break;
   }
@@ -71,24 +85,67 @@ export function serializeSetupSteps(steps: SetupStep[]): string | null {
   return clean.length > 0 ? JSON.stringify(clean) : null;
 }
 
+/** A list marker an owner typed in front of a step ("1. ", "2) ", "- "). */
+const LIST_MARKER_RE = /^(?:\d{1,2}[.)]|[-*•])\s+/;
+const NUMBERED_RE = /^\d{1,2}[.)]\s/;
+
 /**
- * The owner/admin text format: one command per block, an optional `# Label`
- * line naming the command that follows, blank lines between steps. A command
- * may span lines (a `bash -c '…'` wrapper); a blank line ends it.
+ * Whether a block of owner text is an instruction in words rather than a
+ * command: it opens with a capitalized plain word and reads as a sentence
+ * ("Pair the computer with your account…"). Shell commands start lowercase
+ * (PowerShell's capitalized cmdlets are hyphenated, so they never match), and
+ * anything in doubt stays a command, so a real command never loses its copy
+ * button.
+ */
+function isInstruction(block: string): boolean {
+  const line = block.split('\n')[0].trim();
+  return /^[A-Z][a-z']*[,:]?\s/.test(line) && line.split(/\s+/).length >= 3;
+}
+
+/**
+ * The owner/admin text format: one step per block, an optional `# Label`
+ * line naming the step that follows, blank lines between steps. A command
+ * may span lines (a `bash -c '…'` wrapper); a blank line ends it. A step
+ * written as a sentence becomes a text step, and a numbered list typed as one
+ * block ("1. …" then "2. …") is split into one step per item.
  *
  *   # Install
  *   curl -fsSL https://example.com/install.sh | bash
  *
  *   # Sign in
  *   example login
+ *
+ *   Open Settings, then Connectors, and paste the server URL.
  */
 export function setupStepsFromText(text: string): SetupStep[] {
   const steps: SetupStep[] = [];
   let label: string | null = null;
   let lines: string[] = [];
-  const flush = () => {
-    const step = clampStep(label, lines.join('\n'));
+  const push = (body: string, stepLabel: string | null) => {
+    // A list marker is never part of the command or the sentence.
+    const unmarked = body.replace(LIST_MARKER_RE, '');
+    const kind = isInstruction(unmarked) ? 'text' : undefined;
+    const step = clampStep(stepLabel, unmarked, kind);
     if (step) steps.push(step);
+  };
+  const flush = () => {
+    // Only a block that opens with a number is a list, so a multi-line
+    // command stays whole.
+    if (lines.length > 1 && NUMBERED_RE.test(lines[0].trim())) {
+      const items: string[][] = [];
+      for (const line of lines) {
+        if (NUMBERED_RE.test(line.trim()) || items.length === 0) {
+          items.push([line.trim()]);
+        } else {
+          items[items.length - 1].push(line.trim());
+        }
+      }
+      items.forEach((item, i) => {
+        push(item.join(' '), i === 0 ? label : null);
+      });
+    } else {
+      push(lines.join('\n'), label);
+    }
     label = null;
     lines = [];
   };
@@ -503,9 +560,14 @@ export function setupStepsMarkdown(server: {
   const source = server.setupSourceUrl
     ? ` (from ${server.setupSourceUrl})`
     : '';
-  let md = `The project's own setup steps${source}, copied verbatim. Run them in order; they are not an mcpServers config.\n\n`;
+  let md = `The project's own setup steps${source}, copied verbatim. Follow them in order; they are not an mcpServers config.\n\n`;
   if (server.setupNote) md += `${server.setupNote}\n\n`;
   steps.forEach((s, i) => {
+    if (s.kind === 'text') {
+      const text = s.command.replace(/\s*\n\s*/g, ' ');
+      md += `${i + 1}. ${s.label ? `${s.label}: ` : ''}${text}\n\n`;
+      return;
+    }
     md += `${i + 1}. ${s.label ?? 'Run'}:\n\n\`\`\`sh\n${s.command}\n\`\`\`\n\n`;
   });
   return md;

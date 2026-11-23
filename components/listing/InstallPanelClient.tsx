@@ -376,15 +376,19 @@ export function InstallPanelClient(masked: InstallPanelProps) {
     const sourceUrl = server.setupSourceUrl || setupUrl || null;
     const fromOwner =
       server.setupSource === 'owner' || server.setupSource === 'admin';
+    const hasCommands = setupSteps.some((s) => s.kind !== 'text');
     return (
       <div className="lst-install-body">
         <div className="lst-setup-intro">
           <p className="lst-setup-title">Setup steps from the project</p>
           <p className="lst-setup-text">
-            {server.name} installs with its own commands rather than a config we
-            can generate, so these are copied as-is
-            {fromOwner ? ' from its maintainers’ setup guide' : ''}. Run them in
-            order in a terminal.
+            {server.name} {hasCommands ? 'installs' : 'connects'} with its own
+            steps rather than a config we can generate, so these are copied
+            as-is
+            {fromOwner ? ' from its maintainers’ setup guide' : ''}.{' '}
+            {hasCommands
+              ? 'Follow them in order and run the commands in a terminal.'
+              : 'Follow them in order.'}
             {sourceUrl ? (
               <>
                 {' '}
@@ -406,14 +410,24 @@ export function InstallPanelClient(masked: InstallPanelProps) {
         <ol className="lst-setup-steps">
           {setupSteps.map((step, i) => (
             <li key={`${step.label ?? ''}|${step.command}`}>
-              <CopyBlock
-                code={step.command}
-                title={`${i + 1}. ${step.label ?? 'Run'}`}
-                language="bash"
-                serverId={server.id}
-                snippetType="setup-step"
-                toastMessage="Command copied"
-              />
+              {step.kind === 'text' ? (
+                <div className="lst-setup-step-text">
+                  <span className="lst-setup-step-num">{i + 1}.</span>
+                  <p>
+                    {step.label ? <strong>{step.label}: </strong> : null}
+                    {step.command}
+                  </p>
+                </div>
+              ) : (
+                <CopyBlock
+                  code={step.command}
+                  title={`${i + 1}. ${step.label ?? 'Run'}`}
+                  language="bash"
+                  serverId={server.id}
+                  snippetType="setup-step"
+                  toastMessage="Command copied"
+                />
+              )}
             </li>
           ))}
         </ol>

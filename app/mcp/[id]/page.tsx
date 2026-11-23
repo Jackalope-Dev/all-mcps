@@ -530,7 +530,7 @@ export default async function MCPDetail({
   const setupStepCount = server.setupSteps?.length ?? 0;
   const fallbackInstallAnswer = isUnverifiedInstall(fallbackInstall)
     ? setupStepCount > 0
-      ? `${server.name} installs with its own setup commands rather than a generated mcpServers config. Run the ${setupStepCount} step${setupStepCount === 1 ? '' : 's'} in the Install section in order — they are copied as-is from ${server.setupSourceUrl || server.url}.${server.setupNote ? ` ${server.setupNote}` : ''}`
+      ? `${server.name} installs with its own setup steps rather than a generated mcpServers config. Follow the ${setupStepCount} step${setupStepCount === 1 ? '' : 's'} in the Install section in order — they are copied as-is from ${server.setupSourceUrl || server.url}.${server.setupNote ? ` ${server.setupNote}` : ''}`
       : `We don't have a confirmed install command for ${server.name} yet, so we don't publish a generated one — a guessed package name would point at the wrong package or none at all. Follow the project's own README or setup instructions (${server.url}) for the current steps.`
     : fallbackInstall.kind === 'remote'
       ? `${server.name} is a hosted MCP server. Add it as a remote server in your client's config: "mcpServers": { "${installSlug}": { "url": "${fallbackInstall.url}" } }`
