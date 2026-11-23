@@ -254,3 +254,36 @@ export async function blockSubmitter(
     rejected: rejected.length,
   };
 }
+
+/**
+ * Blocks addresses Resend reported as hard-bounced, complained or suppressed
+ * (app/api/resend/webhook), so every intake and the magic-link sign-in refuse
+ * them and nothing is mailed to them again. Only ever the address, never its
+ * domain: one dead mailbox says nothing about the rest of gmail.com or a
+ * company's domain. Idempotent: a repeat event for the same address changes
+ * nothing. Returns how many addresses were newly blocked.
+ */
+export async function blockUndeliverableAddresses(
+  db: Db,
+  opts: { emails: string[]; reason: string; sourceId?: string | null },
+): Promise<number> {
+  const emails = [
+    ...new Set(opts.emails.map((e) => e.trim().toLowerCase())),
+  ].filter((e) => e.includes('@'));
+  if (emails.length === 0) return 0;
+  const inserted = await db
+    .insert(submitterBlocks)
+    .values(
+      emails.map((value) => ({
+        kind: 'email' as const,
+        value,
+        reason: opts.reason,
+        sourceId: opts.sourceId ?? null,
+        createdBy: 'resend-webhook',
+        createdAt: new Date(),
+      })),
+    )
+    .onConflictDoNothing()
+    .returning({ id: submitterBlocks.id });
+  return inserted.length;
+}
