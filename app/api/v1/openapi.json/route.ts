@@ -1,5 +1,10 @@
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { NextResponse } from 'next/server';
 import { AGENT_SCOPE_DETAILS } from '@/lib/agentAuth';
+import { mppStatus } from '@/lib/mpp';
+
+// Reads secrets at request time: MPP offers appear only once MPP is configured.
+export const dynamic = 'force-dynamic';
 
 // Shared 4xx/5xx error shape returned by every AllMCPs API route — see the
 // `{ error, message }` convention used throughout app/api/**/route.ts. Kept
@@ -776,9 +781,9 @@ export async function GET() {
       },
       '/api/v1/boost/x402': {
         post: {
-          summary: 'Buy a boost autonomously with x402 (USDC)',
+          summary: 'Buy a boost autonomously with x402 (USDC) or MPP (card)',
           description:
-            'x402 v2, `exact` scheme, USDC on Base. Without a `PAYMENT-SIGNATURE` header this returns 402 with a base64 `PAYMENT-REQUIRED` header (and the same JSON body). Retry with `PAYMENT-SIGNATURE` to pay; the boost activates once payment settles and a `PAYMENT-RESPONSE` header carries the receipt. The price includes the 50% agent discount. Returns 503 while x402 is not enabled.',
+            'x402 v2, `exact` scheme, USDC on Base. Without a `PAYMENT-SIGNATURE` header this returns 402 with a base64 `PAYMENT-REQUIRED` header (and the same JSON body). Retry with `PAYMENT-SIGNATURE` to pay; the boost activates once payment settles and a `PAYMENT-RESPONSE` header carries the receipt. The price includes the 50% agent discount. When MPP is enabled the same 402 also carries a `WWW-Authenticate: Payment method="stripe"` challenge; answer it with `Authorization: Payment <credential>` (a Stripe shared payment token) instead. Returns 503 while neither is enabled.',
           operationId: 'buyBoostX402',
           requestBody: {
             required: true,
@@ -813,15 +818,16 @@ export async function GET() {
             ),
             '404': errorResponse('Listing not found.'),
             '409': errorResponse('Category already sponsored.'),
-            '503': errorResponse('x402 is not enabled.'),
+            '503': errorResponse('Agent payments are not enabled.'),
           },
         },
       },
       '/api/v1/ads/x402': {
         post: {
-          summary: 'Buy a sponsor ad campaign autonomously with x402 (USDC)',
+          summary:
+            'Buy a sponsor ad campaign autonomously with x402 (USDC) or MPP (card)',
           description:
-            'Same 402 / PAYMENT-SIGNATURE flow as /api/v1/boost/x402. Cost is impressions / 1000 × bidCpm. The campaign is created only after payment settles, then reviewed before it serves. Returns 503 while x402 is not enabled.',
+            'Same 402 flow as /api/v1/boost/x402 (x402 `PAYMENT-SIGNATURE` or MPP `Authorization: Payment`). Cost is impressions / 1000 × bidCpm. The campaign is created only after payment settles, then reviewed before it serves. Returns 503 while neither is enabled.',
           operationId: 'buyAdX402',
           requestBody: {
             required: true,
@@ -873,7 +879,7 @@ export async function GET() {
             '402': errorResponse(
               'Payment required, or the supplied payment was invalid (see `error`).',
             ),
-            '503': errorResponse('x402 is not enabled.'),
+            '503': errorResponse('Agent payments are not enabled.'),
           },
         },
       },
@@ -989,6 +995,37 @@ export async function GET() {
       },
     },
   };
+
+  // MPP discovery (draft-payment-discovery): each paid operation lists the
+  // ways to pay it. Prices depend on the request body (sku, weeks,
+  // impressions), so amount is null and the runtime 402 is authoritative.
+  const { env } = await getCloudflareContext({ async: true });
+  if (mppStatus(env).enabled) {
+    const offer = {
+      intent: 'charge',
+      method: 'stripe',
+      currency: 'usd',
+      amount: null,
+      description:
+        'Stripe shared payment token (card). Answer the 402 with Authorization: Payment.',
+    };
+    const paths = openApiSpec.paths as Record<
+      string,
+      { post?: Record<string, unknown> }
+    >;
+    for (const path of ['/api/v1/boost/x402', '/api/v1/ads/x402']) {
+      const op = paths[path]?.post;
+      if (op) op['x-payment-info'] = { offers: [offer] };
+    }
+    (openApiSpec as Record<string, unknown>)['x-service-info'] = {
+      categories: ['developer-tools', 'advertising'],
+      docs: {
+        homepage: 'https://allmcps.com',
+        apiReference: 'https://allmcps.com/docs/api',
+        llms: 'https://allmcps.com/llms.txt',
+      },
+    };
+  }
 
   return NextResponse.json(openApiSpec, {
     headers: {
