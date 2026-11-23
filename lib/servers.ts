@@ -40,11 +40,8 @@ import {
   trustLabel,
 } from './featuredStatus';
 import { publicViewCount } from './format';
-import {
-  installConfidenceNote,
-  isUnverifiedInstall,
-  resolveInstallConfig,
-} from './installConfig';
+import { installConfidenceNote, isUnverifiedInstall } from './installConfig';
+import { resolveListingInstall } from './listingClientConfigs';
 import { indexableListingSql } from './listingIndexability';
 import { resolveRepoLink } from './repoLinks';
 import { parseGithubUrl } from './repoUrl';
@@ -3233,18 +3230,10 @@ export function formatServerAsMarkdown(
     md += `\n`;
   }
 
-  // Prefer resolved install (cached README/description hint) over blind npx + name.
-  const install = resolveInstallConfig({
-    id: server.id,
-    name: server.name,
-    url: server.url,
-    description: server.description,
-    installKind: server.installKind,
-    installCommand: server.installCommand,
-    installArgs: server.installArgs,
-    installPackage: server.installPackage,
-    installConfidence: server.installConfidence,
-  });
+  // The same resolver the listing page and the API use, so the owner's remote
+  // endpoint and submitted command count here too. Without them this file told
+  // agents "no generated config" for a listing whose page showed its endpoint.
+  const install = resolveListingInstall(server);
 
   const envVars = server.aiEnvVars || [];
   const confNote = installConfidenceNote(install);

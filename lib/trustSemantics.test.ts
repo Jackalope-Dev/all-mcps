@@ -170,4 +170,18 @@ describe('agent markdown', () => {
       ).split('\n')[0],
     ).toBe('# acme/demo-mcp [Reference]');
   });
+
+  it('uses the listing’s remote endpoint, like the page does', () => {
+    const md = formatServerAsMarkdown(
+      server({
+        url: 'https://brainscanner.dev/',
+        remoteEndpointUrl: 'https://app.brainscanner.dev/mcp',
+        setupSteps: [
+          { label: null, command: 'Pair the computer.', kind: 'text' },
+        ],
+      }),
+    );
+    expect(md).toContain('"url": "https://app.brainscanner.dev/mcp"');
+    expect(md).not.toContain('No generated config');
+  });
 });
