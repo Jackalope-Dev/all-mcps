@@ -1,6 +1,7 @@
 import { ArrowLeft, MailCheck, MailX } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import '../styles/account.css';
 
 export const metadata: Metadata = {
   title: 'Email confirmation',
