@@ -1,10 +1,16 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import {
   NEWSLETTER_SUBSCRIBERS_LIST_ID,
   syncSequenzySubscriber,
 } from '../../../lib/sequenzy';
+import {
+  hashSubmitterIp,
+  requestIp,
+  screenSubmitter,
+} from '../../../lib/submitterBlocks';
 
 export async function POST(req: Request) {
   try {
@@ -81,23 +87,45 @@ export async function POST(req: Request) {
       );
     }
 
+    // The newsletter is opt-in: only an explicit tick counts. The address is
+    // whatever was typed, so it is screened like any intake and Sequenzy
+    // emails a confirmation link before any issue or sequence goes out. The
+    // message itself already reached us either way.
+    let newsletter: 'confirm' | 'skipped' | undefined;
     if (
-      body.newsletterOptIn !== false &&
+      body.newsletterOptIn === true &&
       typeof body.email === 'string' &&
       body.email
     ) {
-      await syncSequenzySubscriber({
-        email: body.email,
-        tags: ['newsletter-signup'],
-        lists: [NEWSLETTER_SUBSCRIBERS_LIST_ID],
-        customAttributes: { source: 'contact' },
-        enrollInSequences: true,
-      });
+      const problem = env?.DB
+        ? await screenSubmitter(
+            drizzle(env.DB),
+            {
+              email: body.email,
+              ipHash: await hashSubmitterIp(requestIp(req)),
+            },
+            env,
+          )
+        : 'Database unavailable';
+      if (problem) {
+        newsletter = 'skipped';
+      } else {
+        await syncSequenzySubscriber({
+          email: body.email,
+          tags: ['newsletter-signup'],
+          lists: [NEWSLETTER_SUBSCRIBERS_LIST_ID],
+          customAttributes: { source: 'contact' },
+          enrollInSequences: true,
+          optInMode: 'double_opt_in',
+        });
+        newsletter = 'confirm';
+      }
     }
 
     return NextResponse.json({
       success: true,
       message: 'Message sent successfully',
+      ...(newsletter ? { newsletter } : {}),
     });
   } catch (error) {
     console.error('Contact API error:', error);

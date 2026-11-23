@@ -1,8 +1,7 @@
 'use client';
 
 import { Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { isUserInEU } from '../../lib/consentRegion';
+import { useState } from 'react';
 import { trackContactSubmit } from '../../lib/gtag';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -14,12 +13,8 @@ export function ContactForm() {
     'idle' | 'loading' | 'success' | 'error'
   >('idle');
   const [token, setToken] = useState<string>('');
-  const [newsletterOptIn, setNewsletterOptIn] = useState(true);
-
-  // Same EU/UK opt-in-only signal as the cookie banner and submit form.
-  useEffect(() => {
-    if (isUserInEU()) setNewsletterOptIn(false);
-  }, []);
+  // Opt-in only, everywhere: unticked until the visitor ticks it.
+  const [newsletterOptIn, setNewsletterOptIn] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -53,8 +48,14 @@ export function ContactForm() {
           messageLength:
             typeof data.message === 'string' ? data.message.length : 0,
         });
+        const payload = (await res.json().catch(() => null)) as {
+          newsletter?: 'confirm' | 'skipped';
+        } | null;
         toast.success('Message sent', {
-          description: "We'll get back to you soon.",
+          description:
+            payload?.newsletter === 'confirm'
+              ? "We'll get back to you soon. Check your inbox to confirm the newsletter."
+              : "We'll get back to you soon.",
         });
       } else {
         setStatus('error');
@@ -141,7 +142,7 @@ export function ContactForm() {
           onChange={(e) => setNewsletterOptIn(e.target.checked)}
         />
         <span>
-          Send me the weekly AllMCPs newsletter — new servers and guides.
+          Send me the weekly AllMCPs newsletter: new servers and guides.
         </span>
       </label>
 

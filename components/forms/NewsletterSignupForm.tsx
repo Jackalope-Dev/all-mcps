@@ -51,7 +51,9 @@ export function NewsletterSignupForm({
       if (res.ok) {
         setStatus('success');
         trackNewsletterSignup({ source });
-        toast.success('Subscribed', { description: "You're on the list." });
+        toast.success('Almost there', {
+          description: 'Check your inbox and click the link to confirm.',
+        });
         // The response sets the allmcps_subscribed cookie, so the newsletter
         // modal won't reappear.
         onSuccess?.();
@@ -80,7 +82,7 @@ export function NewsletterSignupForm({
     return (
       <p className="acct-newsletter-done" role="status">
         <CheckCircle2 size={16} aria-hidden="true" />
-        You&apos;re subscribed — thanks for joining!
+        Check your inbox and click the link to confirm your subscription.
       </p>
     );
   }

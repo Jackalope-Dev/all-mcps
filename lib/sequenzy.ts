@@ -24,6 +24,13 @@ export type SequenzySubscriberSync = {
    * could get an "you never paid" sequence. Defaults to false.
    */
   enrollInSequences?: boolean;
+  /**
+   * 'double_opt_in' for any address that hasn't proved it is real (a form
+   * anyone can type into): Sequenzy emails a confirmation link and keeps the
+   * contact unsubscribed, its lists held and its sequences parked, until it
+   * is clicked. Omitted, the workspace setting decides (off for AllMCPs).
+   */
+  optInMode?: 'double_opt_in';
 };
 
 /**
@@ -98,6 +105,7 @@ export async function syncSequenzySubscriber(
         customAttributes: input.customAttributes,
         duplicateStrategy: 'merge',
         enrollInSequences: input.enrollInSequences ?? false,
+        ...(input.optInMode ? { optInMode: input.optInMode } : {}),
       }),
       // Outbound fetches from Workers occasionally hang well past what's reasonable
       // (same rationale as lib/stripe.ts) — this call sits on the Stripe webhook's

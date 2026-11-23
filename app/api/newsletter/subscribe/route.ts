@@ -93,6 +93,9 @@ export async function POST(req: Request) {
       lists: [NEWSLETTER_SUBSCRIBERS_LIST_ID],
       customAttributes: { source },
       enrollInSequences: true,
+      // A typed-in address: nothing goes out until its owner clicks
+      // Sequenzy's confirmation link.
+      optInMode: 'double_opt_in',
     });
 
     const res = NextResponse.json({ success: true });
