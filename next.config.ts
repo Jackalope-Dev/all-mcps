@@ -35,6 +35,16 @@ const nextConfig: NextConfig = {
   // compile step, which runs first). Leaving it external skips webpack bundling
   // for it entirely, so the wasm import passes through untouched to that later stage.
   serverExternalPackages: ['@cf-wasm/photon'],
+  // mppx (MPP agent payments, lib/mpp.ts) lazy-imports the MCP SDK only on
+  // its MCP transport, which we never use; its peer dependency is optional.
+  // Resolve that import to an empty module instead of failing the build.
+  webpack(config) {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@modelcontextprotocol/sdk/types.js': false,
+    };
+    return config;
+  },
   // /sitemap.xml itself can't be a route folder (it collides with the
   // app/sitemap.ts metadata convention's reserved slot), so the sitemap index
   // route lives at /sitemap-index.xml and is rewritten to the public URL here.
