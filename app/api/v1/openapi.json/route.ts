@@ -1033,7 +1033,9 @@ export async function GET() {
     >;
     for (const [path, cents] of Object.entries(offers)) {
       const op = paths[path]?.post;
-      if (op) op['x-payment-info'] = { offers: [offer(cents)] };
+      // One offer per operation, so the flat form: the spec keeps it valid
+      // and older validators (isitagentready) only read this shape.
+      if (op) op['x-payment-info'] = offer(cents);
     }
     (openApiSpec as Record<string, unknown>)['x-service-info'] = {
       categories: ['developer-tools', 'advertising'],
