@@ -3,8 +3,16 @@ name: 📰 Weekly Newsletter Digest
 # Cloudflare Worker cron owns the automatic Monday 12:00 UTC send
 # (custom-worker.ts → /api/cron/newsletter-digest).
 # This workflow is manual-only so we never double-create campaigns on Mondays.
+# "test" (the default) builds this week's issue from live data as an unscheduled
+# Sequenzy draft with no audience, for a test send; "send" mails the whole list.
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "test = draft only (no audience); send = schedule to every subscriber"
+        type: choice
+        options: [test, send]
+        default: test
 
 permissions:
   contents: read
@@ -14,6 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Newsletter Digest API
+        env:
+          MODE: ${{ inputs.mode }}
         run: |
-          curl -f -X POST https://allmcps.com/api/cron/newsletter-digest \
+          query=""
+          if [ "$MODE" != "send" ]; then query="?test=1"; fi
+          curl -sS -f -X POST "https://allmcps.com/api/cron/newsletter-digest${query}" \
           -H "Authorization: Bearer ${{ secrets.CRON_SECRET || secrets.ADMIN_SECRET }}"

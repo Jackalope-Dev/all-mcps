@@ -4,11 +4,11 @@ import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { servers } from '../../../../db/schema';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
+import { isGenericServerName } from '../../../../lib/genericName';
 import { getGithubToken } from '../../../../lib/githubAuth';
 import {
   deriveServerName,
   fetchGithubReadme,
-  isGenericServerName,
   parseGithubUrl,
 } from '../../../../lib/listingEnrich';
 

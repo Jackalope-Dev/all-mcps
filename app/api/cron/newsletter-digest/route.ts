@@ -17,6 +17,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import {
   listingSignals,
+  newsletterFeatures,
   servers,
   upvoteRecords,
   viewRecords,
@@ -25,12 +26,15 @@ import { getAllPosts } from '../../../../lib/blog';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
 import {
   buildDigestBlocks,
+  DEFAULT_HEADLINE,
   type DigestBlogPost,
   type DigestCandidate,
   type DigestEditorial,
-  displayName,
   githubRepoKey,
+  isDigestTooThin,
+  isDigestTrustworthy,
   listingSummary,
+  listingTitle,
   listingUseCases,
   newListingScore,
   pickDiverse,
@@ -41,8 +45,11 @@ import {
 import { chatJson } from '../../../../lib/openai';
 
 const WINDOW_DAYS = 7;
-const NEW_COUNT = 4;
-const TRENDING_COUNT = 4;
+// Fewer, better items: nine one-line cards read as a wall, and clicks sat at ~1%.
+const NEW_COUNT = 3;
+const TRENDING_COUNT = 3;
+/** A listing featured in any of the last this-many weeks is left out, so trending never reruns. */
+const REPEAT_WINDOW_WEEKS = 8;
 /** Candidates pulled per section before scoring. Bounded so the repo-dedupe query stays under D1's 100 bound-parameter limit. */
 const POOL_SIZE = 30;
 /** A listing needs this many unique viewers in the window to count as trending. */
@@ -74,6 +81,8 @@ const CANDIDATE_FIELDS = {
   authType: servers.authType,
   installKind: servers.installKind,
   listingQuality: listingSignals.listingQuality,
+  repoCreatedAt: listingSignals.repoCreatedAt,
+  reviewFlagged: servers.reviewFlagged,
 };
 
 /** Listings fit to put in front of subscribers: enriched, alive, not a fork, not triaged out. */
@@ -172,6 +181,7 @@ async function loadTrendingCandidates(
         // Listings from this window belong to "New & notable".
         lt(servers.createdAt, since),
         gte(weekly.views, MIN_WEEKLY_VIEWS),
+        sql`coalesce(${listingSignals.listingQuality}, 0) >= ${MIN_NEW_QUALITY}`,
       ),
     )
     .orderBy(desc(weekly.views))
@@ -243,24 +253,44 @@ type LlmEditorial = DigestEditorial & {
   previewText: string;
 };
 
+type EditorialResult =
+  | { ok: true; editorial: LlmEditorial }
+  | { ok: false; reason: string };
+
+function toolNames(c: DigestCandidate): string[] {
+  if (!c.tools) return [];
+  try {
+    const parsed = JSON.parse(c.tools);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((t) => (typeof t?.name === 'string' ? t.name : null))
+      .filter((n): n is string => !!n)
+      .slice(0, 8);
+  } catch {
+    return [];
+  }
+}
+
 /**
- * One LLM pass writes the editorial layer: which shortlisted server leads as the
- * pick, a short write-up for it, a concrete blurb per card, and the subject and
- * preview text. Fail-soft: any budget/timeout/parse error returns null and the
- * deterministic copy is used, so the send never depends on the LLM.
+ * One LLM pass writes the editorial layer: the issue's theme and editor's note,
+ * which shortlisted server leads as the pick, a write-up and paste-ready prompts
+ * for it, a concrete blurb and example prompt per card, and the subject and
+ * preview text. Fail-soft: any budget/timeout/parse error returns the reason and
+ * the deterministic copy is used, so the send never depends on the LLM.
  */
 async function generateEditorial(
   week: number,
   shortlist: DigestCandidate[],
   others: DigestCandidate[],
   blogPost: DigestBlogPost | null,
-): Promise<LlmEditorial | null> {
+): Promise<EditorialResult> {
   const describe = (c: DigestCandidate) => ({
     id: c.id,
-    name: displayName(c.name).title,
+    name: listingTitle(c).title,
     category: plainCategory(c.category),
     summary: truncate(listingSummary(c), 240),
     useCases: listingUseCases(c).slice(0, 3),
+    tools: toolNames(c),
     githubStars: c.githubStars ?? undefined,
     pricing: c.pricingModel ?? undefined,
     auth: c.authType ?? undefined,
@@ -268,34 +298,42 @@ async function generateEditorial(
   });
 
   const result = await chatJson<{
+    headline?: string;
+    intro?: string;
     pickId?: string;
     pickWriteup?: string;
-    intro?: string;
+    pickPrompts?: unknown;
     subject?: string;
     previewText?: string;
-    items?: Array<{ id: string; blurb?: string }>;
+    items?: Array<{ id: string; blurb?: string; prompt?: string }>;
   }>({
     model: 'gpt-5.6-luna',
     temperature: 0.6,
-    maxTokens: 1400,
-    timeoutMs: 30_000,
+    // A reasoning model spends part of this budget thinking before it writes.
+    // At 1400 the JSON for ~10 listings was cut off, failed to parse, and the
+    // Nov 16 and Nov 23 2026 issues went out with the fallback copy.
+    maxTokens: 8000,
+    timeoutMs: 90_000,
     messages: [
       {
         role: 'system',
         content:
           'You are the editor of AllMCPs, a directory of Model Context Protocol (MCP) servers that give AI agents ' +
           '(Claude, Cursor, Codex, etc.) new tools. Readers are developers deciding what to plug into their agent. ' +
-          'Write a weekly email that makes them want to click through and try something. ' +
+          'Write a weekly email that reads like a short, opinionated briefing from someone who tried these tools, and makes readers want to try one today. ' +
           'Be concrete: name the task the server lets an agent do ("have Claude diff two Postgres schemas"), not adjectives. ' +
-          'Use only facts present in the input. No hype ("game-changer", "revolutionary", "supercharge", "unlock"), no emoji, no exclamation marks. ' +
+          'Use only facts present in the input (summary, use cases, tool names). No hype ("game-changer", "revolutionary", "supercharge", "unlock"), no emoji, no exclamation marks. ' +
+          'Refer to servers by the "name" given, never by an id. ' +
           'Return JSON with:\n' +
+          '"headline": the theme of this issue under 60 chars, concrete, drawn from what these servers have in common or the pick ("Give your agent a real browser"); never "This week on AllMCPs";\n' +
+          '"intro": an editor\'s note of 2-3 sentences (under 320 chars) that connects this week\'s servers to a workflow a developer has, and says why it matters now;\n' +
           '"pickId": the id from SHORTLIST most likely to be useful and interesting to the broadest set of developers;\n' +
           '"pickWriteup": 2-3 sentences (under 330 chars) on what it lets you do and who should try it — do not start with its name;\n' +
-          '"intro": 1-2 sentences (under 200 chars) setting up this week\'s email;\n' +
+          '"pickPrompts": exactly 3 prompts a reader could paste into their agent once the pick is installed, each under 110 chars, written as the user speaking to the agent, specific to the pick\'s tools;\n' +
           '"subject": email subject under 60 chars that names the pick or one concrete thing from this week; no "This week on AllMCPs";\n' +
           '"previewText": inbox preview under 100 chars that complements the subject (mention another highlight, not a repeat);\n' +
-          '"items": [{id, blurb}] for EVERY listing in SHORTLIST and OTHERS — one sentence under 140 chars on what you can do with it; ' +
-          'do not start with the server name or "This server". Keep every id exactly as provided.',
+          '"items": [{id, blurb, prompt}] for EVERY listing in SHORTLIST and OTHERS — blurb: one sentence under 140 chars on what you can do with it, ' +
+          'not starting with the server name or "This server"; prompt: one example prompt under 100 chars the reader could paste into their agent. Keep every id exactly as provided.',
       },
       {
         role: 'user',
@@ -310,29 +348,74 @@ async function generateEditorial(
     ],
   });
 
-  if (!result.ok) return null;
+  if (!result.ok) return { ok: false, reason: result.reason };
   const data = result.data;
   const text = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 
   const blurbs: Record<string, string> = {};
+  const prompts: Record<string, string> = {};
   for (const item of data.items || []) {
-    const blurb = text(item?.blurb);
-    if (item?.id && blurb) blurbs[item.id] = blurb;
+    if (!item?.id) continue;
+    const blurb = text(item.blurb);
+    const prompt = text(item.prompt);
+    if (blurb) blurbs[item.id] = blurb;
+    if (prompt) prompts[item.id] = prompt;
   }
   const pickId = shortlist.some((c) => c.id === data.pickId)
     ? (data.pickId as string)
     : null;
   const subject = text(data.subject);
+  const headline = text(data.headline);
 
   return {
-    pickId,
-    pickWriteup: text(data.pickWriteup),
-    intro: text(data.intro) || FALLBACK_INTROS[week % FALLBACK_INTROS.length],
-    // A runaway subject gets clipped by every inbox; fall back rather than truncate mid-word.
-    subject: subject.length <= 80 ? subject : '',
-    previewText: truncate(text(data.previewText), 140),
-    blurbs,
+    ok: true,
+    editorial: {
+      pickId,
+      headline: headline.length <= 70 ? headline : '',
+      pickWriteup: text(data.pickWriteup),
+      pickPrompts: Array.isArray(data.pickPrompts)
+        ? data.pickPrompts.map(text).filter(Boolean).slice(0, 3)
+        : [],
+      intro: text(data.intro) || FALLBACK_INTROS[week % FALLBACK_INTROS.length],
+      // A runaway subject gets clipped by every inbox; fall back rather than truncate mid-word.
+      subject: subject.length <= 80 ? subject : '',
+      previewText: truncate(text(data.previewText), 140),
+      blurbs,
+      prompts,
+    },
   };
+}
+
+/** Listing ids featured in the last REPEAT_WINDOW_WEEKS sends. */
+async function loadRecentlyFeatured(db: Db, now: Date): Promise<Set<string>> {
+  const since = new Date(
+    now.getTime() - REPEAT_WINDOW_WEEKS * 7 * 24 * 60 * 60 * 1000,
+  );
+  const rows = await db
+    .select({ serverId: newsletterFeatures.serverId })
+    .from(newsletterFeatures)
+    .where(gte(newsletterFeatures.featuredAt, since));
+  return new Set(rows.map((r) => r.serverId));
+}
+
+async function recordFeatures(
+  db: Db,
+  campaign: string,
+  now: Date,
+  slots: { id: string; slot: 'pick' | 'new' | 'trending' }[],
+): Promise<void> {
+  if (slots.length === 0) return;
+  await db
+    .insert(newsletterFeatures)
+    .values(
+      slots.map((s) => ({
+        campaign,
+        serverId: s.id,
+        slot: s.slot,
+        featuredAt: now,
+      })),
+    )
+    .onConflictDoNothing();
 }
 
 async function sequenzyFetch(path: string, body: unknown): Promise<Response> {
@@ -352,13 +435,25 @@ async function createSequenzyCampaign(input: {
   subject: string;
   previewText: string;
   blocks: Record<string, any>[];
+  /** A test draft: no audience, so it can only be sent as a test email. */
+  test: boolean;
 }): Promise<string> {
+  const date = new Date().toISOString().slice(0, 10);
   const res = await sequenzyFetch('/campaigns', {
-    name: `Weekly Digest — ${new Date().toISOString().slice(0, 10)}`,
+    name: input.test
+      ? `[TEST — do not send] Weekly Digest — ${date}`
+      : `Weekly Digest — ${date}`,
     subject: input.subject,
     previewText: input.previewText,
     blocks: input.blocks,
-    targetLists: { type: 'lists', listIds: [NEWSLETTER_SUBSCRIBERS_LIST_ID] },
+    ...(input.test
+      ? {}
+      : {
+          targetLists: {
+            type: 'lists',
+            listIds: [NEWSLETTER_SUBSCRIBERS_LIST_ID],
+          },
+        }),
     // No senderProfileId: the From inherits the company's default sender so it
     // can't go stale (it hardcoded an old sender profile ID before). Reply-To is
     // explicit because omitting it still left campaigns pinned to an old personal
@@ -384,11 +479,17 @@ async function scheduleSequenzyCampaign(campaignId: string): Promise<void> {
   }
 }
 
+/**
+ * POST runs the weekly send. `?test=1` builds the same issue from live data as an
+ * unscheduled draft with no audience, for a test send to the team; it records
+ * nothing, so the real send next Monday is unaffected.
+ */
 export async function POST(req: Request) {
   try {
     if (!(await isCronAuthorized(req))) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
+    const test = new URL(req.url).searchParams.get('test') === '1';
 
     let env: CloudflareEnv | undefined;
     try {
@@ -405,18 +506,15 @@ export async function POST(req: Request) {
     const now = new Date();
     const since = new Date(now.getTime() - WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
-    const [newPool, trendingPool] = await Promise.all([
+    const [newRaw, trendingRaw, recentlyFeatured] = await Promise.all([
       loadNewCandidates(db, since),
       loadTrendingCandidates(db, since),
+      loadRecentlyFeatured(db, now),
     ]);
-
-    if (newPool.length === 0 && trendingPool.length === 0) {
-      return NextResponse.json({
-        success: true,
-        skipped: true,
-        message: 'No listings to feature this week.',
-      });
-    }
+    const eligible = (c: DigestCandidate) =>
+      !recentlyFeatured.has(c.id) && isDigestTrustworthy(c, now);
+    const newPool = newRaw.filter(eligible);
+    const trendingPool = trendingRaw.filter(eligible);
 
     const week = isoWeek(now);
     const campaign = `digest-${now.getUTCFullYear()}-w${String(week).padStart(2, '0')}`;
@@ -432,12 +530,46 @@ export async function POST(req: Request) {
     );
     const shortlist = [...newRanked.slice(0, 3), ...trendingRanked.slice(0, 2)];
 
-    const llm = await generateEditorial(
+    // Decide whether the week is worth a send before paying for the LLM pass.
+    const draftPick = shortlist[0] || null;
+    const draftExclude = new Set(draftPick ? [draftPick.id] : []);
+    if (
+      isDigestTooThin({
+        pick: draftPick,
+        newListings: pickDiverse(
+          newRanked,
+          newListingScore,
+          NEW_COUNT,
+          draftExclude,
+        ),
+        trending: pickDiverse(
+          trendingRanked,
+          trendingScore,
+          TRENDING_COUNT,
+          draftExclude,
+        ),
+        blogPost,
+      })
+    ) {
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        message: 'Too little worth featuring this week; skipped the send.',
+      });
+    }
+
+    const llmResult = await generateEditorial(
       week,
       shortlist,
       [...newRanked.slice(3), ...trendingRanked.slice(2)],
       blogPost,
     );
+    const llm = llmResult.ok ? llmResult.editorial : null;
+    if (!llmResult.ok) {
+      console.warn('newsletter_digest.editorial_fallback', {
+        reason: llmResult.reason,
+      });
+    }
 
     const pick =
       shortlist.find((c) => c.id === llm?.pickId) || shortlist[0] || null;
@@ -456,12 +588,15 @@ export async function POST(req: Request) {
     );
 
     const editorial: DigestEditorial = {
+      headline: llm?.headline || DEFAULT_HEADLINE,
       intro: llm?.intro || FALLBACK_INTROS[week % FALLBACK_INTROS.length],
       pickWriteup: llm?.pickWriteup || '',
+      pickPrompts: llm?.pickPrompts || [],
       blurbs: llm?.blurbs || {},
+      prompts: llm?.prompts || {},
     };
 
-    const pickTitle = pick ? displayName(pick.name).title : '';
+    const pickTitle = pick ? listingTitle(pick).title : '';
     const subject =
       llm?.subject ||
       (pick
@@ -488,18 +623,28 @@ export async function POST(req: Request) {
       subject,
       previewText,
       blocks,
+      test,
     });
-    await scheduleSequenzyCampaign(campaignId);
+    if (!test) {
+      await scheduleSequenzyCampaign(campaignId);
+      await recordFeatures(db, campaign, now, [
+        ...(pick ? [{ id: pick.id, slot: 'pick' as const }] : []),
+        ...newListings.map((c) => ({ id: c.id, slot: 'new' as const })),
+        ...trending.map((c) => ({ id: c.id, slot: 'trending' as const })),
+      ]);
+    }
 
     return NextResponse.json({
       success: true,
+      test,
       campaignId,
       subject,
+      headline: editorial.headline,
       pick: pick?.id ?? null,
-      newCount: newListings.length,
-      trendingCount: trending.length,
+      newListings: newListings.map((c) => c.id),
+      trending: trending.map((c) => c.id),
       blogPost: blogPost?.slug ?? null,
-      editorial: llm ? 'llm' : 'fallback',
+      editorial: llmResult.ok ? 'llm' : `fallback:${llmResult.reason}`,
       week,
     });
   } catch (error: any) {

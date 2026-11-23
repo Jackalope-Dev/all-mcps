@@ -1,3 +1,10 @@
+import {
+  hostBrandLabel,
+  isGenericListingName,
+  isGenericNameTail,
+  ownerBrandSlug,
+} from './genericName';
+
 /**
  * Server names are usually the literal package/repo identifier (e.g.
  * "moxiespirit/oathscore", "@modelcontextprotocol/server-filesystem") — accurate
@@ -11,17 +18,20 @@ export function parseServerName(
 ): { displayName: string; org: string | null } {
   const idx = name.lastIndexOf('/');
   if (idx === -1) {
-    // Some ~200 catalog entries have a bare, uninformative `name` of literally
-    // "mcp" with no org prefix — the org-folding fix below never fires for
-    // them since there's no slash to split on. Recover the org/repo from the
-    // GitHub URL instead, when the caller has one, so these don't all render
-    // as page title/H1 "MCP".
-    if (/^mcp$/i.test(name) && url) {
+    // A bare label ("mcp", "cli", "core") says nothing on its own. Recover the
+    // org/repo from the GitHub URL, else the website's domain, when the caller
+    // has a URL, so these don't all render as page title/H1 "MCP".
+    if (isGenericListingName(name) && url) {
       const m = url.match(/github\.com\/([^/]+)\/([^/#?]+)/i);
       if (m) {
         const org = m[1];
         const repo = m[2].replace(/\.git$/i, '');
+        // A generic repo ("acme/mcp") is folded into "Acme MCP" below.
         return parseServerName(`${org}/${repo}`);
+      }
+      const label = hostBrandLabel(url);
+      if (label) {
+        return { displayName: `${humanize(label)} MCP`, org: null };
       }
     }
     return { displayName: humanize(name), org: null };
@@ -30,11 +40,17 @@ export function parseServerName(
   const base = name.slice(idx + 1);
   let displayName = humanize(base);
   // "snowflake-labs/mcp" used to become just "Mcp", then the listing template
-  // appended "MCP Server" → "Mcp MCP Server". Fold the org in when the repo
-  // name is only "mcp" (or humanizes to only "MCP").
-  if (/^mcp$/i.test(base) || displayName === 'MCP') {
-    const orgLeaf = org.split('/').pop() || org;
-    displayName = `${humanize(orgLeaf)} MCP`;
+  // appended "MCP Server" → "Mcp MCP Server", and "@memlab/mcp-server" rendered
+  // as "MCP Server". When the repo/package part is a bare label, the org is the
+  // product name, so fold it in front.
+  if (isGenericNameTail(base)) {
+    const orgLeaf = ownerBrandSlug(org.split('/').pop() || org);
+    const orgName = humanize(orgLeaf);
+    if (displayName === 'MCP' || displayName === 'MCP Server') {
+      displayName = /\bMCP\b/.test(orgName) ? orgName : `${orgName} MCP`;
+    } else {
+      displayName = `${orgName} ${displayName}`;
+    }
   }
   return { displayName, org };
 }
@@ -44,6 +60,8 @@ function titleCaseWord(word: string): string {
   if (word.toLowerCase() === 'ai') return 'AI';
   if (word.toLowerCase() === 'api') return 'API';
   if (word.toLowerCase() === 'io') return 'IO';
+  if (word.toLowerCase() === 'cli') return 'CLI';
+  if (word.toLowerCase() === 'sdk') return 'SDK';
   return word.charAt(0).toUpperCase() + word.slice(1);
 }
 

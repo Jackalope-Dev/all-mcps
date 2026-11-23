@@ -4,6 +4,8 @@ import { servers } from '../../db/schema';
 import { DEFAULT_SUBMIT_CATEGORY, normalizeCategory } from '../categories';
 import { classifyCategory } from '../categoryClassifier';
 import { cleanListingDescription } from '../description';
+import { parseServerName } from '../displayName';
+import { isGenericListingName } from '../genericName';
 import { toCachedInstallFields } from '../installConfig';
 import { fetchGithubRepo, parseGithubUrl } from '../listingEnrich';
 import { buildListingSlug } from '../listingIntake';
@@ -224,6 +226,19 @@ async function nearDuplicateVerdict(
   return flag;
 }
 
+/**
+ * The name a new listing is stored under. Sources hand us raw repo or package ids,
+ * and a repo literally called `mcp` (`corsair-dev/mcp`) or a bare `mcp` then shows
+ * as "MCP" in the digest, search and LLM context. Those get the readable form
+ * ("Corsair Dev MCP"). An `@scope/pkg` name with no install package is kept: the
+ * install fallback guesses the npm package from it.
+ */
+export function listingNameFor(c: IngestCandidate): string {
+  if (!isGenericListingName(c.name)) return c.name;
+  if (c.name.trim().startsWith('@') && !c.installPackage) return c.name;
+  return parseServerName(c.name, c.url).displayName;
+}
+
 function installFieldsFor(c: IngestCandidate) {
   if (!c.installCommand || !c.installPackage) return null;
   return toCachedInstallFields({
@@ -323,12 +338,13 @@ export async function ingestCandidates(
       isSafeSubmissionUrl(checked.remoteEndpointUrl)
         ? checked.remoteEndpointUrl
         : null;
-    const id = await freeListingId(db, checked.name);
+    const name = listingNameFor(checked);
+    const id = await freeListingId(db, name);
 
     try {
       await db.insert(servers).values({
         id,
-        name: checked.name,
+        name,
         url: checked.url,
         websiteUrl: checked.websiteUrl || null,
         description:

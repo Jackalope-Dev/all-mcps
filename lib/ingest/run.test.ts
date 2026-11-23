@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { selectNewCandidates } from './run';
+import { listingNameFor, selectNewCandidates } from './run';
 import type { IngestCandidate } from './sources';
 
 const c = (over: Partial<IngestCandidate>): IngestCandidate => ({
@@ -61,5 +61,29 @@ describe('selectNewCandidates', () => {
       'no description': 1,
       'scaffold or demo name': 1,
     });
+  });
+});
+
+describe('listingNameFor', () => {
+  it('gives a label-only repo a readable name', () => {
+    expect(
+      listingNameFor(
+        c({ name: 'acme/mcp', url: 'https://github.com/acme/mcp' }),
+      ),
+    ).toBe('Acme MCP');
+    expect(listingNameFor(c({ name: 'Weather MCP' }))).toBe('Weather MCP');
+  });
+
+  it('keeps an @scope/pkg name the install fallback depends on', () => {
+    expect(listingNameFor(c({ name: '@acme/mcp' }))).toBe('@acme/mcp');
+    expect(
+      listingNameFor(
+        c({
+          name: '@acme/mcp',
+          installCommand: 'npx',
+          installPackage: '@acme/mcp',
+        }),
+      ),
+    ).toBe('Acme MCP');
   });
 });

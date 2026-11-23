@@ -4,6 +4,14 @@
  */
 
 import { cleanListingDescription } from './description';
+import {
+  hostBrandLabel,
+  isGenericListingName,
+  isGenericServerName,
+  meaningfulNameWords,
+  nameTail,
+  ownerBrandSlug,
+} from './genericName';
 import { isGenericWebsite } from './genericWebsite';
 import { githubApiHeaders } from './githubAuth';
 import {
@@ -679,88 +687,6 @@ export async function extractWebsiteFaviconUrl(
   }
 }
 
-/**
- * Bare technical labels ("mcp", "mcp-server", "reference-data") that a
- * scraped import can leave as `servers.name` instead of an actual product
- * title — usually because the source was an npm/package name rather than a
- * human-written title. A name is generic when every one of its words (split
- * on whitespace/hyphen/underscore) is one of these, and there are few enough
- * words that it reads as a label rather than a real title — "Kai AGI -
- * Autonomous AI Agent" has "agent" in the set but enough other words that
- * it's clearly a real name, not a placeholder.
- */
-const GENERIC_NAME_WORDS = new Set([
-  'mcp',
-  'server',
-  'servers',
-  'tool',
-  'tools',
-  'toolkit',
-  'toolset',
-  'api',
-  'client',
-  'service',
-  'services',
-  'app',
-  'core',
-  'cli',
-  'sdk',
-  'docs',
-  'doc',
-  'documentation',
-  'gateway',
-  'assistant',
-  'agent',
-  'agents',
-  'memory',
-  'registry',
-  'catalog',
-  'marketplace',
-  'monitoring',
-  'audit',
-  'booking',
-  'library',
-  'libraries',
-  'reference',
-  'data',
-  'hub',
-  'kit',
-  'connector',
-  'connectors',
-  'integration',
-  'integrations',
-  'bridge',
-  'proxy',
-  'wrapper',
-  'adapter',
-  'util',
-  'utils',
-  'utility',
-  'utilities',
-  'backend',
-  'frontend',
-  'platform',
-  'system',
-  'framework',
-  'plugin',
-  'plugins',
-  'extension',
-  'module',
-]);
-
-/** Words too generic to carry a fetched title/repo-slug/hostname as a listing name. */
-export function isGenericServerName(name: string | null | undefined): boolean {
-  const words = (name || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .split(' ')
-    .filter(Boolean);
-  if (words.length === 0) return true;
-  if (words.length > 3) return false;
-  return words.every((w) => GENERIC_NAME_WORDS.has(w));
-}
-
 const ACRONYMS = new Set([
   'mcp',
   'api',
@@ -1035,13 +961,70 @@ export function extractReadmeTitle(
   return null;
 }
 
+const condense = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+const TITLE_FILLER = new Set(['the', 'and', 'for', 'with', 'your', 'from']);
+
+/**
+ * Whether a README heading names this project rather than a section. The first
+ * heading is often "Add to MCP Clients", "Quick Links" or "Configure Claude
+ * Desktop"; a real title shares a word with the owner, repo or domain ("Alby
+ * Bitcoin Payments" for getAlby, "Atlas Przetargów" for atlasprzetargow).
+ */
+export function readmeTitleNamesProject(
+  title: string,
+  identities: (string | null | undefined)[],
+): boolean {
+  const ids = identities
+    .filter((s): s is string => !!s)
+    .map(condense)
+    .filter((s) => s.length >= 3);
+  const tokens = meaningfulNameWords(title).filter(
+    (w) => w.length >= 3 && !TITLE_FILLER.has(w) && !isGenericServerName(w),
+  );
+  return tokens.some((t) =>
+    ids.some((id) => id.includes(t) || (id.length >= 4 && t.includes(id))),
+  );
+}
+
+/** "Corsair" -> "Corsair MCP"; a base that already says MCP is kept. */
+const withMcp = (base: string) =>
+  /\bmcp\b|model context protocol/i.test(base) ? base : `${base} MCP`;
+
+/**
+ * The part of a README title that names the project, without a tagline:
+ * "LUNO — AI-era Backend Platform" -> "LUNO", "TagoIO | MCP Server" -> "TagoIO",
+ * "@nativine/mcp — Nativine MCP Server" -> "Nativine MCP Server".
+ */
+function projectTitle(
+  title: string,
+  identities: (string | null | undefined)[],
+): string | null {
+  const segments = title
+    .split(/\s+[—–|]\s+|:\s+/)
+    // "知己 (Zhiji) Memory": keep the words, drop the brackets.
+    .map((s) =>
+      s
+        .replace(/[()（）]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim(),
+    )
+    .filter(Boolean);
+  for (const segment of segments) {
+    if (/[/@]/.test(segment)) continue;
+    if (readmeTitleNamesProject(segment, identities)) return segment;
+  }
+  return null;
+}
+
 /**
  * Replacement title for a listing whose stored `name` is a bare technical
- * label (see isGenericServerName). Preference order: the repo's own README
- * title > a humanized repo slug (falling back to the org/owner name when the
- * repo slug is itself generic, e.g. a repo literally named "mcp") > a
- * humanized hostname for non-GitHub listings. Returns null when the current
- * name isn't generic, or no better candidate could be derived.
+ * label, alone or after an owner (see isGenericListingName). Preference order:
+ * the repo's README title when it names the project > the repo name when it is
+ * a real one > the owner as the brand, keeping any meaningful label word
+ * ("mcp-gateway" by civic -> "Civic Gateway MCP") > the website's domain for
+ * non-GitHub listings. Returns null when the current name isn't generic, or no
+ * better candidate could be derived.
  */
 export function deriveServerName(input: {
   currentName: string;
@@ -1049,33 +1032,50 @@ export function deriveServerName(input: {
   ghRepo?: { owner: string; repo: string } | null;
   readme?: string | null;
 }): string | null {
-  if (!isGenericServerName(input.currentName)) return null;
+  const current = input.currentName.trim();
+  if (!isGenericListingName(current)) return null;
+  const gh = input.ghRepo;
+  const nameOwner = current.includes('/')
+    ? current.slice(0, current.lastIndexOf('/'))
+    : null;
 
-  const fromReadme = extractReadmeTitle(input.readme);
-  if (
-    fromReadme &&
-    fromReadme.toLowerCase() !== input.currentName.trim().toLowerCase()
-  ) {
-    return fromReadme.slice(0, 80);
+  const readmeTitle = extractReadmeTitle(input.readme);
+  const fromReadme = readmeTitle
+    ? projectTitle(readmeTitle, [
+        gh?.owner,
+        gh?.repo,
+        nameOwner,
+        hostBrandLabel(input.url),
+      ])
+    : null;
+  if (fromReadme && fromReadme.toLowerCase() !== current.toLowerCase()) {
+    return withMcp(fromReadme).slice(0, 80);
   }
 
-  if (input.ghRepo) {
-    const { owner, repo } = input.ghRepo;
-    const base = isGenericServerName(repo)
-      ? humanizeSlug(owner)
-      : humanizeSlug(repo);
-    if (!base) return null;
-    return /\bmcp\b/i.test(base) ? base : `${base} MCP`;
-  }
+  // "gateway" in "mcp-gateway": generic alone, but worth keeping after a brand.
+  const label = meaningfulNameWords(nameTail(current))
+    .map((w) => humanizeSlug(w))
+    .join(' ');
+  const branded = (brandSlug: string) => {
+    const brand = humanizeSlug(brandSlug);
+    if (!brand) return null;
+    const lower = brand.toLowerCase();
+    return withMcp(
+      label && !lower.includes(label.toLowerCase())
+        ? `${brand} ${label}`
+        : brand,
+    );
+  };
 
-  try {
-    const host = new URL(input.url).hostname.replace(/^www\./i, '');
-    const parts = host.split('.').filter(Boolean);
-    const label = parts.length >= 2 ? parts[parts.length - 2] : parts[0];
-    if (!label || isGenericServerName(label)) return null;
-    const base = humanizeSlug(label);
-    return /\bmcp\b/i.test(base) ? base : `${base} MCP`;
-  } catch {
-    return null;
+  // The name's own owner first: a monorepo URL can point at a folder repo
+  // ("openpulsechain/public") that says less than the package scope does.
+  if (nameOwner) {
+    return branded(ownerBrandSlug(nameOwner.split('/').pop() || nameOwner));
   }
+  if (gh) {
+    if (!isGenericListingName(gh.repo)) return withMcp(humanizeSlug(gh.repo));
+    return branded(ownerBrandSlug(gh.owner));
+  }
+  const host = hostBrandLabel(input.url);
+  return host ? branded(host) : null;
 }

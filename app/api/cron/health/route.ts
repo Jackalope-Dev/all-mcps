@@ -248,6 +248,7 @@ async function checkListing(
   let lastCommitAt: Date | null = server.lastCommitAt ?? null;
   // undefined = GitHub was not asked this pass; leave the stored value alone.
   let repoForkOf: string | null | undefined;
+  let repoCreatedAt: Date | null | undefined;
   let readmeHash = server.readmeHash ?? null;
   let latestReleaseTag = server.latestReleaseTag ?? null;
   let contentChanged = false;
@@ -286,6 +287,8 @@ async function checkListing(
         if (snapshot.pushedAt) lastCommitAt = snapshot.pushedAt;
         // Feeds the stale sweep's unmodified-fork rule.
         repoForkOf = snapshot.forkOf;
+        // With stars, spots bought stars (lib/repoStars.ts).
+        repoCreatedAt = snapshot.createdAt;
         if (snapshot.archived) {
           healthStatus = 'archived';
         } else {
@@ -719,6 +722,7 @@ async function checkListing(
     statements.push(
       upsertSignals(db, server.id, {
         ...(repoForkOf !== undefined ? { repoForkOf } : {}),
+        ...(repoCreatedAt ? { repoCreatedAt } : {}),
         readmeHash,
         latestReleaseTag,
         ...(contentChanged ? { contentChangedAt: now } : {}),

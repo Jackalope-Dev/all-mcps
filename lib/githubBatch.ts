@@ -15,6 +15,8 @@ export type RepoSnapshot =
       kind: 'ok';
       stars: number;
       pushedAt: Date | null;
+      /** When the repo was created; null when GitHub did not say. */
+      createdAt: Date | null;
       archived: boolean;
       /** owner/repo of the parent when this repo is a fork, 'unknown' when GitHub hides it, null when not a fork. */
       forkOf: string | null;
@@ -51,12 +53,18 @@ const README_PATHS = [
 ];
 const SAFE_SEGMENT = /^[A-Za-z0-9_.-]+$/;
 
-const REPO_FIELDS = `stargazerCount pushedAt isArchived isDisabled isFork
+const REPO_FIELDS = `stargazerCount pushedAt createdAt isArchived isDisabled isFork
   parent { nameWithOwner }
   latestRelease { tagName }
   ${README_PATHS.map(
     (p, i) => `rm${i}: object(expression: "HEAD:${p}") { ... on Blob { oid } }`,
   ).join('\n  ')}`;
+
+function parseDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
 
 /** The GraphQL document for `slugs` (owner/repo), aliased r0…rN in order. */
 export function buildRepoBatchQuery(slugs: string[]): string {
@@ -70,6 +78,7 @@ export function buildRepoBatchQuery(slugs: string[]): string {
 type RepoNode = {
   stargazerCount?: number;
   pushedAt?: string | null;
+  createdAt?: string | null;
   isArchived?: boolean;
   isDisabled?: boolean;
   isFork?: boolean;
@@ -114,6 +123,7 @@ export function parseRepoBatchResponse(
       kind: 'ok',
       stars: node.stargazerCount ?? 0,
       pushedAt: pushed && !Number.isNaN(pushed.getTime()) ? pushed : null,
+      createdAt: parseDate(node.createdAt),
       archived: Boolean(node.isArchived || node.isDisabled),
       forkOf: node.isFork ? (node.parent?.nameWithOwner ?? 'unknown') : null,
       latestReleaseTag: node.latestRelease?.tagName ?? null,
@@ -208,6 +218,7 @@ export async function fetchRepoSnapshotRest(
     const repo = (await res.json()) as {
       stargazers_count?: number;
       pushed_at?: string;
+      created_at?: string;
       archived?: boolean;
       disabled?: boolean;
       fork?: boolean;
@@ -229,6 +240,7 @@ export async function fetchRepoSnapshotRest(
       kind: 'ok',
       stars: repo.stargazers_count ?? 0,
       pushedAt: pushed && !Number.isNaN(pushed.getTime()) ? pushed : null,
+      createdAt: parseDate(repo.created_at),
       archived: Boolean(repo.archived || repo.disabled),
       forkOf: repo.fork ? (repo.parent?.full_name ?? 'unknown') : null,
       latestReleaseTag: null,

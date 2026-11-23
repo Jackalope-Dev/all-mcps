@@ -31,6 +31,7 @@ describe('parseRepoBatchResponse', () => {
         r0: {
           stargazerCount: 42,
           pushedAt: '2026-10-01T00:00:00Z',
+          createdAt: '2025-03-04T00:00:00Z',
           isArchived: false,
           isDisabled: false,
           isFork: true,
@@ -52,6 +53,7 @@ describe('parseRepoBatchResponse', () => {
       kind: 'ok',
       stars: 42,
       pushedAt: new Date('2026-10-01T00:00:00Z'),
+      createdAt: new Date('2025-03-04T00:00:00Z'),
       archived: false,
       forkOf: 'up/stream',
       latestReleaseTag: 'v1.2.0',

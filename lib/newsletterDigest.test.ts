@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   buildDigestBlocks,
   type DigestCandidate,
-  displayName,
+  type DigestEditorial,
   factsLine,
   githubRepoKey,
+  isDigestTooThin,
+  isDigestTrustworthy,
+  listingTitle,
   newListingScore,
   pickDiverse,
   trendingScore,
@@ -30,7 +33,21 @@ function candidate(overrides: Partial<DigestCandidate> = {}): DigestCandidate {
     authType: 'none',
     installKind: 'stdio',
     listingQuality: 2,
+    repoCreatedAt: null,
+    reviewFlagged: false,
     ...overrides,
+  };
+}
+
+function editorial(over: Partial<DigestEditorial> = {}): DigestEditorial {
+  return {
+    headline: 'Scan brains from chat',
+    intro: 'Hello',
+    pickWriteup: '',
+    pickPrompts: [],
+    blurbs: {},
+    prompts: {},
+    ...over,
   };
 }
 
@@ -89,19 +106,34 @@ describe('githubRepoKey', () => {
 });
 
 describe('copy', () => {
-  it('splits owner/repo names into a title and byline', () => {
-    expect(displayName('acme/brainscanner-mcp')).toEqual({
-      title: 'brainscanner-mcp',
+  it('humanizes owner/repo names into a title and byline', () => {
+    const t = (name: string, url = 'https://github.com/acme/brainscanner') =>
+      listingTitle({ name, url });
+    expect(t('acme/brainscanner-mcp')).toEqual({
+      title: 'Brainscanner MCP',
       by: 'acme',
     });
-    expect(displayName('@acme/brainscanner')).toEqual({
-      title: 'brainscanner',
+    expect(t('@acme/brainscanner')).toEqual({
+      title: 'Brainscanner',
       by: 'acme',
     });
-    expect(displayName('Acme Brainscanner')).toEqual({
+    expect(t('Acme Brainscanner')).toEqual({
       title: 'Acme Brainscanner',
       by: null,
     });
+  });
+
+  it('never titles a listing just "mcp"', () => {
+    // The Nov 23 2026 subject read "Pick of the week: mcp".
+    expect(
+      listingTitle({ name: '@acme/mcp', url: 'https://github.com/acme/x' }),
+    ).toEqual({
+      title: 'Acme MCP',
+      by: null,
+    });
+    expect(
+      listingTitle({ name: 'mcp', url: 'https://github.com/acme/mcp' }).title,
+    ).toBe('Acme MCP');
   });
 
   it('builds the facts line', () => {
@@ -142,11 +174,11 @@ describe('buildDigestBlocks', () => {
       newListings: [candidate({ id: 'n1', logoUrl: '/logos/n1' })],
       trending: [candidate({ id: 't1' })],
       blogPost: { slug: 'acme-guide', title: 'Acme guide', excerpt: 'How to.' },
-      editorial: {
-        intro: 'Hello',
+      editorial: editorial({
         pickWriteup: 'Have your agent compare two scans.',
         blurbs: { n1: 'Read scans from chat.' },
-      },
+        prompts: { n1: 'Summarize my latest scan' },
+      }),
       campaign: 'digest-2026-w44',
     });
     const html = JSON.stringify(blocks);
@@ -161,6 +193,9 @@ describe('buildDigestBlocks', () => {
     expect(html).toContain('Have your agent compare two scans.');
     expect(html).toContain('Read scans from chat.');
     expect(html).toContain('Compare two scans');
+    expect(html).toContain('Summarize my latest scan');
+    expect(html).toContain('Scan brains from chat');
+    expect(html).toContain('Hit reply');
     // Logos are absolutized for email clients.
     expect(html).toContain('https://allmcps.com/logos/n1');
     // Names are escaped, never injected.
@@ -174,7 +209,7 @@ describe('buildDigestBlocks', () => {
       newListings: [candidate({ id: 'n1' })],
       trending: [],
       blogPost: null,
-      editorial: { intro: 'Hello', pickWriteup: 'Great.', blurbs: {} },
+      editorial: editorial({ pickWriteup: 'Great.' }),
       campaign: 'digest-2026-w47',
     });
     const pickIndex = blocks.findIndex((b) =>
@@ -185,7 +220,7 @@ describe('buildDigestBlocks', () => {
       .slice(pickIndex + 1, pickIndex + 3)
       .find((b) => b.type === 'button');
     expect(button).toBeDefined();
-    expect(button?.text).toBe('Set up brainscanner →');
+    expect(button?.text).toBe('Set up Brainscanner →');
     expect(button?.buttonColor).toBe('#00E5FF');
     expect(button?.buttonTextColor).toBe('#020617');
     expect(button?.styles).toEqual({ textAlign: 'center' });
@@ -205,7 +240,7 @@ describe('buildDigestBlocks', () => {
       newListings: [],
       trending: [],
       blogPost: null,
-      editorial: { intro: 'Hi', pickWriteup: '', blurbs: {} },
+      editorial: editorial(),
       campaign: 'digest-2026-w47',
     });
     const button = blocks.find(
@@ -220,7 +255,7 @@ describe('buildDigestBlocks', () => {
       newListings: [],
       trending: [candidate({ id: 't1' })],
       blogPost: null,
-      editorial: { intro: 'Hi', pickWriteup: '', blurbs: {} },
+      editorial: editorial(),
       campaign: 'digest-2026-w44',
     });
     const html = JSON.stringify(blocks);
@@ -228,5 +263,85 @@ describe('buildDigestBlocks', () => {
     expect(html).not.toContain('New &amp; notable');
     expect(html).not.toContain('From the blog');
     expect(html).toContain('Trending this week');
+  });
+
+  it('prefers written prompts for the pick and falls back to the headline default', () => {
+    const blocks = buildDigestBlocks({
+      pick: candidate({ id: 'p' }),
+      newListings: [],
+      trending: [],
+      blogPost: null,
+      editorial: editorial({
+        headline: '',
+        pickPrompts: ['Compare my last two scans and flag changes'],
+      }),
+      campaign: 'digest-2026-w48',
+    });
+    const html = JSON.stringify(blocks);
+    expect(html).toContain('Compare my last two scans and flag changes');
+    // Written prompts replace the listing's own use cases.
+    expect(html).not.toContain('Summarize last night');
+    expect(blocks.find((b) => b.type === 'heading')?.content).toBe(
+      'This week on AllMCPs',
+    );
+  });
+});
+
+describe('isDigestTrustworthy', () => {
+  const now = new Date('2026-11-23T00:00:00Z');
+  it('leaves out bought stars, borrowed repos and flagged listings', () => {
+    expect(isDigestTrustworthy(candidate(), now)).toBe(true);
+    expect(
+      isDigestTrustworthy(
+        candidate({
+          githubStars: 475_000,
+          repoCreatedAt: new Date('2026-04-14T00:00:00Z'),
+        }),
+        now,
+      ),
+    ).toBe(false);
+    expect(
+      isDigestTrustworthy(
+        candidate({
+          name: 'Brainscanner',
+          url: 'https://github.com/bigco/unrelated-framework',
+          githubStars: 90_000,
+        }),
+        now,
+      ),
+    ).toBe(false);
+    expect(isDigestTrustworthy(candidate({ reviewFlagged: true }), now)).toBe(
+      false,
+    );
+  });
+});
+
+describe('isDigestTooThin', () => {
+  it('skips a week with under three listings and no blog post', () => {
+    const one = candidate();
+    expect(
+      isDigestTooThin({
+        pick: one,
+        newListings: [one],
+        trending: [],
+        blogPost: null,
+      }),
+    ).toBe(true);
+    expect(
+      isDigestTooThin({
+        pick: one,
+        newListings: [one],
+        trending: [],
+        blogPost: { slug: 's', title: 't', excerpt: 'e' },
+      }),
+    ).toBe(false);
+    expect(
+      isDigestTooThin({
+        pick: one,
+        newListings: [one, one],
+        trending: [],
+        blogPost: null,
+      }),
+    ).toBe(false);
   });
 });

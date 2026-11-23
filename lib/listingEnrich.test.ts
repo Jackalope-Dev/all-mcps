@@ -1,10 +1,10 @@
+import { isGenericServerName } from './genericName';
 import {
   deriveServerName,
   extractCandidateImagesFromReadme,
   extractCandidateWebsitesFromReadme,
   extractReadmeTitle,
   humanizeSlug,
-  isGenericServerName,
   logoSourcePriority,
 } from './listingEnrich';
 

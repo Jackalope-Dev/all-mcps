@@ -13,6 +13,9 @@
  */
 
 import { cleanListingDescription } from './description';
+import { parseServerName } from './displayName';
+import { findRepoIdentityMismatch } from './ingest/repoIdentity';
+import { starsLookInflated } from './repoStars';
 
 const APP_URL = 'https://allmcps.com';
 
@@ -36,6 +39,10 @@ export type DigestCandidate = {
   authType: string | null;
   installKind: string | null;
   listingQuality: number | null;
+  /** When the GitHub repo was created (listing_signals.repo_created_at). */
+  repoCreatedAt: Date | null;
+  /** Ingest or an admin flagged the listing for a second look. */
+  reviewFlagged: boolean | null;
   /** Unique views in the digest window (trending candidates only). */
   weeklyViews?: number;
   /** Upvotes in the digest window (trending candidates only). */
@@ -45,10 +52,49 @@ export type DigestCandidate = {
 export type DigestBlogPost = { slug: string; title: string; excerpt: string };
 
 export type DigestEditorial = {
+  /** The issue's theme, used as the H1 ("Give your agent a real browser"). */
+  headline: string;
+  /** Editor's note tying the issue together. */
   intro: string;
   pickWriteup: string;
+  /** Prompts a reader can paste into their agent to try the pick. */
+  pickPrompts: string[];
+  /** One concrete line per listing, by id. */
   blurbs: Record<string, string>;
+  /** One example prompt per listing, by id. */
+  prompts: Record<string, string>;
 };
+
+export const DEFAULT_HEADLINE = 'This week on AllMCPs';
+
+/**
+ * Whether a listing's numbers can be put in front of subscribers. Listings whose
+ * stars look bought, whose GitHub repo doesn't look like theirs (so the stars are
+ * someone else's), or that are flagged for review are left out of the digest.
+ */
+export function isDigestTrustworthy(
+  c: DigestCandidate,
+  now: Date = new Date(),
+): boolean {
+  if (c.reviewFlagged) return false;
+  if (starsLookInflated(c.githubStars, c.repoCreatedAt, now)) return false;
+  return !findRepoIdentityMismatch(c);
+}
+
+/**
+ * Too thin to be worth a send: fewer than three listings and no new blog post.
+ * Skipping a week beats mailing a filler issue.
+ */
+export function isDigestTooThin(input: {
+  pick: DigestCandidate | null;
+  newListings: DigestCandidate[];
+  trending: DigestCandidate[];
+  blogPost: DigestBlogPost | null;
+}): boolean {
+  const listings =
+    (input.pick ? 1 : 0) + input.newListings.length + input.trending.length;
+  return listings < 3 && !input.blogPost;
+}
 
 type SequenzyBlock = Record<string, any>;
 
@@ -170,15 +216,22 @@ export function listingSummary(c: DigestCandidate): string {
 
 /**
  * Ingested listings are often named `owner/repo`. In a card that reads like a URL,
- * so show the repo as the title and the owner as a byline.
+ * so show the humanized repo as the title and the owner as a byline. A repo that
+ * is only a label (`corsair-dev/mcp`, a bare `mcp`) takes its name from the owner
+ * or URL instead: the Nov 23 2026 issue went out as "Pick of the week: mcp".
  */
-export function displayName(name: string): {
+export function listingTitle(c: Pick<DigestCandidate, 'name' | 'url'>): {
   title: string;
   by: string | null;
 } {
-  const m = name.match(/^@?([^/\s]+)\/([^/\s]+)$/);
-  if (!m) return { title: name, by: null };
-  return { title: m[2], by: m[1] };
+  const { displayName, org } = parseServerName(c.name.trim(), c.url);
+  const by = org ? org.replace(/^@/, '') : null;
+  // "Corsair Dev MCP by corsair-dev" says the owner twice.
+  const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!by || squash(displayName).startsWith(squash(by))) {
+    return { title: displayName, by: null };
+  }
+  return { title: displayName, by };
 }
 
 function compactNumber(n: number): string {
@@ -285,7 +338,7 @@ function iconHtml(c: DigestCandidate, size: number): string {
 }
 
 function headerHtml(c: DigestCandidate, size: number, titlePx: number): string {
-  const { title, by } = displayName(c.name);
+  const { title, by } = listingTitle(c);
   const byline = by
     ? ` <span style="font-weight:400;color:#64748b;font-size:13px">by ${escapeHtml(by)}</span>`
     : '';
@@ -323,27 +376,39 @@ const PICK_STYLES = {
   paddingRight: 24,
 };
 
+const hasText = (s: string | undefined): s is string =>
+  !!s && /[\p{L}\p{N}]/u.test(s);
+
+const MONO =
+  "ui-monospace,SFMono-Regular,Menlo,Consolas,'Courier New',monospace";
+
+/**
+ * A prompt the reader can paste into their agent, styled like a terminal line so
+ * it reads as "copy this", not as more marketing copy.
+ */
+function promptChip(text: string, marginTop = 8): string {
+  return `<div style="margin-top:${marginTop}px;padding:9px 12px;background-color:#0f172a;border-radius:8px;font-family:${MONO};font-size:13px;line-height:1.5;color:#e2e8f0"><span style="color:${BRAND_CYAN};font-weight:700">&gt;</span>&nbsp; ${escapeHtml(truncate(text.trim(), 140))}</div>`;
+}
+
 function pickBlocks(
   c: DigestCandidate,
-  writeup: string | undefined,
+  editorial: DigestEditorial,
   buttonLink: string,
 ): SequenzyBlock[] {
-  const copy =
-    writeup && /[\p{L}\p{N}]/u.test(writeup)
-      ? truncate(writeup.trim(), 420)
-      : truncate(listingSummary(c), 260);
+  const writeup = editorial.pickWriteup;
+  const copy = hasText(writeup)
+    ? truncate(writeup.trim(), 420)
+    : truncate(listingSummary(c), 260);
   let content = kicker('Pick of the week') + headerHtml(c, 56, 20);
   content += `<p style="margin:16px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:#1e293b">${escapeHtml(copy)}</p>`;
 
-  const cases = listingUseCases(c).slice(0, 3);
-  if (cases.length > 0) {
-    content += `<div style="margin-top:14px;font-family:${FONT};font-size:12px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.6px">Try asking your agent to</div>`;
-    content += cases
-      .map(
-        (u) =>
-          `<div style="margin-top:6px;font-family:${FONT};font-size:14px;line-height:1.5;color:#334155"><span style="color:${BLUE};font-weight:700">→</span>&nbsp; ${escapeHtml(truncate(u, 120))}</div>`,
-      )
-      .join('');
+  // Written prompts when the editorial pass produced them; the listing's own use
+  // cases otherwise.
+  const written = editorial.pickPrompts.filter(hasText).slice(0, 3);
+  const prompts = written.length > 0 ? written : listingUseCases(c).slice(0, 3);
+  if (prompts.length > 0) {
+    content += `<div style="margin-top:16px;font-family:${FONT};font-size:12px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.6px">Try asking your agent</div>`;
+    content += prompts.map((p) => promptChip(p)).join('');
   }
 
   return [
@@ -363,7 +428,7 @@ function pickButton(c: DigestCandidate, link: string): SequenzyBlock {
   return {
     type: 'button',
     // Plain text, not HTML; drop angle brackets in case a renderer doesn't escape it.
-    text: `Set up ${truncate(displayName(c.name).title.replace(/[<>]/g, '').trim(), 32)} →`,
+    text: `Set up ${truncate(listingTitle(c).title.replace(/[<>]/g, '').trim(), 32)} →`,
     url: link,
     variant: 'primary',
     size: 'lg',
@@ -376,17 +441,19 @@ function pickButton(c: DigestCandidate, link: string): SequenzyBlock {
 
 function cardBlocks(
   c: DigestCandidate,
-  blurb: string | undefined,
+  editorial: DigestEditorial,
   link: string,
 ): SequenzyBlock[] {
-  const copy =
-    blurb && /[\p{L}\p{N}]/u.test(blurb)
-      ? truncate(blurb.trim(), 180)
-      : truncate(listingSummary(c), 160);
+  const blurb = editorial.blurbs[c.id];
+  const copy = hasText(blurb)
+    ? truncate(blurb.trim(), 180)
+    : truncate(listingSummary(c), 160);
   let content = headerHtml(c, 44, 16);
-  if (/[\p{L}\p{N}]/u.test(copy)) {
+  if (hasText(copy)) {
     content += `<p style="margin:12px 0 0;font-family:${FONT};font-size:14px;line-height:1.6;color:#334155">${escapeHtml(copy)}</p>`;
   }
+  const prompt = editorial.prompts[c.id];
+  if (hasText(prompt)) content += promptChip(prompt, 10);
   // A text link, not a button: a full-width button per card read as a wall of chrome.
   content += `<a href="${escapeHtml(link)}" style="display:inline-block;margin-top:10px;font-family:${FONT};font-size:13px;font-weight:700;color:${BLUE};text-decoration:none">View setup →</a>`;
   return [
@@ -444,7 +511,15 @@ export function buildDigestBlocks(input: {
       align: 'center',
       href: withUtm('/', campaign, 'header'),
     },
-    { type: 'heading', content: 'This week on AllMCPs', level: 1 },
+    {
+      type: 'heading',
+      // Plain text like the button labels; drop angle brackets in case a
+      // renderer doesn't escape it.
+      content:
+        truncate(editorial.headline.replace(/[<>]/g, '').trim(), 70) ||
+        DEFAULT_HEADLINE,
+      level: 1,
+    },
     {
       type: 'text',
       variant: 'paragraph',
@@ -455,11 +530,7 @@ export function buildDigestBlocks(input: {
 
   if (pick) {
     blocks.push(
-      ...pickBlocks(
-        pick,
-        editorial.pickWriteup,
-        listingLink(pick, 'pick-button'),
-      ),
+      ...pickBlocks(pick, editorial, listingLink(pick, 'pick-button')),
     );
     blocks.push({ type: 'spacer', height: 24 });
   }
@@ -470,13 +541,7 @@ export function buildDigestBlocks(input: {
     );
     blocks.push({ type: 'spacer', height: 8 });
     newListings.forEach((c, i) => {
-      blocks.push(
-        ...cardBlocks(
-          c,
-          editorial.blurbs[c.id],
-          listingLink(c, `new-${i + 1}`),
-        ),
-      );
+      blocks.push(...cardBlocks(c, editorial, listingLink(c, `new-${i + 1}`)));
     });
     blocks.push({ type: 'spacer', height: 14 });
   }
@@ -491,11 +556,7 @@ export function buildDigestBlocks(input: {
     blocks.push({ type: 'spacer', height: 8 });
     trending.forEach((c, i) => {
       blocks.push(
-        ...cardBlocks(
-          c,
-          editorial.blurbs[c.id],
-          listingLink(c, `trending-${i + 1}`),
-        ),
+        ...cardBlocks(c, editorial, listingLink(c, `trending-${i + 1}`)),
       );
     });
     blocks.push({ type: 'spacer', height: 14 });
@@ -511,6 +572,19 @@ export function buildDigestBlocks(input: {
     blocks.push({ type: 'spacer', height: 16 });
   }
 
+  // Replies go to the shared contact inbox (Reply-To). Asking a direct question
+  // gets replies, which tell us what readers want and help deliverability.
+  blocks.push({
+    type: 'text',
+    variant: 'html',
+    content: `<div style="font-family:${FONT};font-size:15px;font-weight:700;color:#020617">What should your agent be able to do?</div><p style="margin:6px 0 0;font-family:${FONT};font-size:14px;line-height:1.6;color:#475569">Hit reply and tell us the tool or workflow you wish had an MCP server. We read every reply, and the best asks shape next week's picks.</p>`,
+    styles: {
+      ...CARD_STYLES,
+      backgroundColor: '#f0fdff',
+      borderColor: '#a5f3fc',
+    },
+  });
+  blocks.push({ type: 'spacer', height: 16 });
   blocks.push({
     type: 'button',
     text: 'Browse all MCP servers →',

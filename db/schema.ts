@@ -745,6 +745,8 @@ export const listingSignals = sqliteTable(
     repoFirstGoneAt: integer('repo_first_gone_at', { mode: 'timestamp' }),
     /** `owner/repo` this GitHub repo was forked from. Null = not a fork or not measured. */
     repoForkOf: text('repo_fork_of'),
+    /** When the GitHub repo was created; with stars it spots bought stars (lib/repoStars.ts). */
+    repoCreatedAt: integer('repo_created_at', { mode: 'timestamp' }),
     /** JSON SecurityProfile (lib/securityProfile.ts). */
     securityProfile: text('security_profile'),
     /** Last time the tool definitions' hash changed after a previous profile existed. */
@@ -1476,5 +1478,25 @@ export const acpIdempotencyKeys = sqliteTable(
   (table) => ({
     pk: primaryKey({ columns: [table.agentTokenHash, table.key] }),
     createdIdx: index('idx_acp_idempotency_created').on(table.createdAt),
+  }),
+);
+
+/**
+ * Listings each weekly digest featured, one row per (campaign, listing). The digest
+ * skips anything featured in recent sends so "trending" doesn't rerun last week.
+ */
+export const newsletterFeatures = sqliteTable(
+  'newsletter_features',
+  {
+    /** utm_campaign of the send, e.g. `digest-2026-w48`. */
+    campaign: text('campaign').notNull(),
+    serverId: text('server_id').notNull(),
+    /** pick | new | trending */
+    slot: text('slot').notNull(),
+    featuredAt: integer('featured_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.campaign, table.serverId] }),
+    featuredIdx: index('idx_newsletter_features_featured').on(table.featuredAt),
   }),
 );
