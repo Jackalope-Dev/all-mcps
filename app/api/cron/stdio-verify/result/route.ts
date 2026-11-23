@@ -333,7 +333,14 @@ export async function POST(req: Request) {
       toolsRejected,
     });
   } catch (error: any) {
-    console.error('stdio-verify result error:', error);
+    // Message and Drizzle's `cause` as strings: Workers Logs kept only the
+    // stack of the Error object, dropping what actually failed.
+    console.error(
+      'stdio-verify result error:',
+      String(error?.message ?? error),
+      String(error?.cause?.message ?? ''),
+      error?.stack ?? '',
+    );
     return NextResponse.json(
       { error: error?.message || 'Internal Server Error' },
       { status: 500 },

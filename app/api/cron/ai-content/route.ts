@@ -732,8 +732,15 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     // Drizzle wraps the D1 error in `cause`; its message is the actual reason
-    // ("Failed query: ..." alone doesn't say what D1 objected to).
-    console.error('AI content cron error:', error, error?.cause?.message ?? '');
+    // ("Failed query: ..." alone doesn't say what D1 objected to). Log both as
+    // strings: Workers Logs kept only the stack of the Error object, so the
+    // message and cause never reached the dashboard.
+    console.error(
+      'AI content cron error:',
+      String(error?.message ?? error),
+      String(error?.cause?.message ?? ''),
+      error?.stack ?? '',
+    );
     return NextResponse.json(
       { error: error?.message || 'Internal Server Error' },
       { status: 500 },
