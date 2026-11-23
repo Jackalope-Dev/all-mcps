@@ -446,6 +446,64 @@ function saveSharedSummary(summary: SitemapSummary): void {
     });
 }
 
+/**
+ * How long a sitemap request waits on the catalog before answering from the
+ * last good summary. A cold scan (the first hit after a deploy, or after the
+ * hourly expiry) takes 10-15s wall and ~2s CPU. Clients that fetch all three
+ * shards at once gave up first, and the requests left waiting on that scan
+ * were cancelled by the runtime as hung (16 in one hour on 2026-11-23, during
+ * a run of deploys). The scan keeps going in the background, so the cache
+ * still fills and later requests get fresh data.
+ */
+const SCAN_WAIT_MS = 4000;
+
+/** Thrown when the scan outlives SCAN_WAIT_MS; the scan itself carries on. */
+class SitemapScanSlow extends Error {}
+
+/** This isolate's running scan, so concurrent requests don't each start one. */
+let scanInFlight: Promise<SitemapSummary> | null = null;
+
+/** Lets `p` finish after the response is sent (no-op without a request context). */
+async function finishInBackground(p: Promise<unknown>): Promise<void> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const { ctx } = await getCloudflareContext({ async: true });
+    ctx?.waitUntil?.(p.catch(() => {}));
+  } catch {
+    // No request context (build, tests): nothing to extend.
+  }
+}
+
+/** The cached scan, bounded by SCAN_WAIT_MS for this request. */
+async function scanWithDeadline(): Promise<SitemapSummary> {
+  // Another request in this isolate is already scanning: don't wait on its
+  // promise (that wait is what got cancelled as hung) or start a second scan.
+  if (scanInFlight) throw new SitemapScanSlow();
+  const scan = getCachedSitemapSummaryFromD1().then((summary) => {
+    lastGoodSummary = summary;
+    saveSharedSummary(summary);
+    return summary;
+  });
+  scanInFlight = scan;
+  void scan
+    .catch(() => {})
+    .finally(() => {
+      if (scanInFlight === scan) scanInFlight = null;
+    });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new SitemapScanSlow()), SCAN_WAIT_MS);
+  });
+  try {
+    return await Promise.race([scan, deadline]);
+  } catch (e) {
+    if (e instanceof SitemapScanSlow) void finishInBackground(scan);
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Catalog summary for sitemap generation (D1 when available). */
 export async function getSitemapSummary(): Promise<SitemapSummary> {
   let summary: SitemapSummary | null = null;
@@ -454,12 +512,13 @@ export async function getSitemapSummary(): Promise<SitemapSummary> {
     summary = lastGoodSummary;
   } else
     try {
-      summary = await getCachedSitemapSummaryFromD1();
-      lastGoodSummary = summary;
-      saveSharedSummary(summary);
+      summary = await scanWithDeadline();
     } catch (e) {
-      // The scan itself just failed: retrying it at once only adds D1 load.
-      if (e instanceof SitemapSummaryUnavailable) {
+      if (e instanceof SitemapScanSlow) {
+        // Answer now from the last good copy (this isolate's, else R2's below).
+        summary = lastGoodSummary;
+      } else if (e instanceof SitemapSummaryUnavailable) {
+        // The scan itself just failed: retrying it at once only adds D1 load.
         lastScanFailureAt = Date.now();
         summary = lastGoodSummary;
       } else {
