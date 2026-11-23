@@ -1,5 +1,6 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { NextResponse } from 'next/server';
+import { mppStatus } from '@/lib/mpp';
 import {
   AGENT_PROMO_CODE,
   agentPriceCents,
@@ -16,6 +17,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const { env } = await getCloudflareContext();
   const x402 = x402Status(env);
+  const mpp = mppStatus(env);
   const tiers = Object.values(PAID_PRODUCTS).map((p) => ({
     sku: p.sku,
     name: p.name,
@@ -28,6 +30,7 @@ export async function GET() {
     payment_methods: [
       'stripe_checkout',
       ...(x402.enabled && isOneTimeBoostSku(p.sku) ? ['x402'] : []),
+      ...(mpp.enabled && isOneTimeBoostSku(p.sku) ? ['mpp'] : []),
     ],
     ...(p.weeklyTiers
       ? { weekly_tiers: p.weeklyTiers, max_weeks: p.maxWeeks ?? 8 }
@@ -68,6 +71,14 @@ export async function GET() {
             ? {
                 ...x402,
                 note: 'POST { serverId, sku, weeks?, email? } to boost_endpoint; answer the 402 with a PAYMENT-SIGNATURE header. Agent price (50% off) is built in. Premium (subscription) is Stripe-only.',
+              }
+            : { enabled: false },
+          mpp: mpp.enabled
+            ? {
+                ...mpp,
+                boost_endpoint: 'https://allmcps.com/api/v1/boost/x402',
+                ads_endpoint: 'https://allmcps.com/api/v1/ads/x402',
+                note: 'Same endpoints as x402. The 402 carries a WWW-Authenticate: Payment challenge; answer with Authorization: Payment <credential>. Premium (subscription) is Stripe checkout only.',
               }
             : { enabled: false },
           mcp_tool: 'boost_mcp_server',

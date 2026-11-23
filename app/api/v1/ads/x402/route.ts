@@ -11,6 +11,10 @@ import {
 } from '@/lib/ads';
 import { attributionFromRequest } from '@/lib/attribution';
 import { recordConversion } from '@/lib/conversions';
+import {
+  getMachinePaymentConfig,
+  sellWithMachinePayments,
+} from '@/lib/machinePayments';
 import { sendReceiptEmail } from '@/lib/notify';
 import { getAppUrl } from '@/lib/stripe';
 import {
@@ -19,25 +23,24 @@ import {
   screenStatus,
   screenSubmitter,
 } from '@/lib/submitterBlocks';
-import { getX402Config, sellWithX402 } from '@/lib/x402';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * Buy a sponsor ad campaign with x402. Same body as /api/ads/create
+ * Buy a sponsor ad campaign with x402 or MPP. Same body as /api/ads/create
  * (title, description, ctaText, targetUrl, logoUrl, placement, bidCpm,
  * impressions, advertiserEmail). The first call answers 402 with the cost;
- * retry with PAYMENT-SIGNATURE to pay. The campaign is created only after
+ * retry with PAYMENT-SIGNATURE (x402) or Authorization: Payment (MPP). The campaign is created only after
  * payment settles and then waits for the same admin review as any other ad.
  */
 export async function POST(req: Request) {
   const { env } = await getCloudflareContext();
-  const config = getX402Config(env);
+  const config = getMachinePaymentConfig(env);
   if (!config) {
     return NextResponse.json(
       {
         error:
-          'x402 payments are not enabled yet. Create campaigns at https://allmcps.com/advertise/create.',
+          'Agent payments (x402, MPP) are not enabled yet. Create campaigns at https://allmcps.com/advertise/create.',
       },
       { status: 503 },
     );
@@ -92,11 +95,45 @@ export async function POST(req: Request) {
   const costCents = calculateAdCostCents(ad.impressions, ad.bidCpm);
   const adId = crypto.randomUUID();
 
-  return sellWithX402(req, config, {
+  return sellWithMachinePayments(req, config, {
     priceCents: costCents,
     description: `AllMCPs sponsor campaign "${ad.title}": ${ad.impressions.toLocaleString()} impressions at ${formatUsdAmount(ad.bidCpm)} CPM (${placement} placement)`,
     resourceUrl: new URL(req.url).toString(),
     metadata: { adId, advertiserEmail: ad.advertiserEmail, placement },
+    discovery: {
+      bodyType: 'json',
+      input: {
+        title: 'Acme MCP',
+        description: 'Ship MCP servers faster.',
+        targetUrl: 'https://example.com',
+        advertiserEmail: 'ads@example.com',
+        placement: 'all',
+        impressions: 1000,
+        bidCpm: 500,
+      },
+      inputSchema: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          description: { type: 'string' },
+          ctaText: { type: 'string' },
+          targetUrl: { type: 'string', format: 'uri' },
+          logoUrl: { type: 'string', format: 'uri' },
+          advertiserEmail: { type: 'string', format: 'email' },
+          placement: { type: 'string', enum: Object.keys(AD_PLACEMENTS) },
+          impressions: { type: 'integer', minimum: 1000 },
+          bidCpm: {
+            type: 'integer',
+            minimum: 100,
+            description: 'Cents per 1,000 impressions',
+          },
+        },
+        required: ['title', 'description', 'targetUrl', 'advertiserEmail'],
+      },
+      output: {
+        example: { adId: 'ad_123', status: 'pending_approval' },
+      },
+    },
     fulfill: async (receipt) => {
       const db = drizzle(env.DB);
       await db.insert(sponsorAds).values({
@@ -123,21 +160,21 @@ export async function POST(req: Request) {
         sku: 'sponsor_ad',
         amountCents: receipt.amountCents,
         attribution: attributionFromRequest(req),
-        stripeSessionId: `x402:${receipt.transaction}`,
+        stripeSessionId: receipt.paymentRef,
       });
 
       const dashboardUrl = `${getAppUrl()}/advertise/campaign/${adId}`;
       try {
         await sendReceiptEmail({
           to: ad.advertiserEmail,
-          receiptId: receipt.stripePaymentIntentId || receipt.transaction,
+          receiptId: receipt.stripePaymentIntentId || receipt.paymentRef,
           date: new Date().toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
           }),
           amount: formatUsdAmount(receipt.amountCents),
-          description: `AllMCPs Sponsor Campaign: ${ad.title} (paid in USDC via x402)`,
+          description: `AllMCPs Sponsor Campaign: ${ad.title} (paid with ${receipt.paidWith})`,
           actionText: 'View campaign dashboard',
           actionUrl: dashboardUrl,
         });

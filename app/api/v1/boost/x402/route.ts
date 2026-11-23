@@ -9,6 +9,10 @@ import {
   fulfillBoostPurchase,
 } from '@/lib/boostPurchase';
 import {
+  getMachinePaymentConfig,
+  sellWithMachinePayments,
+} from '@/lib/machinePayments';
+import {
   agentPriceCents,
   clampWeeks,
   formatUsd,
@@ -17,23 +21,23 @@ import {
   PAID_PRODUCTS,
   tieredTotal,
 } from '@/lib/pricing';
-import { getX402Config, sellWithX402 } from '@/lib/x402';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * Buy a boost with x402. POST { serverId, sku, weeks?, email? } — the first
+ * Buy a boost with x402 or MPP. POST { serverId, sku, weeks?, email? } — the first
  * call answers 402 with the price; retry the same request with a
- * PAYMENT-SIGNATURE header to pay. The boost turns on once payment settles.
+ * PAYMENT-SIGNATURE (x402) or Authorization: Payment (MPP) header to pay.
+ * The boost turns on once payment settles.
  */
 export async function POST(req: Request) {
   const { env } = await getCloudflareContext();
-  const config = getX402Config(env);
+  const config = getMachinePaymentConfig(env);
   if (!config) {
     return NextResponse.json(
       {
         error:
-          'x402 payments are not enabled yet. Use POST /api/v1/boost/checkout for a Stripe checkout link.',
+          'Agent payments (x402, MPP) are not enabled yet. Use POST /api/v1/boost/checkout for a Stripe checkout link.',
       },
       { status: 503 },
     );
@@ -63,8 +67,8 @@ export async function POST(req: Request) {
       {
         error:
           sku === 'premium_monthly'
-            ? 'Premium is a monthly subscription, which x402 cannot bill. Use POST /api/v1/boost/checkout instead.'
-            : `Invalid sku. x402 accepts: ${ONE_TIME_BOOST_SKUS.join(', ')}`,
+            ? 'Premium is a monthly subscription, which agent payments cannot bill. Use POST /api/v1/boost/checkout instead.'
+            : `Invalid sku. Agent payments accept: ${ONE_TIME_BOOST_SKUS.join(', ')}`,
       },
       { status: 400 },
     );
@@ -95,11 +99,37 @@ export async function POST(req: Request) {
     ? ` for ${weeks} week${weeks === 1 ? '' : 's'}`
     : '';
 
-  return sellWithX402(req, config, {
+  return sellWithMachinePayments(req, config, {
     priceCents,
     description: `${product.name}${span} for "${server.name}" on AllMCPs (${formatUsd(listCents)} list, agent price ${formatUsd(priceCents)})`,
     resourceUrl: new URL(req.url).toString(),
     metadata: { serverId, sku, weeks: String(weeks) },
+    discovery: {
+      bodyType: 'json',
+      input: { serverId: 'github-mcp-server', sku: 'featured_7d', weeks: 1 },
+      inputSchema: {
+        type: 'object',
+        properties: {
+          serverId: {
+            type: 'string',
+            description: 'AllMCPs listing id (the slug in /mcp/<id>)',
+          },
+          sku: { type: 'string', enum: [...ONE_TIME_BOOST_SKUS] },
+          weeks: { type: 'integer', minimum: 1 },
+          email: { type: 'string', description: 'Optional receipt email' },
+        },
+        required: ['serverId', 'sku'],
+      },
+      output: {
+        example: {
+          serverId: 'github-mcp-server',
+          sku: 'featured_7d',
+          weeks: 1,
+          featuredUntil: '2026-12-01T00:00:00.000Z',
+          listing: 'https://allmcps.com/mcp/github-mcp-server',
+        },
+      },
+    },
     fulfill: async (receipt) => {
       const updated = await fulfillBoostPurchase(db, {
         serverId,
@@ -107,7 +137,7 @@ export async function POST(req: Request) {
         weeks,
         amountCents: receipt.amountCents,
         attribution: attributionFromRequest(req),
-        paymentRef: `x402:${receipt.transaction}`,
+        paymentRef: receipt.paymentRef,
         email,
       });
       return {

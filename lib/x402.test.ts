@@ -114,6 +114,16 @@ describe('sellWithX402', () => {
       description: 'Featured listing',
       resourceUrl: 'https://allmcps.com/api/v1/boost/x402',
       metadata: { serverId: 'acme-mcp' },
+      discovery: {
+        bodyType: 'json' as const,
+        input: { serverId: 'acme-mcp', sku: 'featured_7d' },
+        inputSchema: {
+          type: 'object',
+          properties: { serverId: { type: 'string' }, sku: { type: 'string' } },
+          required: ['serverId'],
+        },
+        output: { example: { activated: true } },
+      },
       fulfill,
     };
     const req = (headers: Record<string, string> = {}) =>
@@ -128,6 +138,18 @@ describe('sellWithX402', () => {
     expect(header).toBeTruthy();
     return decodePaymentRequiredHeader(header as string) as PaymentRequired;
   }
+  it('declares Bazaar discovery (method, body schema) on the 402 challenge', async () => {
+    const pr = (await challenge(setup())) as PaymentRequired & {
+      extensions?: Record<
+        string,
+        { info?: { input?: Record<string, unknown> } }
+      >;
+    };
+    const input = pr.extensions?.bazaar?.info?.input;
+    expect(input?.method).toBe('POST');
+    expect(input?.bodyType).toBe('json');
+    expect(input?.body).toEqual({ serverId: 'acme-mcp', sku: 'featured_7d' });
+  });
 
   function signed(required: PaymentRequired) {
     return encodePaymentSignatureHeader({

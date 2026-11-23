@@ -16,6 +16,11 @@ import type {
   SettleResponse,
 } from '@x402/core/types';
 import { ExactEvmScheme } from '@x402/evm/exact/server';
+import {
+  bazaarResourceServerExtension,
+  type DeclareDiscoveryExtensionInput,
+  declareDiscoveryExtension,
+} from '@x402/extensions/bazaar';
 import { NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 
@@ -131,7 +136,11 @@ function getResourceServer(config: X402Config): Promise<x402ResourceServer> {
     server = (async () => {
       const s = new x402ResourceServer(
         new HTTPFacilitatorClient(config.facilitator),
-      ).register(config.network, new ExactEvmScheme());
+      )
+        .register(config.network, new ExactEvmScheme())
+        // Lets the facilitator list our paid endpoints in the x402 Bazaar
+        // (the discovery index agents and scanners search).
+        .registerExtension(bazaarResourceServerExtension);
       await s.initialize();
       return s;
     })();
@@ -150,22 +159,45 @@ type X402Receipt = {
   stripePaymentIntentId: string | null;
 };
 
-type X402Sale = {
+export type X402Sale = {
   priceCents: number;
   description: string;
   resourceUrl: string;
   /** Stored on the Stripe PaymentIntent so every payment is traceable to what it bought. */
   metadata: Record<string, string>;
+  /** Bazaar discovery: the request body and response this endpoint takes. */
+  discovery: DeclareDiscoveryExtensionInput;
   /** Runs only after the payment settles. Its return value is the 200 body. */
   fulfill: (receipt: X402Receipt) => Promise<Record<string, unknown>>;
 };
 
 const NO_STORE = { 'Cache-Control': 'private, no-store' };
 
+/**
+ * The HTTP request context x402 extension hooks read (Bazaar uses it to
+ * record the method and path of the paid endpoint).
+ */
+function transportContext(req: Request) {
+  const url = new URL(req.url);
+  return {
+    method: req.method,
+    adapter: {
+      getHeader: (name: string) => req.headers.get(name) ?? undefined,
+      getMethod: () => req.method,
+      getPath: () => url.pathname,
+      getUrl: () => req.url,
+      getAcceptHeader: () => req.headers.get('accept') ?? '',
+      getUserAgent: () => req.headers.get('user-agent') ?? '',
+    },
+    path: url.pathname,
+  };
+}
+
 function paymentRequired(
   server: x402ResourceServer,
   requirements: PaymentRequirements[],
   sale: X402Sale,
+  extensions: Record<string, unknown>,
   error?: string,
 ) {
   return server
@@ -178,6 +210,7 @@ function paymentRequired(
         serviceName: 'AllMCPs',
       },
       error,
+      extensions,
     )
     .then(
       (body) =>
@@ -271,9 +304,16 @@ export async function sellWithX402(
     {},
   );
 
+  // Bazaar listing for this endpoint, with the method and path filled in.
+  const context = transportContext(req);
+  const extensions = server.enrichExtensions(
+    declareDiscoveryExtension(sale.discovery),
+    context,
+  );
+
   const header =
     req.headers.get('PAYMENT-SIGNATURE') ?? req.headers.get('X-PAYMENT');
-  if (!header) return paymentRequired(server, requirements, sale);
+  if (!header) return paymentRequired(server, requirements, sale, extensions);
 
   let payload: PaymentPayload;
   try {
@@ -283,6 +323,7 @@ export async function sellWithX402(
       server,
       requirements,
       sale,
+      extensions,
       'Malformed PAYMENT-SIGNATURE header',
     );
   }
@@ -293,26 +334,39 @@ export async function sellWithX402(
       server,
       requirements,
       sale,
+      extensions,
       'Payment does not match the current price or network',
     );
   }
 
-  const verified = await server.verifyPayment(payload, matched);
+  const verified = await server.verifyPayment(
+    payload,
+    matched,
+    extensions,
+    context,
+  );
   if (!verified.isValid) {
     return paymentRequired(
       server,
       requirements,
       sale,
+      extensions,
       verified.invalidReason || 'Payment verification failed',
     );
   }
 
-  const settle = await server.settlePayment(payload, matched);
+  const settle = await server.settlePayment(
+    payload,
+    matched,
+    extensions,
+    context,
+  );
   if (!settle.success) {
     return paymentRequired(
       server,
       requirements,
       sale,
+      extensions,
       settle.errorReason || 'Payment settlement failed',
     );
   }
