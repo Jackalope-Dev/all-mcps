@@ -8,6 +8,7 @@ import { AuthSubmitButton } from '@/components/forms/AuthSubmitButton';
 import { TurnstileWidget } from '@/components/ui/TurnstileWidget';
 import { auth } from '@/lib/auth';
 import { requestSignInLink } from './actions';
+import '../styles/account.css';
 
 export const metadata: Metadata = {
   title: 'Sign In to Manage Your MCP Server Listings',

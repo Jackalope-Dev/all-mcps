@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
+import '../styles/account.css';
 
 export const metadata: Metadata = {
   title: 'Check your email',

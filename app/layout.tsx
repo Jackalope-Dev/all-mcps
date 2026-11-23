@@ -27,9 +27,12 @@ import './styles/chrome.css';
 // (.home-*, .jd-*), so it no longer ships render-blocking on other pages.
 import './styles/directory.css';
 import './styles/listing.css';
-import './styles/tools.css';
+// tools.css and account.css load only on the routes that render them (see
+// app/tools/layout.tsx, app/dashboard/layout.tsx, etc.). overlays.css holds the
+// toast, cookie banner, newsletter card, theme FAB and form-field states that
+// any page can show.
 import './styles/content.css';
-import './styles/account.css';
+import './styles/overlays.css';
 
 // Atkinson Hyperlegible Next: purpose-built so l / I / 1 don't collide —
 // lowercase "l" has a clear tail (not a plain vertical bar). Critical for "AllMCPs".

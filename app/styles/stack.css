@@ -1,0 +1,394 @@
+/* Stack builder (components/StackBuilderModal.tsx) and preset stacks
+   (components/PresetStackGrid.tsx). Imported by those components after
+   tools.css, whose .tl-* shell they build on; overrides here rely on that
+   order. */
+
+.stk-root {
+  scroll-margin-top: calc(var(--header-height) + 1rem);
+}
+
+.stk-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--accent-color);
+  color: var(--bg-color);
+  font-size: 0.7rem;
+  font-weight: 700;
+  animation: pop-in 280ms var(--ease-spring) both;
+}
+
+.stk-clear:hover {
+  color: var(--tl-err);
+}
+
+.stk-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stk-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0.4rem 0.5rem 0.55rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--surface-2);
+  animation: stk-item-in 340ms var(--ease-spring) both;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.stk-item:hover {
+  border-color: var(--border-strong);
+}
+
+.stk-item.is-leaving {
+  animation: stk-item-out 200ms var(--ease-in-out) forwards;
+  pointer-events: none;
+}
+
+@keyframes stk-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+}
+
+@keyframes stk-item-out {
+  to {
+    opacity: 0;
+    transform: translateX(12px) scale(0.97);
+  }
+}
+
+.stk-avatar {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 0.85rem;
+  overflow: hidden;
+}
+
+.stk-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.stk-item-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.stk-item-name {
+  font-size: 0.88rem;
+  font-weight: 650;
+  color: var(--text-primary);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stk-item-name:hover {
+  color: var(--accent-color);
+}
+
+.stk-item-meta {
+  font-size: 0.74rem;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stk-recs {
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.stk-recs-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 0.55rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.stk-recs-label svg {
+  color: var(--accent-color);
+}
+
+.stk-recs-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.stk-recs-row .chip {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 640px) {
+  .stk-actions > .btn {
+    flex: 1 1 100%;
+  }
+}
+
+/* Presets */
+.stk-presets {
+  margin-top: clamp(2.5rem, 6vw, 4rem);
+}
+
+.stk-presets-head {
+  margin-bottom: 1.25rem;
+}
+
+.stk-presets-title {
+  margin: 0 0 0.35rem;
+  font-size: clamp(1.2rem, 2.4vw, 1.45rem);
+  color: var(--text-primary);
+}
+
+.stk-presets-sub {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.stk-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stk-preset {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-elevated);
+  overflow: hidden;
+  transition:
+    border-color var(--duration-base) var(--ease-out),
+    transform var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out);
+}
+
+.stk-preset:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-elevated-hover);
+}
+
+.stk-preset-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.stk-preset-icon {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  transition: color var(--duration-base) var(--ease-out);
+}
+
+.stk-preset:hover .stk-preset-icon {
+  color: var(--accent-color);
+}
+
+.stk-preset-badge {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.stk-preset-title {
+  margin: 0.2rem 0 0;
+  font-size: 0.98rem;
+  color: var(--text-primary);
+}
+
+.stk-preset-desc {
+  flex: 1;
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.stk-preset-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0.15rem 0 0.4rem;
+  padding: 0;
+  list-style: none;
+}
+
+.stk-preset-tools li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-2);
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.stk-preset-tools li span {
+  font-weight: 450;
+  color: var(--text-tertiary);
+}
+
+.stk-preset-load {
+  align-self: flex-start;
+}
+
+/* Modal (opened from the floating dock) */
+.stk-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(3, 5, 10, 0.68);
+  backdrop-filter: blur(6px);
+  animation: enter-fade 200ms var(--ease-out) both;
+}
+
+[data-theme="light"] .stk-modal {
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.stk-modal-dialog {
+  /* Positioned so it paints above the full-bleed backdrop button. */
+  position: relative;
+  width: 100%;
+  max-width: 64rem;
+  max-height: min(92vh, 52rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: var(--radius-xl);
+  background: var(--bg-color);
+  box-shadow: var(--shadow-popover);
+  outline: none;
+  animation: stk-modal-in 360ms var(--ease-spring) both;
+}
+
+@keyframes stk-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+}
+
+.stk-root--modal {
+  padding: 0 clamp(0.75rem, 2vw, 1.25rem) clamp(0.75rem, 2vw, 1.25rem);
+}
+
+.stk-root--modal .tl-sticky {
+  position: static;
+}
+
+.stk-modal-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 calc(clamp(0.75rem, 2vw, 1.25rem) * -1) 1rem;
+  padding: 0.9rem clamp(0.75rem, 2vw, 1.25rem);
+  background: color-mix(in srgb, var(--bg-color) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.stk-modal-icon {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-md);
+  color: var(--accent-color);
+  background: rgba(var(--accent-rgb), 0.1);
+  border: 1px solid rgba(var(--accent-rgb), 0.25);
+}
+
+.stk-modal-title {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+}
+
+.stk-modal-sub {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+}
+
+.stk-modal-close {
+  margin-left: auto;
+}
+
+@media (max-width: 640px) {
+  .stk-modal {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .stk-modal-dialog {
+    max-height: 92vh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    animation-name: stk-sheet-in;
+  }
+
+  @keyframes stk-sheet-in {
+    from {
+      transform: translateY(40px);
+      opacity: 0;
+    }
+  }
+}

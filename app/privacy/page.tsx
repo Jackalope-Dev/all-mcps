@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { LegalDoc } from '../../components/LegalDoc';
+import '../styles/account.css';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy & Data Rights',

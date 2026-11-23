@@ -1,0 +1,188 @@
+/* Badge builder (components/ui/BadgeEmbedBuilder.tsx), imported by that
+   component after tools.css.
+   Also rendered inside the listing ShareModal, so the two-pane split keys off
+   the container width, not the viewport. */
+
+.bdg-dofollow {
+  margin-bottom: 1rem;
+}
+
+.bdg {
+  container-type: inline-size;
+}
+
+.bdg-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.bdg-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+@container (min-width: 52rem) {
+  .bdg-grid {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    gap: 1.25rem;
+  }
+
+  .bdg-output {
+    position: sticky;
+    top: calc(var(--header-height) + 1rem);
+  }
+}
+
+.bdg-selected {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0.5rem 0.6rem 0.7rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--surface-2);
+}
+
+.bdg-selected-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.bdg-selected-name {
+  font-weight: 650;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bdg-selected-id {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bdg-clear {
+  position: absolute;
+  right: 0.35rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.9rem;
+  height: 1.9rem;
+}
+
+.bdg-clear:active {
+  transform: translateY(-50%) scale(0.92);
+}
+
+.bdg-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.bdg-preview {
+  display: grid;
+  place-items: center;
+  min-height: 7rem;
+  padding: 1.5rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: #0b0f17;
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.06) 1px,
+    transparent 1px
+  );
+  background-size: 14px 14px;
+}
+
+.bdg-preview--light {
+  background-color: #f6f8fa;
+  border-color: rgba(15, 23, 42, 0.12);
+  background-image: radial-gradient(
+    rgba(15, 23, 42, 0.08) 1px,
+    transparent 1px
+  );
+}
+
+.bdg-preview img {
+  display: block;
+  animation: pop-in 260ms var(--ease-spring) both;
+}
+
+.bdg-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.bdg-notes li {
+  display: flex;
+  gap: 0.55rem;
+}
+
+.bdg-notes svg {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  color: var(--tl-ok);
+}
+
+.bdg-notes strong {
+  color: var(--text-primary);
+  font-weight: 650;
+}
+
+.bdg-notes code,
+.bdg-claim code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--text-primary);
+}
+
+.bdg-claim {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-accent);
+  background: rgba(var(--accent-rgb), 0.05);
+}
+
+.bdg-claim > div:first-child {
+  flex: 1 1 15rem;
+  min-width: 0;
+}
+
+.bdg-claim-title {
+  margin: 0 0 0.15rem;
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.bdg-claim-sub {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}

@@ -1,0 +1,180 @@
+/* Floating stack dock (components/ui/FloatingStackDock.tsx). The dock can
+   show on any page, so it keeps its own small sheet; the builder it opens
+   loads tools.css and stack.css only when opened. */
+
+.stk-dock {
+  position: fixed;
+  left: max(1rem, env(safe-area-inset-left));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 9990;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  backdrop-filter: blur(14px) saturate(1.4);
+  border: 1px solid var(--border-strong);
+  box-shadow:
+    0 12px 32px -10px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(var(--accent-rgb), 0.06);
+  animation: stk-dock-in 520ms var(--ease-spring) both;
+}
+
+[data-theme="light"] .stk-dock {
+  box-shadow: 0 12px 32px -12px rgba(15, 23, 42, 0.28);
+}
+
+@keyframes stk-dock-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.92);
+  }
+}
+
+.stk-dock-main {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.6rem;
+  padding: 0.25rem 0.75rem 0.25rem 0.3rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.stk-dock-main:hover {
+  background: var(--surface-hover);
+}
+
+.stk-dock-main:active {
+  transform: scale(0.97);
+}
+
+.stk-dock-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  background: var(--brand-gradient);
+  color: #ffffff;
+  box-shadow: 0 4px 14px -4px rgba(var(--accent-rgb), 0.6);
+}
+
+.stk-dock-badge {
+  position: absolute;
+  top: -0.3rem;
+  right: -0.35rem;
+  display: grid;
+  place-items: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background: var(--text-primary);
+  color: var(--bg-color);
+  font-size: 0.66rem;
+  font-weight: 800;
+  border: 2px solid var(--surface-1);
+  animation: stk-badge-pop 420ms var(--ease-spring) both;
+}
+
+@keyframes stk-badge-pop {
+  from {
+    transform: scale(0.4);
+  }
+}
+
+.stk-dock-label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+}
+
+.stk-dock-title {
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+.stk-dock-sub {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+}
+
+.stk-dock-chev {
+  color: var(--text-tertiary);
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+.stk-dock-main:hover .stk-dock-chev {
+  transform: translateY(-2px);
+  color: var(--accent-color);
+}
+
+.stk-dock-x {
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.stk-dock-x:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.stk-dock-bubble {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 10px);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  width: min(18rem, calc(100vw - 2rem));
+  padding: 0.75rem 0.5rem 0.75rem 0.9rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-popover);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  transform-origin: bottom left;
+  animation: pop-in 320ms var(--ease-spring) 300ms both;
+}
+
+.stk-dock-bubble p {
+  margin: 0;
+}
+
+.stk-dock-bubble strong {
+  color: var(--text-primary);
+}
+
+.stk-dock-bubble .stk-dock-x {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+@media (max-width: 480px) {
+  .stk-dock-sub {
+    display: none;
+  }
+}

@@ -3,6 +3,7 @@
 import { Search } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useId, useRef, useState } from 'react';
+import '../../app/styles/tools.css';
 
 export interface DirectoryServerHit {
   id: string;

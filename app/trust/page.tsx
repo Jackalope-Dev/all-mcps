@@ -35,6 +35,7 @@ import type {
   EndpointBreakdown,
 } from '../../lib/siteStats';
 import { AI_SYSTEM_CLASSES, getSiteStats } from '../../lib/siteStats';
+import '../styles/account.css';
 
 // Callers we operate ourselves — their labels link out to the product.
 const CALLER_LINKS: Record<string, string> = {

@@ -1,10 +1,20 @@
 'use client';
 
 import { ChevronUp, Layers, X } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { StackBuilderModal } from '@/components/StackBuilderModal';
 import { clearStack, getStackServerIds } from '@/lib/stackStore';
+import '../../app/styles/stack-dock.css';
+
+// The builder (and the tools.css + stack.css it imports) only matters once the
+// dock is opened, so it loads on demand instead of with the dock on every page.
+// Hover/focus on the dock warms the chunk so the open feels instant.
+const loadModal = () => import('@/components/StackBuilderModal');
+const StackBuilderModal = dynamic(
+  () => loadModal().then((m) => m.StackBuilderModal),
+  { ssr: false },
+);
 
 const BUBBLE_KEY = 'mcp_stack_bubble_dismissed';
 
@@ -80,6 +90,8 @@ export function FloatingStackDock() {
               dismissBubble();
               setModalOpen(true);
             }}
+            onPointerEnter={loadModal}
+            onFocus={loadModal}
             aria-haspopup="dialog"
           >
             <span className="stk-dock-icon" aria-hidden="true">

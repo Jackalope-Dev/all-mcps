@@ -26,7 +26,7 @@ type Listener = (toasts: ToastItem[]) => void;
 
 const DEFAULT_DURATION = 4000;
 const MAX_TOASTS = 4;
-/** Matches the .acct-toast exit animation in app/styles/account.css. */
+/** Matches the .acct-toast exit animation in app/styles/overlays.css. */
 const EXIT_MS = 180;
 
 let toasts: ToastItem[] = [];

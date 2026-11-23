@@ -3,6 +3,8 @@ import Link from 'next/link';
 import type React from 'react';
 import { FeelingLuckyArcade } from '@/components/FeelingLuckyArcade';
 import { serializeJsonLd } from '@/lib/jsonLd';
+import '../styles/tools.css';
+import '../styles/lucky.css';
 
 const SITE = 'https://allmcps.com';
 

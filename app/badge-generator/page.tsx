@@ -2,6 +2,7 @@ import { ShieldCheck } from 'lucide-react';
 import type { Metadata } from 'next';
 import { ToolPage } from '../../components/tools/ToolPage';
 import { BadgeEmbedBuilder } from '../../components/ui/BadgeEmbedBuilder';
+import '../styles/tools.css';
 
 export const metadata: Metadata = {
   title: 'MCP Server Badge Generator & Embed Builder',

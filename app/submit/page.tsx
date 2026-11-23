@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { SubmitForm } from '../../components/forms/SubmitForm';
 import { PageShell } from '../../components/PageShell';
+import '../styles/account.css';
 
 export const metadata: Metadata = {
   title: 'Submit Your MCP Server for Listing & Review',

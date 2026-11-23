@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { ContactForm } from '../../components/forms/ContactForm';
 import { PageShell } from '../../components/PageShell';
+import '../styles/account.css';
 
 export const metadata: Metadata = {
   title: 'Contact & Support - Listings & Sponsorships',

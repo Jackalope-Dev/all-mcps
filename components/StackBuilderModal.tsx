@@ -28,6 +28,8 @@ import {
 } from '@/lib/stackStore';
 import { CodePanel, downloadText, useCopy } from './tools/CodePanel';
 import { ServerPicker } from './tools/ServerPicker';
+import '../app/styles/tools.css';
+import '../app/styles/stack.css';
 
 type ClientFormat = 'claude' | 'cursor' | 'cline' | 'windsurf' | 'prompt';
 

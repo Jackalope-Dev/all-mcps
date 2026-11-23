@@ -1,0 +1,119 @@
+/* Status screens (404 / error): components/StatusScreen.tsx imports this, so
+   it loads only where a status screen renders. */
+
+.acct-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100svh - var(--header-height) - 6rem);
+  padding: clamp(3rem, 10vh, 6rem) 16px;
+  text-align: center;
+}
+
+.acct-status-inner {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.acct-status-code {
+  margin: 0 0 1rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  background: rgba(var(--accent-rgb), 0.08);
+  color: var(--accent-color);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.acct-status-title {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  color: var(--text-primary);
+}
+
+.acct-status-desc {
+  margin: 0 0 2rem;
+  max-width: 44ch;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.acct-status-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.4rem 0.4rem 0.4rem 1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-elevated);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.acct-status-search:focus-within {
+  border-color: var(--accent-color);
+  box-shadow: var(--ring), var(--shadow-elevated);
+}
+
+.acct-status-search > svg {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
+.acct-status-search input {
+  flex: 1;
+  min-width: 0;
+  height: 2.5rem;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+.acct-status-search input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.acct-status-search .btn {
+  height: 2.35rem;
+  padding-inline: 1rem;
+}
+
+.acct-status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.acct-status-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1.75rem;
+}
+
+:where(.acct-status-links) .chip svg {
+  color: var(--text-tertiary);
+}
+
+:where(.acct-status-links) .chip:where(:hover) svg {
+  color: var(--accent-color);
+}

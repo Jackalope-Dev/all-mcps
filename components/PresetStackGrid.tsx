@@ -15,6 +15,8 @@ import { useState } from 'react';
 import { toast } from '@/components/ui/Toast';
 import { trackFeatureUse } from '@/lib/gtag';
 import { saveStackServerIds } from '@/lib/stackStore';
+import '../app/styles/tools.css';
+import '../app/styles/stack.css';
 
 interface PresetStack {
   id: string;

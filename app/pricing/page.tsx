@@ -23,6 +23,7 @@ import {
 } from '../../lib/pricing';
 import { getSiteStats } from '../../lib/siteStats';
 import { PricingClient } from './PricingClient';
+import '../styles/account.css';
 
 export const metadata: Metadata = {
   title: 'Pricing & Sponsorships - Featured MCP Listings',

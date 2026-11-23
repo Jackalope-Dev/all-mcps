@@ -1,6 +1,7 @@
 import { BookOpen, Compass, LayoutGrid, Search, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import type React from 'react';
+import '../app/styles/status.css';
 
 const QUICK_LINKS = [
   { href: '/browse', label: 'Browse servers', icon: Compass },

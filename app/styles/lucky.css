@@ -1,0 +1,358 @@
+/* /lucky (components/FeelingLuckyArcade.tsx). Loaded by app/lucky after
+   tools.css. */
+
+.lucky-page {
+  max-width: 52rem;
+}
+
+.lucky-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  margin: clamp(0.5rem, 2vw, 1.25rem) auto clamp(1.75rem, 4vw, 2.5rem);
+  text-align: center;
+  max-width: 38rem;
+}
+
+.lucky {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.lucky-machine {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-color);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-elevated);
+}
+
+.lucky-modes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .lucky-modes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.lucky-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.75rem 0.8rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.lucky-mode:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+.lucky-mode:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.lucky-mode:disabled {
+  cursor: default;
+}
+
+.lucky-mode.is-active {
+  border-color: rgba(var(--accent-rgb), 0.5);
+  background: rgba(var(--accent-rgb), 0.07);
+}
+
+.lucky-mode-icon {
+  display: inline-flex;
+  margin-bottom: 0.3rem;
+  color: var(--text-tertiary);
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.lucky-mode.is-active .lucky-mode-icon {
+  color: var(--accent-color);
+}
+
+.lucky-mode-label {
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.lucky-mode-sub {
+  font-size: 0.74rem;
+  color: var(--text-tertiary);
+}
+
+/* The one retro accent: a dark CRT-ish reel window, dark in both themes. */
+.lucky-screen {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  padding: 0.6rem;
+  border-radius: var(--radius-lg);
+  background: radial-gradient(120% 140% at 50% 0%, #0d1726 0%, #070a10 70%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 2px 16px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+@media (max-width: 560px) {
+  .lucky-screen {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.lucky-reel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 6rem;
+  padding: 0.85rem 0.6rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: center;
+  color: #8fa0b8;
+  transition:
+    border-color var(--duration-base) var(--ease-out),
+    color var(--duration-base) var(--ease-out),
+    background-color var(--duration-base) var(--ease-out);
+}
+
+.lucky-reel-icon {
+  display: inline-flex;
+  color: #5d6b80;
+}
+
+.lucky-reel-text {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.lucky-screen.is-spinning .lucky-reel:not(.is-locked) .lucky-reel-text {
+  filter: blur(0.6px);
+  opacity: 0.75;
+}
+
+.lucky-reel.is-locked {
+  color: #e6fbff;
+  border-color: rgba(0, 229, 255, 0.45);
+  background: rgba(0, 229, 255, 0.06);
+  animation: lucky-lock 420ms var(--ease-spring) both;
+}
+
+.lucky-reel.is-locked .lucky-reel-icon {
+  color: #00e5ff;
+}
+
+@keyframes lucky-lock {
+  0% {
+    transform: scale(0.96);
+    box-shadow: 0 0 0 rgba(0, 229, 255, 0);
+  }
+  60% {
+    box-shadow: 0 0 24px rgba(0, 229, 255, 0.35);
+  }
+  100% {
+    transform: none;
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.12);
+  }
+}
+
+.lucky-spin-row {
+  display: flex;
+  justify-content: center;
+}
+
+.lucky-spin {
+  min-width: min(100%, 15rem);
+  justify-content: center;
+}
+
+.lucky-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border-color);
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+}
+
+.lucky-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.lucky-stat strong {
+  color: var(--text-primary);
+  font-weight: 650;
+}
+
+.lucky-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-tertiary);
+  font: inherit;
+  font-size: 0.76rem;
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.lucky-toggle:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.lucky-toggle.is-on {
+  color: var(--accent-color);
+  border-color: rgba(var(--accent-rgb), 0.35);
+}
+
+.lucky-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lucky-result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 1.1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-accent);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-elevated);
+  animation: lucky-result-in 520ms var(--ease-spring) both;
+  animation-delay: calc(var(--i, 0) * 90ms);
+}
+
+@keyframes lucky-result-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+}
+
+.lucky-result-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.lucky-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-2);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.lucky-tag--ok {
+  color: var(--tl-ok);
+  border-color: color-mix(in srgb, var(--tl-ok) 35%, transparent);
+}
+
+.lucky-result-title {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.lucky-result-desc {
+  flex: 1;
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.lucky-install {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.35rem 0.35rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--tl-code-bg, #0a0e16);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lucky-install code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: #dfe6f0;
+}
+
+.lucky-result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+@media (max-width: 560px) {
+  .lucky-reel {
+    flex-direction: row;
+    justify-content: flex-start;
+    min-height: 3.25rem;
+    padding: 0.6rem 0.85rem;
+    text-align: left;
+  }
+}

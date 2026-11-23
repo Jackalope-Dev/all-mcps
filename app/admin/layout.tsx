@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import '../styles/account.css';
 import './admin.css';
 
 // Exists only to scope the admin console's stylesheet to /admin (it used to

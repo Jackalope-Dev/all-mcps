@@ -8,6 +8,8 @@ import { parseServerName } from '../../lib/displayName';
 import { trackShare } from '../../lib/gtag';
 import { CodePanel } from '../tools/CodePanel';
 import { ServerAvatar } from './ServerAvatar';
+import '../../app/styles/tools.css';
+import '../../app/styles/badge.css';
 
 interface BadgeEmbedBuilderProps {
   serverId?: string;
