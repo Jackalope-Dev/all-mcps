@@ -148,6 +148,8 @@ export function middleware(req: NextRequest) {
     response = NextResponse.rewrite(
       new URL('/api/well-known/ai-catalog', req.url),
     );
+  } else if (pathname === '/.well-known/poppy.json') {
+    response = NextResponse.rewrite(new URL('/api/well-known/poppy', req.url));
   } else if (pathname === '/.well-known/http-message-signatures-directory') {
     response = NextResponse.rewrite(
       new URL('/api/well-known/http-message-signatures-directory', req.url),
