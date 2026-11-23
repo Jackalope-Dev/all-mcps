@@ -287,6 +287,8 @@ async function generateEditorial(
   const describe = (c: DigestCandidate) => ({
     id: c.id,
     name: listingTitle(c).title,
+    // Who makes it, so a bare name ("SEO") can be written as "iannuttall's SEO toolkit".
+    maker: listingTitle(c).by ?? undefined,
     category: plainCategory(c.category),
     summary: truncate(listingSummary(c), 240),
     useCases: listingUseCases(c).slice(0, 3),
@@ -323,7 +325,7 @@ async function generateEditorial(
           'Write a weekly email that reads like a short, opinionated briefing from someone who tried these tools, and makes readers want to try one today. ' +
           'Be concrete: name the task the server lets an agent do ("have Claude diff two Postgres schemas"), not adjectives. ' +
           'Use only facts present in the input (summary, use cases, tool names). No hype ("game-changer", "revolutionary", "supercharge", "unlock"), no emoji, no exclamation marks. ' +
-          'Refer to servers by the "name" given, never by an id. ' +
+          'Refer to servers by the "name" given, never by an id; when a name is a plain word, pair it with its "maker" so it reads as a product. ' +
           'Return JSON with:\n' +
           '"headline": the theme of this issue under 60 chars, concrete, drawn from what these servers have in common or the pick ("Give your agent a real browser"); never "This week on AllMCPs";\n' +
           '"intro": an editor\'s note of 2-3 sentences (under 320 chars) that connects this week\'s servers to a workflow a developer has, and says why it matters now;\n' +

@@ -14,6 +14,7 @@
 
 import { cleanListingDescription } from './description';
 import { parseServerName } from './displayName';
+import { ownerBrandSlug } from './genericName';
 import { findRepoIdentityMismatch } from './ingest/repoIdentity';
 import { starsLookInflated } from './repoStars';
 
@@ -224,11 +225,17 @@ export function listingTitle(c: Pick<DigestCandidate, 'name' | 'url'>): {
   title: string;
   by: string | null;
 } {
-  const { displayName, org } = parseServerName(c.name.trim(), c.url);
-  const by = org ? org.replace(/^@/, '') : null;
-  // "Corsair Dev MCP by corsair-dev" says the owner twice.
+  const name = c.name.trim();
+  const { displayName, org } = parseServerName(name, c.url);
+  // A bare repo-slug name ("seo", "agent-plugin") says little on its own; the
+  // GitHub owner tells the reader whose it is ("SEO by iannuttall").
+  const ghOwner = /^[\w.-]+$/.test(name)
+    ? (/github\.com\/([^/\s?#]+)\//i.exec(c.url)?.[1] ?? null)
+    : null;
+  const by = org ? org.replace(/^@/, '') : ghOwner;
+  // "Corsair Dev MCP by corsair-dev" or "Ollaya by ollaya-dev" says the owner twice.
   const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-  if (!by || squash(displayName).startsWith(squash(by))) {
+  if (!by || squash(displayName).startsWith(squash(ownerBrandSlug(by)))) {
     return { title: displayName, by: null };
   }
   return { title: displayName, by };

@@ -123,6 +123,25 @@ describe('copy', () => {
     });
   });
 
+  it('names the maker of a bare repo-slug listing', () => {
+    expect(
+      listingTitle({ name: 'scanner', url: 'https://github.com/acme/scanner' }),
+    ).toEqual({ title: 'Scanner', by: 'acme' });
+    // The owner is already the brand: no repeat.
+    expect(
+      listingTitle({
+        name: 'brainscanner',
+        url: 'https://github.com/brainscanner-dev/brainscanner',
+      }),
+    ).toEqual({ title: 'Brainscanner', by: null });
+    expect(
+      listingTitle({
+        name: 'brainscanner-ui-mcp',
+        url: 'https://brainscanner.dev',
+      }).title,
+    ).toBe('Brainscanner UI MCP');
+  });
+
   it('never titles a listing just "mcp"', () => {
     // The Nov 23 2026 subject read "Pick of the week: mcp".
     expect(

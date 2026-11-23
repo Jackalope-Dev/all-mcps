@@ -55,13 +55,30 @@ export function parseServerName(
   return { displayName, org };
 }
 
+/** Words that read as acronyms in a title: "figma-ui-mcp" -> "Figma UI MCP". */
+const TITLE_ACRONYMS = new Set([
+  'mcp',
+  'ai',
+  'api',
+  'io',
+  'cli',
+  'sdk',
+  'ui',
+  'ux',
+  'seo',
+  'sql',
+  'db',
+  'llm',
+  'pdf',
+  'css',
+  'html',
+  'crm',
+  'aws',
+  'gcp',
+]);
+
 function titleCaseWord(word: string): string {
-  if (/^mcp$/i.test(word)) return 'MCP';
-  if (word.toLowerCase() === 'ai') return 'AI';
-  if (word.toLowerCase() === 'api') return 'API';
-  if (word.toLowerCase() === 'io') return 'IO';
-  if (word.toLowerCase() === 'cli') return 'CLI';
-  if (word.toLowerCase() === 'sdk') return 'SDK';
+  if (TITLE_ACRONYMS.has(word.toLowerCase())) return word.toUpperCase();
   return word.charAt(0).toUpperCase() + word.slice(1);
 }
 
