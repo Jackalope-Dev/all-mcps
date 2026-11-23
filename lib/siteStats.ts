@@ -512,7 +512,15 @@ async function querySiteStats(
           sql`date(${apiAccessLogs.createdAt}, 'unixepoch')`,
           apiAccessLogs.callerClass,
         )
-        .catch(() => []),
+        // null, not []: an empty result would zero-fill to "no traffic for 30
+        // days" and get cached for a day. Fall back to the last good trend.
+        .catch((err: unknown) => {
+          console.error(
+            '[getSiteStats] daily trend query failed:',
+            d1Cause(err),
+          );
+          return null;
+        }),
 
       db
         .select({
@@ -625,11 +633,13 @@ async function querySiteStats(
         .slice(0, 10);
       dayMap.set(key, { total: 0, ai: 0 });
     }
-    for (const r of (dailyRows as {
-      date: string;
-      callerClass: CallerClass;
-      hits: number;
-    }[]) || []) {
+    for (const r of (dailyRows as
+      | {
+          date: string;
+          callerClass: CallerClass;
+          hits: number;
+        }[]
+      | null) ?? []) {
       const bucket = dayMap.get(r.date);
       if (!bucket) continue; // outside the zero-filled window (cutoff boundary)
       const rowHits = Number(r.hits || 0);
@@ -637,13 +647,14 @@ async function querySiteStats(
       if (r.callerClass && AI_SYSTEM_CLASSES.includes(r.callerClass))
         bucket.ai += rowHits;
     }
-    const dailyTrend: DailyTrendPoint[] = Array.from(dayMap.entries()).map(
-      ([date, v]) => ({
-        date,
-        total: v.total,
-        ai: v.ai,
-      }),
-    );
+    const dailyTrend: DailyTrendPoint[] =
+      dailyRows === null
+        ? (stale?.dailyTrend30d ?? [])
+        : Array.from(dayMap.entries()).map(([date, v]) => ({
+            date,
+            total: v.total,
+            ai: v.ai,
+          }));
 
     const endpointBreakdown: EndpointBreakdown[] = (
       (endpointRows as { endpoint: Endpoint; hits: number }[]) || []
