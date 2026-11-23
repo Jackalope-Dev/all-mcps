@@ -29,6 +29,8 @@ const PRIMARY_ONLY_PREFIXES = [
   '/api/auth',
   '/api/cron',
   '/api/dashboard',
+  // The submitter confirmation link reads the listing it was just sent for.
+  '/api/email',
   '/api/lopebase',
   '/api/stripe',
   '/api/submit',

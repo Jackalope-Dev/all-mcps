@@ -96,6 +96,7 @@ export function SubmitForm() {
   >('idle');
   const [token, setToken] = useState<string>('');
   const [submittedId, setSubmittedId] = useState<string | null>(null);
+  const [emailConfirmation, setEmailConfirmation] = useState(false);
   const [similarListing, setSimilarListing] = useState<{
     id: string;
     name: string;
@@ -399,8 +400,10 @@ export function SubmitForm() {
         const payload = (await res.json().catch(() => null)) as {
           id?: string;
           similar?: { id: string; name: string } | null;
+          emailConfirmation?: boolean;
         } | null;
         setSubmittedId(payload?.id || null);
+        setEmailConfirmation(payload?.emailConfirmation === true);
         setSimilarListing(payload?.similar ?? null);
         setStatus('success');
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -454,6 +457,7 @@ export function SubmitForm() {
         name={name}
         submittedId={submittedId}
         similar={similarListing}
+        emailConfirmation={emailConfirmation}
         isGithub={isGitHubRepoUrl(url)}
         onSubmitAnother={resetForm}
       />

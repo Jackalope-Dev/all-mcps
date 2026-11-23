@@ -9,13 +9,10 @@ import {
 } from './listingIntake';
 import { getEmailEnv, sendNotificationEmail } from './notify';
 import { checkRateLimit, rateLimitHeaders } from './rateLimit';
-import {
-  PRODUCT_SUBSCRIBERS_LIST_ID,
-  syncSequenzySubscriber,
-} from './sequenzy';
 import { upsertSignals } from './signalStore';
 import { getAppUrl } from './stripe';
 import { hashSubmitterIp, recordSubmissionIp } from './submitterBlocks';
+import { notifySubmitter } from './submitterNotify';
 import { formatZodError } from './zodError';
 
 const agentSubmitSchema = z.object({
@@ -53,6 +50,8 @@ type SubmitListingSuccess = {
   status: 'pending';
   claim_url: string;
   badge_markdown: string;
+  /** The submitter email was sent a confirmation link; review emails wait for it. */
+  email_confirmation_required: boolean;
   /** An existing listing this may duplicate; the submission went in anyway. */
   similar: { id: string; name: string; url: string; claim_url: string } | null;
 };
@@ -163,21 +162,13 @@ export async function submitListing(
   }
   const similar = publicSimilarListing(prepared.similar);
 
-  await syncSequenzySubscriber({
-    email,
-    tags: ['submitted-listing', 'agent-submission'],
-    lists: [PRODUCT_SUBSCRIBERS_LIST_ID],
-    customAttributes: { serverId: id, serverName: name },
-    enrollInSequences: true,
-  });
-
-  await sendNotificationEmail({
-    to: email,
-    heading: `Agent Submission Received: ${name}`,
-    message: `Your AI agent has submitted "${name}" to AllMCPs! Your listing is currently queued for review. You can get verified immediately by adding your official AllMCPs badge to your repository or website.`,
-    actionText: 'Verify & Claim Listing',
-    actionUrl: `${getAppUrl()}/mcp/${id}/claim`,
-  });
+  // Proven address: receipt + Sequenzy sync now. Otherwise one confirmation
+  // link, and both wait for the click (lib/submitterNotify.ts).
+  const submitterEmail = await notifySubmitter(
+    db,
+    { email, serverId: id, name, newsletter: false, agent: true },
+    env,
+  );
 
   const emailEnv = await getEmailEnv();
   if (emailEnv.adminEmail) {
@@ -213,6 +204,7 @@ export async function submitListing(
       status: 'pending',
       claim_url: claimUrl,
       badge_markdown: badgeMarkdown,
+      email_confirmation_required: submitterEmail === 'confirm',
       similar: similar
         ? {
             ...similar,

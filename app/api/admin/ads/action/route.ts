@@ -112,6 +112,8 @@ export async function POST(request: Request) {
         try {
           await sendNotificationEmail({
             to: adToApprove.advertiserEmail,
+            // A paid campaign: the advertiser completed checkout.
+            basis: 'paid',
             heading: 'Your sponsor campaign is live',
             message: `Your campaign "${adToApprove.title}" has been approved and is now running across AllMCPs.`,
             actionText: 'View campaign dashboard',
@@ -167,6 +169,8 @@ export async function POST(request: Request) {
           try {
             await sendNotificationEmail({
               to: existingAd.advertiserEmail,
+              // An unpaid campaign's address was never proven, so it needs a sign-in.
+              basis: existingAd.stripePaymentIntentId ? 'paid' : 'verified',
               heading: 'Your sponsor campaign was not approved',
               message: existingAd.stripePaymentIntentId
                 ? `Your campaign "${existingAd.title}" was not approved: ${finalRejectionReason}. A full refund has been issued to your original payment method.`
@@ -203,6 +207,8 @@ export async function POST(request: Request) {
           try {
             await sendNotificationEmail({
               to: adToPause.advertiserEmail,
+              // A paid campaign: the advertiser completed checkout.
+              basis: 'paid',
               heading: 'Your sponsor campaign has been paused',
               message: reason
                 ? `Your campaign "${adToPause.title}" has been paused: ${reason}. Delivery has stopped and will resume once this is resolved.`
@@ -236,6 +242,8 @@ export async function POST(request: Request) {
           try {
             await sendNotificationEmail({
               to: adToResume.advertiserEmail,
+              // A paid campaign: the advertiser completed checkout.
+              basis: 'paid',
               heading: 'Your sponsor campaign has resumed',
               message: `Your campaign "${adToResume.title}" is active again and delivering across AllMCPs.`,
               actionText: 'View campaign dashboard',
@@ -290,6 +298,8 @@ export async function POST(request: Request) {
           try {
             await sendNotificationEmail({
               to: adToBonus.advertiserEmail,
+              // A paid campaign: the advertiser completed checkout.
+              basis: 'paid',
               heading: 'Bonus impressions added to your campaign',
               message: `We've added ${bonusImpressions.toLocaleString()} bonus impressions to your campaign "${adToBonus.title}" — new total: ${(adToBonus.totalImpressionsPurchased + bonusImpressions).toLocaleString()}. It's running again if it had finished delivering.`,
               actionText: 'View campaign dashboard',
@@ -377,6 +387,8 @@ export async function POST(request: Request) {
         try {
           await sendNotificationEmail({
             to: adWithEdit.advertiserEmail,
+            // A paid campaign: the advertiser completed checkout.
+            basis: 'paid',
             heading: approved
               ? 'Your ad edit is live'
               : 'Your ad edit needs changes',

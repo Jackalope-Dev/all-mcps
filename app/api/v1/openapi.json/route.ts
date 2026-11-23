@@ -524,6 +524,11 @@ export async function GET() {
                     description:
                       'Ready-to-paste public README badge; earns a dofollow backlink once detected. It does not prove ownership — claiming uses the personalized badge from claim_url.',
                   },
+                  email_confirmation_required: {
+                    type: 'boolean',
+                    description:
+                      'True when the submitter email has not signed in or confirmed before: it was sent one confirmation link, and review emails go to it only after that link is clicked.',
+                  },
                 },
               },
             ),

@@ -41,6 +41,7 @@ export function SubmitSuccess({
   name,
   submittedId,
   similar,
+  emailConfirmation,
   isGithub,
   onSubmitAnother,
 }: {
@@ -48,6 +49,8 @@ export function SubmitSuccess({
   submittedId: string | null;
   /** A live listing the submission may duplicate (submitted anyway). */
   similar: { id: string; name: string } | null;
+  /** The address is new to us: review emails wait for the confirmation link. */
+  emailConfirmation: boolean;
   isGithub: boolean;
   onSubmitAnother: () => void;
 }) {
@@ -102,8 +105,11 @@ export function SubmitSuccess({
           className="acct-success-lead animate-in"
           style={{ '--i': 3 } as React.CSSProperties}
         >
-          We&apos;ll email you as soon as it&apos;s approved. Here&apos;s what
-          happens next — and a few ways to get more out of your listing.
+          {emailConfirmation
+            ? 'We sent you a link to confirm your email. Click it and we will email you as soon as the listing is approved.'
+            : 'We will email you as soon as it is approved.'}{' '}
+          Here&apos;s what happens next, and a few ways to get more out of your
+          listing.
         </p>
         <div
           className="acct-success-actions animate-in"

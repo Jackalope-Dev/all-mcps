@@ -775,7 +775,7 @@ ${JSON.stringify({ ...ad, placement })}
 - **Server ID**: ${data.id}
 - **Status**: ${data.status} (Pending Manual Review & Verification)
 - **Claim & Verify URL**: [Verify Listing](${data.claim_url})
-${enrichedFields.length ? `- **Enrichment captured**: ${enrichedFields.join(' · ')}\n` : ''}
+${data.email_confirmation_required ? '- **Email**: we sent the submitter address a confirmation link. Review emails go to it only after that link is clicked.\n' : ''}${enrichedFields.length ? `- **Enrichment captured**: ${enrichedFields.join(' · ')}\n` : ''}
 ### Add the AllMCPs badge to your README.md
 Embed this markdown badge in your GitHub repository. It links back to the listing and earns a reciprocal dofollow backlink once detected:
 

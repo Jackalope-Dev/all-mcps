@@ -162,6 +162,8 @@ export async function registerAgent(
 
   await sendNotificationEmail({
     to: email,
+    // The code is the proof of the address (lib/agentConfirm.ts).
+    basis: 'verification',
     heading: 'AllMCPs Agent Registration Code',
     message: `Your confirmation code for AllMCPs Agent API registration is: ${rawCode}\n\nSubmit this code along with your email to POST /api/v1/agent/register/confirm (or the confirm_mcp_agent MCP tool) to obtain your bearer token. This code expires in 15 minutes.`,
   });

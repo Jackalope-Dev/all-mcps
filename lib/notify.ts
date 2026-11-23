@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import { ListingStatusEmail } from '@/components/emails/ListingStatusEmail';
 import { NotificationEmail } from '@/components/emails/NotificationEmail';
 import { ReceiptEmail } from '@/components/emails/ReceiptEmail';
+import { isEmailVerified } from './emailVerification';
 
 export async function getEmailEnv() {
   let apiKey = process.env.RESEND_API_KEY;
@@ -29,6 +30,51 @@ export async function getEmailEnv() {
 }
 
 /**
+ * Why an address may get an email:
+ * - 'verified' (default): it finished a magic-link sign-in or another proof
+ *   (lib/emailVerification.ts), or it is ADMIN_EMAIL.
+ * - 'verification': the email is itself the proof step (a code or a
+ *   confirmation link), so the address can't have been proven yet.
+ * - 'paid': the recipient completed a payment for what the email is about
+ *   (a receipt, or a notice about a paid ad campaign).
+ */
+export type SendBasis = 'verified' | 'verification' | 'paid';
+
+/**
+ * The gate every notice to a user-supplied address passes. A bot can type
+ * any address into a public form; mailing it bounces, and Resend pauses all
+ * sending (magic links included) once bounces pass 4%. A skipped send keeps
+ * the caller's record (listing, ad, claim) intact; only the email is dropped.
+ * Fails closed: no database, no email.
+ */
+export async function mayEmail(
+  to: string,
+  basis: SendBasis = 'verified',
+): Promise<boolean> {
+  if (basis !== 'verified') return true;
+  const address = to.trim().toLowerCase();
+  if (!address) return false;
+  const { adminEmail } = await getEmailEnv();
+  if (adminEmail && adminEmail.trim().toLowerCase() === address) return true;
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const { drizzle } = await import('drizzle-orm/d1');
+    const ctx = await getCloudflareContext();
+    const DB = (ctx?.env as { DB?: unknown } | undefined)?.DB;
+    if (!DB) return false;
+    return await isEmailVerified(drizzle(DB as never), address);
+  } catch (e) {
+    console.error('[email] verification lookup failed:', e);
+    return false;
+  }
+}
+
+/** Logs a skipped send without the address. */
+function logSkipped(subject: string) {
+  console.info(`[email] not sent, address not verified: ${subject}`);
+}
+
+/**
  * Sends a generic notification email via Resend. No-ops (rather than throwing)
  * when RESEND_API_KEY isn't configured, so a missing secret in a given
  * environment degrades to "no email sent" instead of failing the caller's request.
@@ -39,11 +85,16 @@ export async function sendNotificationEmail(params: {
   message: string;
   actionText?: string;
   actionUrl?: string;
-}): Promise<void> {
+  basis?: SendBasis;
+}): Promise<boolean> {
   const env = await getEmailEnv();
   if (!env.apiKey) {
     console.warn('sendNotificationEmail skipped: RESEND_API_KEY is missing.');
-    return;
+    return false;
+  }
+  if (!(await mayEmail(params.to, params.basis))) {
+    logSkipped(params.heading);
+    return false;
   }
 
   const resend = new Resend(env.apiKey);
@@ -62,14 +113,17 @@ export async function sendNotificationEmail(params: {
 
   if (error) {
     console.error('sendNotificationEmail error:', error);
+    return false;
   }
+  return true;
 }
 
 /**
  * Branded payment receipt via Resend — supplements (doesn't replace) Stripe's
  * own default receipt email, since disabling that is an account-level Stripe
  * setting this app doesn't own. No-ops the same way as the other senders when
- * RESEND_API_KEY is missing.
+ * RESEND_API_KEY is missing. Only called once a payment has settled, so it
+ * needs no verified address ('paid' in mayEmail's terms).
  */
 export async function sendReceiptEmail(params: {
   to: string;
@@ -124,6 +178,10 @@ export async function sendListingStatusEmail(params: {
   const env = await getEmailEnv();
   if (!env.apiKey) {
     console.warn('sendListingStatusEmail skipped: RESEND_API_KEY is missing.');
+    return;
+  }
+  if (!(await mayEmail(params.to))) {
+    logSkipped(`listing ${params.status}`);
     return;
   }
 

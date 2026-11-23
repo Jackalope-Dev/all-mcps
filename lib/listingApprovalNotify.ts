@@ -3,7 +3,7 @@
  * Drives claim/dofollow growth: transactional email + Sequenzy sequence tag.
  */
 
-import { sendListingStatusEmail } from './notify';
+import { mayEmail, sendListingStatusEmail } from './notify';
 import {
   PRODUCT_SUBSCRIBERS_LIST_ID,
   syncSequenzySubscriber,
@@ -45,6 +45,18 @@ export async function notifyListingApproved(
       emailed: false,
       channel: 'none',
       reason: 'No submitter email on file.',
+    };
+  }
+
+  // A submitter who never proved the address (a magic-link sign-in or the
+  // confirmation link sent on submission) gets nothing: typed-in addresses
+  // are where the bounces come from. The listing is approved either way.
+  if (!(await mayEmail(submitterEmail))) {
+    return {
+      emailed: false,
+      channel: 'none',
+      reason:
+        "Not emailed: the submitter hasn't confirmed this address or signed in yet.",
     };
   }
 

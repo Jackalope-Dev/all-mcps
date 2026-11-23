@@ -10,6 +10,7 @@ import {
   parseAgentScopes,
   sha256Hex,
 } from '@/lib/agentAuth';
+import { markEmailVerified } from './emailVerification';
 import { formatZodError } from './zodError';
 
 const confirmSchema = z.object({
@@ -151,6 +152,9 @@ export async function confirmAgentRegistration(
       name: reg.agentName || 'AI Agent',
     });
   }
+  // The code proves the address, so notices may now go to it
+  // (lib/notify.ts mayEmail).
+  await markEmailVerified(db, email);
 
   // Mint bearer token, carrying over the scopes requested at registration
   const rawToken = generateAgentToken();

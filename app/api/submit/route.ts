@@ -18,11 +18,6 @@ import {
   clientKey,
   rateLimitHeaders,
 } from '../../../lib/rateLimit';
-import {
-  NEWSLETTER_SUBSCRIBERS_LIST_ID,
-  PRODUCT_SUBSCRIBERS_LIST_ID,
-  syncSequenzySubscriber,
-} from '../../../lib/sequenzy';
 import { upsertSignals } from '../../../lib/signalStore';
 import { getAppUrl } from '../../../lib/stripe';
 import {
@@ -30,6 +25,7 @@ import {
   recordSubmissionIp,
   requestIp,
 } from '../../../lib/submitterBlocks';
+import { notifySubmitter } from '../../../lib/submitterNotify';
 import { verifyTurnstileToken } from '../../../lib/turnstile';
 import { formatZodError } from '../../../lib/zodError';
 
@@ -179,29 +175,21 @@ export async function POST(req: Request) {
       heardFrom: normalizeHeardFrom(result.data.heardFrom),
     });
 
-    const newsletterOptIn = result.data.newsletterOptIn !== false;
-    await syncSequenzySubscriber({
-      email,
-      tags: newsletterOptIn
-        ? ['submitted-listing', 'newsletter-signup']
-        : ['submitted-listing'],
-      lists: newsletterOptIn
-        ? [PRODUCT_SUBSCRIBERS_LIST_ID, NEWSLETTER_SUBSCRIBERS_LIST_ID]
-        : [PRODUCT_SUBSCRIBERS_LIST_ID],
-      customAttributes: { serverId: id, serverName: name },
-      enrollInSequences: true,
-    });
+    // A proven address gets the receipt and the Sequenzy sync now; any other
+    // gets one confirmation link, and both wait until it is clicked.
+    const submitterEmail = await notifySubmitter(
+      db,
+      {
+        email,
+        serverId: id,
+        name,
+        newsletter: result.data.newsletterOptIn !== false,
+        agent: false,
+      },
+      env,
+    );
 
-    // 1. Send confirmation email to the submitter
-    await sendNotificationEmail({
-      to: email,
-      heading: `Submission Received: ${name}`,
-      message: `Thank you for submitting "${name}" to AllMCPs! Your listing is currently queued for review. You can get verified immediately by adding your official AllMCPs badge to your repository or website.`,
-      actionText: 'Verify & Claim Listing',
-      actionUrl: `${getAppUrl()}/mcp/${id}/claim`,
-    });
-
-    // 2. Send alert email to the admin
+    // Alert the admin
     const emailEnv = await getEmailEnv();
     const adminEmail = emailEnv.adminEmail;
     if (adminEmail) {
@@ -219,6 +207,8 @@ export async function POST(req: Request) {
       message: 'Server submitted successfully for review!',
       id,
       similar: publicSimilarListing(prepared.similar),
+      // The success screen asks the submitter to click the link.
+      emailConfirmation: submitterEmail === 'confirm',
     });
   } catch (error) {
     console.error('Submission error:', error);

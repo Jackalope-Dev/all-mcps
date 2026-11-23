@@ -186,6 +186,8 @@ export async function POST(request: Request) {
           try {
             await sendNotificationEmail({
               to: current.advertiserEmail,
+              // Only a paid campaign serves impressions.
+              basis: 'paid',
               heading: 'Your sponsor campaign has finished delivering',
               message: `Your campaign "${current.title}" has served all ${current.total.toLocaleString()} purchased impressions. You can buy more impressions to keep it running from your dashboard.`,
               actionText: 'View campaign dashboard',
