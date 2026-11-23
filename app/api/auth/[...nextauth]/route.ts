@@ -64,6 +64,18 @@ function handleAuthRoute(req: NextRequest, isPost: boolean) {
     );
   }
 
+  // Magic links are requested only through /login's server action, which
+  // checks Turnstile and the per-connection rate limit first and calls
+  // Auth.js directly (next-auth's signIn never comes through this route). A
+  // POST here is a script skipping those checks to make us email an address
+  // it typed, so it gets the form instead of a link.
+  if (isPost && action === 'signin') {
+    const url = new URL('/login', req.url);
+    const callbackUrl = req.nextUrl.searchParams.get('callbackUrl');
+    if (callbackUrl) url.searchParams.set('callbackUrl', callbackUrl);
+    return NextResponse.redirect(url, 303);
+  }
+
   return isPost ? handlers.POST(req) : handlers.GET(req);
 }
 

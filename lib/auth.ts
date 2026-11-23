@@ -87,8 +87,10 @@ export const { handlers, signIn, auth } = NextAuth(async () => {
     },
     callbacks: {
       // Runs before the magic link is emailed and again when it's used: a
-      // blocked email/domain (lib/submitterBlocks.ts) or an address that
-      // can't receive mail gets no link and no session.
+      // blocked email/domain (lib/submitterBlocks.ts, which includes
+      // addresses Resend reported as bounced) or an address that can't
+      // receive mail gets no link and no session. Turnstile and the
+      // per-connection rate limit run earlier, in app/login/actions.ts.
       async signIn({ user }) {
         const email = user?.email;
         if (!email) return true;

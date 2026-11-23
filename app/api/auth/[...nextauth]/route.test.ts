@@ -140,14 +140,35 @@ describe('NextAuth catch-all route handler (/api/auth/[...nextauth])', () => {
     });
 
     it('delegates valid action POST requests to Auth.js handlers', async () => {
-      const req = new NextRequest(
-        'https://allmcps.com/api/auth/signin/resend',
-        { method: 'POST' },
-      );
+      const req = new NextRequest('https://allmcps.com/api/auth/signout', {
+        method: 'POST',
+      });
       const res = await POST(req);
 
       expect(res.status).toBe(200);
       expect(mockHandlers.POST).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuses a direct magic-link POST, which would skip Turnstile and the rate limit', async () => {
+      const req = new NextRequest(
+        'https://allmcps.com/api/auth/signin/resend?callbackUrl=%2Fmcp%2Fx%2Fclaim',
+        { method: 'POST', body: 'email=probe%40gmail.com' },
+      );
+      const res = await POST(req);
+
+      expect(res.status).toBe(303);
+      expect(res.headers.get('location')).toBe(
+        'https://allmcps.com/login?callbackUrl=%2Fmcp%2Fx%2Fclaim',
+      );
+      expect(mockHandlers.POST).not.toHaveBeenCalled();
+    });
+
+    it('still serves the magic-link callback (GET) to Auth.js', async () => {
+      const req = new NextRequest(
+        'https://allmcps.com/api/auth/callback/resend?token=t&email=a%40b.dev',
+      );
+      await GET(req);
+      expect(mockHandlers.GET).toHaveBeenCalledTimes(1);
     });
 
     it('delegates /api/auth/providers to Auth.js handlers', async () => {

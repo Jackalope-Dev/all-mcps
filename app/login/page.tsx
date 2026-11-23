@@ -1,20 +1,13 @@
-import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { drizzle } from 'drizzle-orm/d1';
 import { BadgeCheck, BarChart3, Link2, Mail, Sparkles } from 'lucide-react';
 import type { Metadata } from 'next';
-import { headers } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type React from 'react';
 import { BrandLogo } from '@/components/BrandLogo';
 import { AuthSubmitButton } from '@/components/forms/AuthSubmitButton';
-import { auth, signIn } from '@/lib/auth';
-import { isUserInEU } from '@/lib/consentRegion';
-import {
-  NEWSLETTER_SUBSCRIBERS_LIST_ID,
-  syncSequenzySubscriber,
-} from '@/lib/sequenzy';
-import { hashSubmitterIp, screenSubmitter } from '@/lib/submitterBlocks';
+import { TurnstileWidget } from '@/components/ui/TurnstileWidget';
+import { auth } from '@/lib/auth';
+import { requestSignInLink } from './actions';
 
 export const metadata: Metadata = {
   title: 'Sign In to Manage Your MCP Server Listings',
@@ -60,12 +53,6 @@ export default async function LoginPage({
     redirect(targetRedirect);
   }
 
-  // GDPR/PECR: no pre-ticked opt-in for EU/UK visitors — same signal the
-  // cookie banner uses, read here from the real geo header since this is
-  // server-rendered (searchParams already forces this route dynamic).
-  const reqHeaders = await headers();
-  const inEU = isUserInEU(reqHeaders.get('cf-ipcountry') || undefined);
-
   return (
     <main className="acct-auth">
       <div className="acct-auth-card animate-in">
@@ -82,61 +69,14 @@ export default async function LoginPage({
             can receive mail at, or contact support@allmcps.com.
           </p>
         )}
+        {error === 'check' && (
+          <p className="acct-auth-sub" role="alert">
+            The security check didn&rsquo;t finish. Wait for it to complete,
+            then send the link again.
+          </p>
+        )}
 
-        <form
-          action={async (formData) => {
-            'use server';
-            const email = String(formData.get('email') || '');
-            const rawRedirect = formData.get('redirectTo');
-            const isValidRedirect =
-              typeof rawRedirect === 'string' &&
-              rawRedirect.startsWith('/') &&
-              !rawRedirect.startsWith('//') &&
-              !rawRedirect.startsWith('/login') &&
-              !rawRedirect.startsWith('/verify-request');
-            const redirectTo = isValidRedirect ? rawRedirect : '/dashboard';
-            const newsletterOptIn = formData.get('newsletterOptIn') === 'on';
-            // Same gate as /submit: a blocked email/domain/IP or an address
-            // that can't receive mail gets no link (and no newsletter sync).
-            // lib/auth.ts's signIn callback repeats it for direct API calls.
-            const { env } = await getCloudflareContext();
-            const actionHeaders = await headers();
-            const problem = await screenSubmitter(
-              drizzle(env.DB),
-              {
-                email,
-                ipHash: await hashSubmitterIp(
-                  actionHeaders.get('cf-connecting-ip'),
-                ),
-              },
-              env,
-            );
-            if (problem) redirect('/login?error=email');
-            // Call with redirect: false and redirect to our own /verify-request
-            // page ourselves, rather than letting next-auth issue its internal
-            // redirect — that one always points at the raw `/api/auth/verify-request`
-            // route (basePath + action name) instead of the custom page set in
-            // pages.verifyRequest, and a POST reaching that route 500s with
-            // "UnknownAction: Cannot handle action: verify-request" since it's
-            // GET-only.
-            await signIn('resend', {
-              email,
-              redirect: false,
-              redirectTo,
-            });
-            if (newsletterOptIn && email) {
-              await syncSequenzySubscriber({
-                email,
-                tags: ['newsletter-signup'],
-                lists: [NEWSLETTER_SUBSCRIBERS_LIST_ID],
-                customAttributes: { source: 'login' },
-                enrollInSequences: true,
-              });
-            }
-            redirect('/verify-request');
-          }}
-          className="acct-auth-form"
-        >
+        <form action={requestSignInLink} className="acct-auth-form">
           <div className="form-field">
             <label htmlFor="email" className="form-label">
               Work or personal email
@@ -159,15 +99,14 @@ export default async function LoginPage({
           <input type="hidden" name="redirectTo" value={targetRedirect} />
 
           <label className="form-checkbox-row">
-            <input
-              type="checkbox"
-              name="newsletterOptIn"
-              defaultChecked={!inEU}
-            />
+            <input type="checkbox" name="newsletterOptIn" />
             <span>
-              Send me the weekly AllMCPs newsletter — new servers and guides.
+              Send me the weekly AllMCPs newsletter: new servers and guides.
+              We&rsquo;ll ask you to confirm first.
             </span>
           </label>
+
+          <TurnstileWidget />
 
           <AuthSubmitButton />
         </form>
