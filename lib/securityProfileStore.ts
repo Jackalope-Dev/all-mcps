@@ -42,9 +42,15 @@ export async function storeSecurityProfile(
   const previous = parseSecurityProfile(raw);
   const next = buildSecurityProfile(tools, sandbox ?? previous?.sandbox, now);
   const changed = toolsChanged(previous, next);
+  // Same tools, but the classifier now reads them differently: rewrite so a
+  // rule fix reaches stored profiles without waiting for the tools to change.
+  const reclassified =
+    previous != null &&
+    JSON.stringify(previous.toolsByCapability) !==
+      JSON.stringify(next.toolsByCapability);
   // An unchanged tool surface with no new sandbox data needs no write — the
   // health cron revisits remote listings every 15 minutes.
-  if (previous && !changed && !sandbox) {
+  if (previous && !changed && !reclassified && !sandbox) {
     return { changed: false };
   }
   await upsertSignals(db, serverId, {

@@ -24,6 +24,7 @@ export type ToolDefinition = {
 export type Capability =
   | 'read_only'
   | 'file_write'
+  | 'writes'
   | 'shell_exec'
   | 'network'
   | 'destructive'
@@ -76,6 +77,15 @@ const RULES: { cap: Capability; re: RegExp }[] = [
   {
     cap: 'file_write',
     re: /\b(write|create|save|edit|modify|update|append|move|rename|upload)[_ ]?(file|dir|directory|folder|path)s?\b|\bfs[_.]write|\bwrite[_ ]?to[_ ]?disk\b/i,
+  },
+  {
+    // State changes that aren't deletes or file writes: placing an order,
+    // paying, sending, publishing, changing settings. Matched on the leading
+    // verb of the tool name (`create_order`, `setNameservers`) or of the
+    // description ("Renew a domain"), not anywhere in the text, so a lookup
+    // that merely mentions an order or a setting stays read-only.
+    cap: 'writes',
+    re: /^(create|add|insert|update|upsert|set|edit|modify|change|save|write|send|post|publish|submit|register|renew|order|purchase|buy|pay|charge|transfer|book|cancel|schedule|assign|upload|move|rename|enable|disable|configure|setup|invite|archive|approve|reply|merge|deploy|trigger|mark|restore|reset|grant|mint|withdraw|deposit) \w/i,
   },
   {
     cap: 'network',
@@ -183,12 +193,26 @@ export function hasStrongPoisoning(
   return Boolean(findings?.some(isStrongFinding));
 }
 
-function toolText(t: ToolDefinition): string {
+/**
+ * A description that opens with a state-changing verb ("Register 1–10
+ * domains", "Sends a message"). Only verbs that are rarely a leading noun:
+ * "Order status…" and "Places near…" describe lookups.
+ */
+const WRITE_DESCRIPTION =
+  /^(creates?|registers?|renews?|sends?|publish(es)?|submits?|purchases?|buys?|pays?|uploads?|saves?|edits?|modif(y|ies)|cancels?|invites?|deploys?|writes?|updates?|inserts?)\b/i;
+
+function toolName(t: ToolDefinition): string {
   // Tool names are snake/camel case; split so `delete_file` matches \bdelete\b.
+  return t.name
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/[_-]/g, ' ')
+    .trim();
+}
+
+function toolText(t: ToolDefinition): string {
   // Parameter names are left out on purpose: a "url" argument would otherwise
   // turn every lookup tool into a network tool.
-  const name = t.name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]/g, ' ');
-  return `${name} ${t.description ?? ''}`;
+  return `${toolName(t)} ${t.description ?? ''}`;
 }
 
 export function classifyTool(t: ToolDefinition): Capability[] {
@@ -196,19 +220,27 @@ export function classifyTool(t: ToolDefinition): Capability[] {
   const a = t.annotations;
   if (a?.destructiveHint) caps.add('destructive');
   if (a?.openWorldHint) caps.add('network');
+  // A server that says a tool is not read-only is believed too.
+  if (a?.readOnlyHint === false) caps.add('writes');
   const text = toolText(t);
   for (const { cap, re } of RULES) {
-    if (re.test(text)) caps.add(cap);
+    // The writes rule is anchored to the start, so it reads the name alone.
+    if (re.test(cap === 'writes' ? toolName(t) : text)) caps.add(cap);
   }
+  if (WRITE_DESCRIPTION.test((t.description ?? '').trim())) caps.add('writes');
+  // Writing files is the more specific label for the same tool.
+  if (caps.has('file_write')) caps.delete('writes');
   // An explicit read-only hint is the server's own declaration and wins over
   // our keyword guesses for the write-ish classes.
   if (a?.readOnlyHint) {
     caps.delete('destructive');
     caps.delete('file_write');
+    caps.delete('writes');
   }
   if (
     !caps.has('destructive') &&
     !caps.has('file_write') &&
+    !caps.has('writes') &&
     !caps.has('shell_exec')
   ) {
     caps.add('read_only');
@@ -286,6 +318,7 @@ export function buildSecurityProfile(
     'shell_exec',
     'destructive',
     'file_write',
+    'writes',
     'credentials',
     'network',
     'read_only',
@@ -330,6 +363,7 @@ export const CAPABILITY_LABEL: Record<Capability, string> = {
   shell_exec: 'Runs commands',
   destructive: 'Can delete or modify data',
   file_write: 'Writes files',
+  writes: 'Makes changes',
   credentials: 'Handles credentials',
   network: 'Makes network requests',
   read_only: 'Read-only tools',

@@ -29,6 +29,36 @@ describe('classifyTool', () => {
     expect(caps).toContain('read_only');
   });
 
+  it('does not call ordering, paying or settings tools read-only', () => {
+    for (const t of [
+      { name: 'create_order', description: 'Register 1–10 domains.' },
+      { name: 'set_nameservers', description: 'Point a domain to 2–4 NS.' },
+      { name: 'renewDomain' },
+      { name: 'crm_contacts', description: 'Creates a contact in the CRM.' },
+      { name: 'snapshot', annotations: { readOnlyHint: false } },
+    ]) {
+      const caps = classifyTool(t);
+      expect(caps).toContain('writes');
+      expect(caps).not.toContain('read_only');
+    }
+  });
+
+  it('keeps lookups that mention orders or settings read-only', () => {
+    for (const t of [
+      { name: 'get_order', description: 'Order status and receipt.' },
+      { name: 'list_settings', description: 'Settings to update later.' },
+      { name: 'add', description: 'Adds two numbers.' },
+    ]) {
+      expect(classifyTool(t)).toEqual(['read_only']);
+    }
+  });
+
+  it('labels a file write once, as a file write', () => {
+    const caps = classifyTool({ name: 'write_file' });
+    expect(caps).toContain('file_write');
+    expect(caps).not.toContain('writes');
+  });
+
   it('does not treat a url parameter as network access', () => {
     expect(
       classifyTool({
