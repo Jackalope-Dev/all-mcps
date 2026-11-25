@@ -389,7 +389,7 @@ describe('team note', () => {
   it('tags the main link for the other site and sits before the reply box', () => {
     const blocks = buildDigestBlocks({ ...base, teamNote: note });
     const index = blocks.findIndex((b) =>
-      String(b.content ?? '').includes('https://example.dev/'),
+      /href="https:\/\/example\.dev\//.test(String(b.content ?? '')),
     );
     expect(index).toBeGreaterThan(-1);
     const href = /href="(https:\/\/example\.dev\/[^"]+)"/.exec(
