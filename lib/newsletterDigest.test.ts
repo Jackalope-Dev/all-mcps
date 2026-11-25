@@ -367,3 +367,49 @@ describe('isDigestTooThin', () => {
     ).toBe(false);
   });
 });
+
+describe('team note', () => {
+  const base = {
+    pick: null,
+    newListings: [candidate({ id: 'n1' })],
+    trending: [],
+    blogPost: null,
+    editorial: editorial(),
+    campaign: 'digest-2026-w48',
+  };
+  const note = {
+    title: 'Side project',
+    body: 'Something we build.',
+    url: 'https://example.dev/',
+    linkLabel: 'Try it',
+    secondaryUrl: 'https://github.com/acme/side',
+    secondaryLabel: 'Star it',
+  };
+
+  it('tags the main link for the other site and sits before the reply box', () => {
+    const blocks = buildDigestBlocks({ ...base, teamNote: note });
+    const index = blocks.findIndex((b) =>
+      String(b.content ?? '').includes('https://example.dev/'),
+    );
+    expect(index).toBeGreaterThan(-1);
+    const href = /href="(https:\/\/example\.dev\/[^"]+)"/.exec(
+      blocks[index].content,
+    )?.[1];
+    const url = new URL((href ?? '').replace(/&amp;/g, '&'));
+    expect(url.searchParams.get('utm_source')).toBe('allmcps');
+    expect(url.searchParams.get('utm_medium')).toBe('newsletter');
+    expect(url.searchParams.get('utm_campaign')).toBe('digest-2026-w48');
+    expect(blocks[index].content).toContain(
+      'href="https://github.com/acme/side"',
+    );
+    const replyIndex = blocks.findIndex((b) =>
+      String(b.content ?? '').includes('Hit reply'),
+    );
+    expect(index).toBeLessThan(replyIndex);
+  });
+
+  it('is left out when set to null', () => {
+    const html = JSON.stringify(buildDigestBlocks({ ...base, teamNote: null }));
+    expect(html).not.toContain('utm_source=allmcps');
+  });
+});

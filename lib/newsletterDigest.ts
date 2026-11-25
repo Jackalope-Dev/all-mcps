@@ -510,6 +510,56 @@ function blogBlocks(post: DigestBlogPost, link: string): SequenzyBlock[] {
   return [boxBlock(content, BLOG_BOX)];
 }
 
+type DigestTeamNote = {
+  title: string;
+  body: string;
+  /** Main link; the digest adds utm_source=allmcps, utm_medium=newsletter and the week. */
+  url: string;
+  linkLabel: string;
+  /** Optional second link, used as given. */
+  secondaryUrl?: string;
+  secondaryLabel?: string;
+};
+
+/**
+ * A short, labelled note about something the AllMCPs team builds, shown after the
+ * blog card. Set to `null` to drop it from every digest.
+ */
+const TEAM_NOTE: DigestTeamNote | null = {
+  title: 'Jackalope: run your coding agents side by side',
+  body: 'We also build Jackalope, a free, open-source desktop app for Codex, Claude Code, Gemini CLI, OpenCode and other coding agents. Each task runs in its own Git worktree, and you review every change in one place before it merges.',
+  url: 'https://jackalope.dev/',
+  linkLabel: 'Try Jackalope →',
+  secondaryUrl: 'https://github.com/Jackalope-Dev/jackalope',
+  secondaryLabel: 'Star it on GitHub →',
+};
+
+/** Tag an outside link so the other site's analytics credit the digest. */
+function teamNoteUrl(url: string, campaign: string): string {
+  const u = new URL(url);
+  u.searchParams.set('utm_source', 'allmcps');
+  u.searchParams.set('utm_medium', 'newsletter');
+  u.searchParams.set('utm_campaign', campaign);
+  return u.toString();
+}
+
+function teamNoteBlocks(
+  note: DigestTeamNote,
+  campaign: string,
+): SequenzyBlock[] {
+  const link = (href: string, label: string, marginRight = 0) =>
+    `<a href="${escapeHtml(href)}" style="display:inline-block;margin-top:10px;margin-right:${marginRight}px;font-family:${FONT};font-size:13px;font-weight:700;color:${BLUE};text-decoration:none">${escapeHtml(label)}</a>`;
+  let content =
+    kicker('From the AllMCPs team', '#64748b') +
+    `<div style="font-family:${FONT};font-size:16px;font-weight:700;line-height:1.35;color:#020617">${escapeHtml(note.title)}</div>` +
+    `<p style="margin:8px 0 0;font-family:${FONT};font-size:14px;line-height:1.6;color:#475569">${escapeHtml(note.body)}</p>` +
+    link(teamNoteUrl(note.url, campaign), note.linkLabel, 18);
+  if (note.secondaryUrl && note.secondaryLabel) {
+    content += link(note.secondaryUrl, note.secondaryLabel);
+  }
+  return [boxBlock(content, BLOG_BOX)];
+}
+
 export function buildDigestBlocks(input: {
   pick: DigestCandidate | null;
   newListings: DigestCandidate[];
@@ -518,8 +568,11 @@ export function buildDigestBlocks(input: {
   editorial: DigestEditorial;
   /** utm_campaign value, e.g. `digest-2026-w44`. */
   campaign: string;
+  /** Defaults to TEAM_NOTE; `null` leaves the note out. */
+  teamNote?: DigestTeamNote | null;
 }): SequenzyBlock[] {
   const { pick, newListings, trending, blogPost, editorial, campaign } = input;
+  const teamNote = input.teamNote === undefined ? TEAM_NOTE : input.teamNote;
   const listingLink = (c: DigestCandidate, slot: string) =>
     withUtm(`/mcp/${c.id}`, campaign, slot);
 
@@ -593,6 +646,11 @@ export function buildDigestBlocks(input: {
         withUtm(`/blog/${blogPost.slug}`, campaign, 'blog'),
       ),
     );
+    blocks.push({ type: 'spacer', height: 16 });
+  }
+
+  if (teamNote) {
+    blocks.push(...teamNoteBlocks(teamNote, campaign));
     blocks.push({ type: 'spacer', height: 16 });
   }
 
