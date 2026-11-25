@@ -189,6 +189,13 @@ const BADGES: DirectoryBadge[] = [
     imageUrl: 'https://launchzone.co/badge.svg',
     rel: 'noopener',
   },
+  {
+    id: 'fwfw',
+    name: 'Featured on FWFW',
+    href: 'https://fwfw.app/item/allmcps',
+    imageUrl: 'https://fwfw.app/badge-white.svg',
+    rel: 'noopener',
+  },
 ];
 
 export function BadgeMarquee() {
