@@ -1,8 +1,12 @@
-import { Button, Link, Text } from '@react-email/components';
+import { Link, Text } from '@react-email/components';
 import {
   BaseLayout,
-  buttonStyle,
+  codeStyle,
   highlightTextStyle,
+  linkStyle,
+  mutedTextStyle,
+  Panel,
+  PrimaryButton,
   textStyle,
 } from './BaseLayout';
 
@@ -35,67 +39,54 @@ export const ListingStatusEmail = ({
     <BaseLayout
       previewText={
         isApproved
-          ? `Your MCP listing is live — claim it for a free dofollow backlink`
+          ? `${mcpName} is live. Claim it for a free dofollow backlink.`
           : canResubmit
             ? `Your MCP listing needs a few changes`
             : `About your MCP listing submission`
       }
       heading={
         isApproved
-          ? 'Listing Approved! 🎉'
+          ? `${mcpName} is live on AllMCPs`
           : canResubmit
-            ? 'Listing Update Required'
-            : 'Submission Not Approved'
+            ? 'Your listing needs a few changes'
+            : 'We couldn’t approve your submission'
       }
     >
-      <Text style={textStyle}>Hello,</Text>
-      <Text style={textStyle}>
-        We have reviewed your submission for{' '}
-        <span style={highlightTextStyle}>{mcpName}</span>.
-      </Text>
-
       {isApproved ? (
         <>
           <Text style={textStyle}>
-            Great news — your MCP server is live on the AllMCPs directory.
-            Developers can discover and install it now:
+            Good news: we reviewed{' '}
+            <span style={highlightTextStyle}>{mcpName}</span> and it&rsquo;s now
+            listed in the directory, where developers can find and install it.
           </Text>
-          <Button href={listingUrl} style={buttonStyle}>
-            View live listing
-          </Button>
 
-          <Text style={{ ...textStyle, marginTop: '28px' }}>
-            <strong style={{ color: '#e2e8f0' }}>
-              Free SEO boost: dofollow backlink
-            </strong>
-          </Text>
-          <Text style={textStyle}>
-            You can earn a{' '}
-            <strong style={{ color: '#34d399' }}>dofollow</strong> website
-            backlink from AllMCPs at no cost:
-          </Text>
-          <Text style={textStyle}>
-            1. Check that your listing links to your product website (claim the
-            listing to change it)
-            <br />
-            2. Place the AllMCPs badge on that site <em>without</em> a{' '}
-            <code style={codeStyle}>nofollow</code> attribute
-            <br />
-            3. Our health checks detect it and make the link dofollow
-          </Text>
-          <Text style={textStyle}>
-            We recheck the badge periodically so it stays honest. The badge is
-            the only way to a dofollow link; it can&apos;t be bought.
-          </Text>
-          <Button
-            href={claimUrl}
-            style={{ ...buttonStyle, backgroundColor: '#0e7490' }}
-          >
-            Claim listing &amp; get free dofollow link
-          </Button>
-          <Text style={{ ...textStyle, fontSize: '13px', color: '#94a3b8' }}>
-            After claiming you can also edit details, upload a logo, and manage
-            the listing from your{' '}
+          <PrimaryButton href={listingUrl}>View your listing →</PrimaryButton>
+
+          <Panel tone="info">
+            <Text style={kicker}>Free SEO boost</Text>
+            <Text style={panelTitle}>Earn a dofollow backlink</Text>
+            <Text style={panelText}>
+              1. Claim the listing and check it links to your product website.
+              <br />
+              2. Put the AllMCPs badge on that site, without a{' '}
+              <code style={codeStyle}>nofollow</code> attribute.
+              <br />
+              3. Our health checks spot it and make your link dofollow.
+            </Text>
+            <Text style={{ ...panelText, margin: '12px 0 0' }}>
+              We recheck the badge now and then to keep it honest. The badge is
+              the only way to a dofollow link; it can&rsquo;t be bought.
+            </Text>
+            <Text style={{ ...panelText, margin: '12px 0 0' }}>
+              <Link href={claimUrl} style={linkStyle}>
+                Claim your listing →
+              </Link>
+            </Text>
+          </Panel>
+
+          <Text style={{ ...mutedTextStyle, margin: 0 }}>
+            Once claimed you can edit details, upload a logo and see analytics
+            from your{' '}
             <Link href="https://allmcps.com/dashboard" style={linkStyle}>
               dashboard
             </Link>
@@ -105,40 +96,42 @@ export const ListingStatusEmail = ({
       ) : (
         <>
           <Text style={textStyle}>
+            Thanks for submitting{' '}
+            <span style={highlightTextStyle}>{mcpName}</span>.{' '}
             {canResubmit
-              ? "Thanks for submitting! We couldn't approve it as it is, but it should be fixable. Here's what we found:"
-              : "Thanks for submitting. We weren't able to approve it, and here's why:"}
+              ? "We couldn't approve it as it is, but it should be fixable. Here's what we found:"
+              : "We weren't able to approve it, and here's why:"}
           </Text>
           {feedback && (
-            <div style={feedbackContainer}>
+            <Panel tone="warning">
               {feedback.split(/\n{2,}/).map((para, i) => (
                 <Text
                   // biome-ignore lint/suspicious/noArrayIndexKey: static paragraphs, never reordered
                   key={i}
-                  style={{ ...feedbackText, marginTop: i > 0 ? '12px' : 0 }}
+                  style={{ ...panelText, marginTop: i > 0 ? '12px' : 0 }}
                 >
                   {para}
                 </Text>
               ))}
-            </div>
+            </Panel>
           )}
           {canResubmit ? (
             <>
               <Text style={textStyle}>
-                We&apos;ve kept your submission. Sign in to your dashboard with
+                We&rsquo;ve kept your submission. Sign in to your dashboard with
                 this email address to edit it and send it back for review.
               </Text>
-              <Button href={listingUrl} style={buttonStyle}>
-                Edit and resubmit
-              </Button>
+              <PrimaryButton href={listingUrl}>
+                Edit and resubmit →
+              </PrimaryButton>
             </>
           ) : (
-            <Text style={{ ...textStyle, fontSize: '13px', color: '#94a3b8' }}>
-              If you think we got this wrong, let us know through{' '}
+            <Text style={{ ...mutedTextStyle, margin: 0 }}>
+              Think we got this wrong? Tell us on{' '}
               <Link href="https://allmcps.com/contact" style={linkStyle}>
                 our contact page
               </Link>{' '}
-              and we'll take another look.
+              and we&rsquo;ll take another look.
             </Text>
           )}
         </>
@@ -147,28 +140,27 @@ export const ListingStatusEmail = ({
   );
 };
 
-const feedbackContainer = {
-  backgroundColor: 'rgba(255, 0, 0, 0.05)',
-  borderLeft: '4px solid #ef4444',
-  padding: '16px',
-  marginTop: '24px',
-  marginBottom: '24px',
+const kicker = {
+  ...textStyle,
+  color: '#007bff',
+  fontSize: '11px',
+  lineHeight: '16px',
+  fontWeight: '800',
+  letterSpacing: '1.2px',
+  textTransform: 'uppercase' as const,
+  margin: '0 0 6px',
 };
 
-const feedbackText = {
-  color: '#e2e8f0',
+const panelTitle = {
+  ...textStyle,
+  ...highlightTextStyle,
+  fontSize: '16px',
+  margin: '0 0 8px',
+};
+
+const panelText = {
+  ...textStyle,
   fontSize: '14px',
-  lineHeight: '22px',
+  lineHeight: '23px',
   margin: 0,
-};
-
-const codeStyle = {
-  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-  fontSize: '12px',
-  color: '#94a3b8',
-};
-
-const linkStyle = {
-  color: '#00E5FF',
-  textDecoration: 'underline' as const,
 };

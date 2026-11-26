@@ -1,12 +1,11 @@
+import { Column, Hr, Row, Text } from '@react-email/components';
 import {
-  Button,
-  Column,
-  Hr,
-  Row,
-  Section,
-  Text,
-} from '@react-email/components';
-import { BaseLayout, buttonStyle, textStyle } from './BaseLayout';
+  BaseLayout,
+  mutedTextStyle,
+  Panel,
+  PrimaryButton,
+  textStyle,
+} from './BaseLayout';
 
 interface ReceiptEmailProps {
   receiptId: string;
@@ -28,89 +27,83 @@ export const ReceiptEmail = ({
   return (
     <BaseLayout
       previewText={`Your receipt for ${amount}`}
-      heading="Payment Receipt"
+      heading="Thanks for your payment"
     >
       <Text style={textStyle}>
-        Thank you for your payment. Your transaction was successful.
+        Your payment went through. Here&rsquo;s your receipt.
       </Text>
 
-      <Section style={receiptSection}>
+      <Panel>
         <Row style={row}>
-          <Column style={labelColumn}>Receipt ID</Column>
-          <Column style={valueColumn}>{receiptId}</Column>
+          <Column style={labelColumn}>Item</Column>
+          <Column style={valueColumn}>{description}</Column>
         </Row>
         <Row style={row}>
           <Column style={labelColumn}>Date</Column>
           <Column style={valueColumn}>{date}</Column>
         </Row>
-        <Hr style={divider} />
         <Row style={row}>
-          <Column style={labelColumn}>Description</Column>
-          <Column style={valueColumn}>{description}</Column>
+          <Column style={labelColumn}>Receipt</Column>
+          <Column style={valueColumn}>{receiptId}</Column>
         </Row>
         <Hr style={divider} />
-        <Row style={totalRow}>
-          <Column style={totalLabelColumn}>Total Paid</Column>
+        <Row>
+          <Column style={totalLabelColumn}>Total paid</Column>
           <Column style={totalValueColumn}>{amount}</Column>
         </Row>
-      </Section>
+      </Panel>
 
       {actionText && actionUrl && (
-        <Button href={actionUrl} style={buttonStyle}>
-          {actionText}
-        </Button>
+        <PrimaryButton href={actionUrl}>{actionText}</PrimaryButton>
       )}
 
-      <Text style={{ ...textStyle, marginTop: '32px', fontSize: '14px' }}>
-        If you have any questions about this receipt, please reply to this
-        email.
+      <Text style={{ ...mutedTextStyle, marginTop: '24px', marginBottom: 0 }}>
+        Questions about this charge? Just reply to this email.
       </Text>
     </BaseLayout>
   );
 };
 
-const receiptSection = {
-  backgroundColor: '#020617', // Slate 950
-  borderRadius: '8px',
-  padding: '24px',
-  marginTop: '24px',
-  border: '1px solid rgba(255,255,255,0.05)',
-};
+const FONT =
+  "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 
 const row = {
-  marginBottom: '12px',
+  marginBottom: '8px',
 };
 
 const labelColumn = {
   color: '#64748b',
-  fontSize: '14px',
-  width: '120px',
+  fontFamily: FONT,
+  fontSize: '13px',
+  width: '96px',
+  verticalAlign: 'top' as const,
+  paddingBottom: '8px',
 };
 
 const valueColumn = {
-  color: '#e2e8f0',
+  color: '#020617',
+  fontFamily: FONT,
   fontSize: '14px',
   fontWeight: '500',
+  paddingBottom: '8px',
 };
 
 const divider = {
-  borderColor: 'rgba(255, 255, 255, 0.1)',
-  margin: '12px 0',
-};
-
-const totalRow = {
-  marginTop: '12px',
+  borderColor: '#e2e8f0',
+  margin: '8px 0 14px',
 };
 
 const totalLabelColumn = {
-  color: '#ffffff',
-  fontSize: '16px',
-  fontWeight: '500',
-  width: '120px',
+  color: '#020617',
+  fontFamily: FONT,
+  fontSize: '15px',
+  fontWeight: '700',
+  width: '96px',
 };
 
 const totalValueColumn = {
-  color: '#00E5FF', // Cyan
-  fontSize: '16px',
+  color: '#020617',
+  fontFamily: FONT,
+  fontSize: '18px',
   fontWeight: '800',
 };

@@ -1,5 +1,12 @@
-import { Button, Link, Text } from '@react-email/components';
-import { BaseLayout, buttonStyle, textStyle } from './BaseLayout';
+import { Link, Text } from '@react-email/components';
+import {
+  BaseLayout,
+  linkStyle,
+  mutedTextStyle,
+  PrimaryButton,
+  textStyle,
+  urlBoxStyle,
+} from './BaseLayout';
 
 interface MagicLinkEmailProps {
   loginUrl: string;
@@ -9,23 +16,26 @@ export const MagicLinkEmail = ({
   loginUrl = 'https://allmcps.com/api/auth/callback/email?token=example',
 }: MagicLinkEmailProps) => {
   return (
-    <BaseLayout previewText="Sign in to AllMCPs" heading="Sign in to AllMCPs">
-      <Text style={textStyle}>Hello,</Text>
+    <BaseLayout
+      previewText="Your secure sign-in link for AllMCPs"
+      heading="Sign in to AllMCPs"
+    >
       <Text style={textStyle}>
-        We received a request to sign in to your AllMCPs account. Click the
-        button below to securely sign in. This link will expire in 24 hours.
+        Tap the button below to sign in. The link works once and expires in 24
+        hours.
       </Text>
 
-      <Button href={loginUrl} style={buttonStyle}>
-        Sign In to AllMCPs
-      </Button>
+      <PrimaryButton href={loginUrl}>Sign in to AllMCPs →</PrimaryButton>
 
-      <Text style={{ ...textStyle, marginTop: '32px', fontSize: '14px' }}>
-        If you didn't request this email, you can safely ignore it.
+      <Text style={{ ...mutedTextStyle, marginTop: '24px' }}>
+        Didn&rsquo;t ask to sign in? You can ignore this email; nobody can get
+        in without the link.
       </Text>
-      <Text style={{ ...textStyle, fontSize: '14px' }}>
-        Or copy and paste this URL into your browser:{' '}
-        <Link href={loginUrl} style={{ color: '#00E5FF' }}>
+      <Text style={{ ...mutedTextStyle, margin: 0 }}>
+        Button not working? Paste this into your browser:
+      </Text>
+      <Text style={urlBoxStyle}>
+        <Link href={loginUrl} style={{ ...linkStyle, fontWeight: '400' }}>
           {loginUrl}
         </Link>
       </Text>

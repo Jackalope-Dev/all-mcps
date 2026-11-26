@@ -17,8 +17,11 @@ const SIZES = {
   lg: 48,
 } as const;
 
+/** The canonical cyan "M" (public/logo-icon.svg, BRAND_GUIDE.md §5). */
 function BrandMark({ px }: { px: number }) {
-  const gradId = `allmcps-grad-${useId().replace(/:/g, '')}`;
+  const id = useId().replace(/:/g, '');
+  const pillarGrad = `allmcps-pillar-${id}`;
+  const vGrad = `allmcps-v-${id}`;
 
   return (
     <svg
@@ -32,53 +35,37 @@ function BrandMark({ px }: { px: number }) {
       focusable="false"
     >
       <defs>
-        {/* Electric Cyan -> Blue Gradient */}
-        <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id={pillarGrad} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#00E5FF" />
           <stop offset="100%" stopColor="#007BFF" />
         </linearGradient>
+        <linearGradient id={vGrad} x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#007BFF" />
+          <stop offset="100%" stopColor="#38BDF8" />
+        </linearGradient>
       </defs>
-
-      {/* Terminal / Hardware Chassis Tile */}
       <rect
-        x="2"
-        y="2"
-        width="28"
-        height="28"
-        rx="7"
-        fill="#070d19"
-        stroke="rgba(0, 229, 255, 0.25)"
-        strokeWidth="1.2"
+        x="4"
+        y="5"
+        width="6"
+        height="22"
+        rx="2"
+        fill={`url(#${pillarGrad})`}
       />
-
-      {/* Crosshair Corner Marks for Dev-Tool Vibe */}
+      <rect
+        x="22"
+        y="5"
+        width="6"
+        height="22"
+        rx="2"
+        fill={`url(#${pillarGrad})`}
+      />
       <path
-        d="M 6 4 V 6 H 4 M 26 4 V 6 H 28 M 6 28 V 26 H 4 M 26 28 V 26 H 28"
-        stroke="rgba(0, 229, 255, 0.4)"
-        strokeWidth="0.8"
-        strokeLinecap="round"
+        d="M 6.5 5.5 L 16 18 L 25.5 5.5 C 26.3 4.4 27.9 4.8 28.2 6.1 C 28.5 7.1 27.9 8.2 27 8.8 L 17.6 20.8 C 16.8 21.8 15.2 21.8 14.4 20.8 L 5 8.8 C 4.1 8.2 3.5 7.1 3.8 6.1 C 4.1 4.8 5.7 4.4 6.5 5.5 Z"
+        fill={`url(#${vGrad})`}
       />
-
-      {/* Model Prompt Chevron: > */}
-      <path
-        d="M 8.5 9.5 L 14.5 16 L 8.5 22.5"
-        stroke={`url(#${gradId})`}
-        strokeWidth="2.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-
-      {/* Protocol / Server Socket Bracket: ] */}
-      <path
-        d="M 18.5 9.5 H 23.5 V 22.5 H 18.5"
-        stroke="#38BDF8"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-
-      {/* Connection Signal Dot */}
-      <circle cx="21" cy="16" r="1.4" fill="#00E5FF" />
+      <circle cx="16" cy="18" r="2.25" fill="#00E5FF" />
+      <circle cx="16" cy="18" r="1.1" fill="#FFFFFF" />
     </svg>
   );
 }
