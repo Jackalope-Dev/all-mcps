@@ -189,6 +189,19 @@ describe('endpoint bar', () => {
     ).toBe(false);
   });
 
+  it('rejects another directory listing page', () => {
+    for (const url of [
+      'https://mcp.tc/i/auto-qr-assistant-aqr',
+      'https://mcp.so/server/acme-mcp/acme',
+      'https://lobehub.com/mcp/acme-acme-mcp',
+      'https://cursor.directory/mcp?install=cursor://x',
+    ]) {
+      expect(looksLikeMcpEndpointUrl(url)).toBe(false);
+    }
+    // A vendor host that merely starts with "mcp.so" is not the directory.
+    expect(looksLikeMcpEndpointUrl('https://mcp.sofya.co/mcp')).toBe(true);
+  });
+
   it('still accepts the hosted endpoint itself', () => {
     expect(looksLikeMcpEndpointUrl('https://mcp.magichour.ai/')).toBe(true);
   });

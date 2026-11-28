@@ -22,6 +22,7 @@ import {
   normalizeCompatibleClients,
   type PricingModel,
 } from './serverEnums';
+import { looksLikeMcpEndpointUrl } from './tools/parseInstallHint';
 
 export type AiFaqItem = { q: string; a: string };
 
@@ -254,7 +255,10 @@ function clampInstall(value: unknown): AiListingContent['install'] {
 
   if (v.kind === 'remote') {
     const pkg = typeof v.package === 'string' ? v.package.trim() : '';
-    if (!pkg || !/^https?:\/\//i.test(pkg)) return null;
+    // Same endpoint bar every other install writer passes (toCachedInstallFields):
+    // a model reading the submission saw a directory page URL and returned it as
+    // the endpoint, which the API then served as the server URL.
+    if (!pkg || !looksLikeMcpEndpointUrl(pkg)) return null;
     return { kind: 'remote', package: pkg.slice(0, 500), confidence };
   }
 
