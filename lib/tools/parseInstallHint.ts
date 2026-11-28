@@ -58,6 +58,18 @@ const NON_ENDPOINT_HOSTS = [
   // The spec/docs site. Thousands of READMEs link it ("built on the Model Context
   // Protocol"), and it was the single most common URL cached as a listing's own endpoint.
   'modelcontextprotocol.io',
+  // Other MCP directories. Their listing pages (mcp.so/server/x, mcp.tc/i/x,
+  // lobehub.com/mcp/x) carry an mcp.* host or an /mcp path, so they cleared the
+  // endpoint bar and got cached as the listing's own remote install. smithery.ai is
+  // left out on purpose: server.smithery.ai hosts real endpoints.
+  'mcp.so',
+  'mcp.tc',
+  'mcp.directory',
+  'cursor.directory',
+  'lobehub.com',
+  'pulsemcp.com',
+  'mcpmarket.com',
+  'mcpservers.org',
 ];
 
 function isNonEndpointHost(hostname: string): boolean {
